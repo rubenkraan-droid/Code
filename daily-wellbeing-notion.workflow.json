@@ -1,0 +1,213 @@
+{
+  "name": "Daily Wellbeing Log to Notion",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 20 * * *"
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000001",
+      "name": "Every Day at 8 PM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=🌿 *Daily Wellbeing Check-in*\n\nHey! Time to reflect on your day.\n\nFill in your wellbeing log here:\n{{ $vars.WELLBEING_FORM_URL }}\n\n_Takes less than 2 minutes_ ✨",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000002",
+      "name": "Send Daily Reminder",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [480, 200],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "formTitle": "Daily Wellbeing Check-in",
+        "formDescription": "Take a moment to reflect on your day. How are you really doing?",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Overall Wellbeing (1–10)",
+              "fieldType": "number",
+              "requiredField": true,
+              "placeholder": "1 = rough day, 10 = amazing"
+            },
+            {
+              "fieldLabel": "Mood",
+              "fieldType": "dropdown",
+              "requiredField": true,
+              "fieldOptions": {
+                "values": [
+                  { "option": "😄 Great" },
+                  { "option": "🙂 Good" },
+                  { "option": "😐 Okay" },
+                  { "option": "😔 Low" },
+                  { "option": "😰 Difficult" }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "Energy Level (1–10)",
+              "fieldType": "number",
+              "requiredField": false,
+              "placeholder": "1 = exhausted, 10 = full of energy"
+            },
+            {
+              "fieldLabel": "Sleep Quality (1–10)",
+              "fieldType": "number",
+              "requiredField": false,
+              "placeholder": "How well did you sleep last night?"
+            },
+            {
+              "fieldLabel": "What went well today?",
+              "fieldType": "textarea",
+              "requiredField": false,
+              "placeholder": "Wins, joyful moments, things you're grateful for..."
+            },
+            {
+              "fieldLabel": "What was challenging?",
+              "fieldType": "textarea",
+              "requiredField": false,
+              "placeholder": "Struggles, stressors, or things that felt hard..."
+            },
+            {
+              "fieldLabel": "Notes / Reflections",
+              "fieldType": "textarea",
+              "requiredField": false,
+              "placeholder": "Anything else on your mind..."
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {
+          "respondWithOptions": {
+            "values": {
+              "respondWith": "text",
+              "responseText": "✅ Logged! Take care of yourself. 🌿"
+            }
+          }
+        }
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000003",
+      "name": "Wellbeing Form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.1,
+      "position": [240, 460],
+      "webhookId": "wellbeing-daily-form"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "create",
+        "databaseId": "YOUR_NOTION_DATABASE_ID",
+        "title": "=Daily Wellbeing — {{ $now.toFormat('MMMM d, yyyy') }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Date",
+              "type": "date",
+              "date": "={{ $now.toISO() }}"
+            },
+            {
+              "key": "Overall Rating",
+              "type": "number",
+              "numberValue": "={{ $json['Overall Wellbeing (1\u201310)'] }}"
+            },
+            {
+              "key": "Mood",
+              "type": "select",
+              "selectValue": "={{ $json['Mood'] }}"
+            },
+            {
+              "key": "Energy Level",
+              "type": "number",
+              "numberValue": "={{ $json['Energy Level (1\u201310)'] }}"
+            },
+            {
+              "key": "Sleep Quality",
+              "type": "number",
+              "numberValue": "={{ $json['Sleep Quality (1\u201310)'] }}"
+            },
+            {
+              "key": "What Went Well",
+              "type": "richText",
+              "textContent": "={{ $json['What went well today?'] }}"
+            },
+            {
+              "key": "Challenges",
+              "type": "richText",
+              "textContent": "={{ $json['What was challenging?'] }}"
+            },
+            {
+              "key": "Notes",
+              "type": "richText",
+              "textContent": "={{ $json['Notes / Reflections'] }}"
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000004",
+      "name": "Log to Notion",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [480, 460],
+      "credentials": {
+        "notionApi": {
+          "id": "YOUR_NOTION_CREDENTIAL_ID",
+          "name": "Notion API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every Day at 8 PM": {
+      "main": [
+        [
+          {
+            "node": "Send Daily Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wellbeing Form": {
+      "main": [
+        [
+          {
+            "node": "Log to Notion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "local"
+  },
+  "tags": ["wellbeing", "notion", "daily"]
+}
