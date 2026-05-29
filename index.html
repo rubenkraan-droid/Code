@@ -7,150 +7,84 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bordeaux: #4a0010;
-      --bordeaux2: #6b0a1d;
-      --ruby:  #8b0000;
       --gold:  #c9a84c;
       --gold2: #e8c97a;
       --cream: #f5ede0;
-      --dark:  #120608;
-      --dark2: #1c080d;
+      --dark:  #0e0507;
+      --dark2: #160709;
       --text:  #e8d5c4;
       --muted: #9a7d6e;
     }
     html { scroll-behavior: smooth; }
-    body {
-      background: var(--dark);
-      color: var(--text);
-      font-family: Georgia, 'Times New Roman', serif;
-      overflow-x: hidden;
-    }
+    body { background: var(--dark); color: var(--text); font-family: Georgia, 'Times New Roman', serif; overflow-x: hidden; }
 
-    /* ── Nav ── */
     nav {
       position: fixed; top: 0; left: 0; right: 0; z-index: 200;
       display: flex; align-items: center; justify-content: space-between;
       padding: .85rem 1.6rem;
-      background: rgba(18,6,8,.88);
-      backdrop-filter: blur(14px);
+      background: rgba(14,5,7,.88); backdrop-filter: blur(14px);
       border-bottom: 1px solid rgba(201,168,76,.15);
     }
     .logo { color: var(--gold); font-size: 1.35rem; letter-spacing: .14em; font-variant: small-caps; text-decoration: none; }
     .nav-links { display: flex; gap: 1.6rem; list-style: none; }
     .nav-links a { color: var(--text); text-decoration: none; font-size: .85rem; letter-spacing: .06em; opacity: .8; transition: color .2s, opacity .2s; }
     .nav-links a:hover { color: var(--gold); opacity: 1; }
-    .nav-btn {
-      background: var(--gold); color: var(--dark); border: none;
-      padding: .5rem 1.15rem; border-radius: 6px; font-size: .83rem;
-      cursor: pointer; font-family: inherit; letter-spacing: .05em;
-      transition: background .2s;
-    }
+    .nav-btn { background: var(--gold); color: var(--dark); border: none; padding: .5rem 1.15rem; border-radius: 6px; font-size: .83rem; cursor: pointer; font-family: inherit; letter-spacing: .05em; transition: background .2s; }
     .nav-btn:hover { background: var(--gold2); }
     @media (max-width: 640px) { .nav-links { display: none; } }
 
-    /* ── Hero ── */
-    #hero {
-      position: relative; height: 100svh; min-height: 540px;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      overflow: hidden;
-    }
+    /* Hero */
+    #hero { position: relative; height: 100svh; min-height: 540px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
     #hero-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-    .hero-text {
-      position: relative; z-index: 2; text-align: center; padding: 0 1.4rem; pointer-events: none;
-    }
+    .hero-text { position: relative; z-index: 2; text-align: center; padding: 0 1.4rem; pointer-events: none; }
     .eyebrow { font-size: .72rem; letter-spacing: .26em; color: var(--gold); text-transform: uppercase; margin-bottom: .8rem; }
     h1 { font-size: clamp(2rem, 7vw, 4.6rem); color: var(--cream); line-height: 1.1; text-shadow: 0 4px 30px rgba(0,0,0,.9); margin-bottom: .9rem; }
     h1 em { color: var(--gold); font-style: normal; }
     .hero-sub { font-size: clamp(.88rem, 2.4vw, 1.1rem); color: var(--muted); max-width: 480px; margin: 0 auto 2rem; }
     .hero-btns { pointer-events: all; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
-    .btn-g {
-      background: var(--gold); color: var(--dark); border: none;
-      padding: .78rem 2rem; border-radius: 8px; font-size: .97rem;
-      cursor: pointer; font-family: inherit; letter-spacing: .06em;
-      box-shadow: 0 4px 22px rgba(201,168,76,.38); transition: background .2s, transform .15s;
-    }
+    .btn-g { background: var(--gold); color: var(--dark); border: none; padding: .78rem 2rem; border-radius: 8px; font-size: .97rem; cursor: pointer; font-family: inherit; letter-spacing: .06em; box-shadow: 0 4px 22px rgba(201,168,76,.38); transition: background .2s, transform .15s; }
     .btn-g:hover { background: var(--gold2); transform: translateY(-2px); }
-    .btn-o {
-      background: transparent; color: var(--gold); border: 1.5px solid var(--gold);
-      padding: .78rem 2rem; border-radius: 8px; font-size: .97rem;
-      cursor: pointer; font-family: inherit; letter-spacing: .06em; transition: background .2s, transform .15s;
-    }
+    .btn-o { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); padding: .78rem 2rem; border-radius: 8px; font-size: .97rem; cursor: pointer; font-family: inherit; letter-spacing: .06em; transition: background .2s, transform .15s; }
     .btn-o:hover { background: rgba(201,168,76,.1); transform: translateY(-2px); }
-    .scroll-hint {
-      position: absolute; bottom: 1.8rem; left: 50%; transform: translateX(-50%);
-      z-index: 2; color: var(--muted); font-size: .72rem; letter-spacing: .14em;
-      text-transform: uppercase; text-align: center; animation: bob 2.2s infinite;
-    }
-    .scroll-hint::after {
-      content: ''; display: block; width: 1.5px; height: 34px;
-      background: linear-gradient(to bottom, var(--gold), transparent);
-      margin: .45rem auto 0;
-    }
+    .scroll-hint { position: absolute; bottom: 1.8rem; left: 50%; transform: translateX(-50%); z-index: 2; color: var(--muted); font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; text-align: center; animation: bob 2.2s infinite; }
+    .scroll-hint::after { content: ''; display: block; width: 1.5px; height: 34px; background: linear-gradient(to bottom, var(--gold), transparent); margin: .45rem auto 0; }
     @keyframes bob { 0%,100%{opacity:.55;transform:translateX(-50%) translateY(0)} 50%{opacity:1;transform:translateX(-50%) translateY(6px)} }
 
-    /* ── Wine selector ── */
-    #selector {
-      position: relative; z-index: 2;
-      background: rgba(18,6,8,.7); backdrop-filter: blur(10px);
-      border-top: 1px solid rgba(201,168,76,.15);
-      border-bottom: 1px solid rgba(201,168,76,.15);
-      padding: 2.2rem 1.4rem;
-    }
+    /* Wine selector */
+    #selector { position: relative; z-index: 2; background: rgba(14,5,7,.75); backdrop-filter: blur(10px); border-top: 1px solid rgba(201,168,76,.15); border-bottom: 1px solid rgba(201,168,76,.15); padding: 2.2rem 1.4rem; }
     .sec-label { text-align: center; font-size: .7rem; letter-spacing: .24em; text-transform: uppercase; color: var(--gold); margin-bottom: 1.4rem; }
     .tabs { display: flex; gap: .7rem; justify-content: center; flex-wrap: wrap; }
-    .tab {
-      display: flex; flex-direction: column; align-items: center; gap: .38rem;
-      padding: .85rem 1.2rem; border-radius: 10px;
-      border: 1.5px solid rgba(201,168,76,.2); background: rgba(28,8,13,.55);
-      cursor: pointer; min-width: 90px;
-      transition: border-color .25s, background .25s, transform .15s;
-    }
+    .tab { display: flex; flex-direction: column; align-items: center; gap: .38rem; padding: .85rem 1.2rem; border-radius: 10px; border: 1.5px solid rgba(201,168,76,.2); background: rgba(22,7,9,.55); cursor: pointer; min-width: 90px; transition: border-color .25s, background .25s, transform .15s; }
     .tab:hover { border-color: var(--gold); transform: translateY(-2px); }
     .tab.active { border-color: var(--gold); background: rgba(74,0,16,.8); box-shadow: 0 4px 18px rgba(201,168,76,.2); }
     .swatch { width: 28px; height: 28px; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,.55); }
     .tab-name { font-size: .78rem; color: var(--text); letter-spacing: .05em; text-align: center; }
     .tab-region { font-size: .65rem; color: var(--muted); }
-    .wine-bar {
-      max-width: 540px; margin: 1.4rem auto 0; text-align: center;
-      padding: .95rem 1.4rem; background: rgba(201,168,76,.05);
-      border: 1px solid rgba(201,168,76,.1); border-radius: 8px;
-    }
+    .wine-bar { max-width: 540px; margin: 1.4rem auto 0; text-align: center; padding: .95rem 1.4rem; background: rgba(201,168,76,.05); border: 1px solid rgba(201,168,76,.1); border-radius: 8px; }
     .wine-bar h3 { color: var(--gold); font-size: 1.05rem; margin-bottom: .25rem; }
     .wine-bar p { color: var(--muted); font-size: .85rem; }
 
-    /* ── Experience (4 scenes) ── */
+    /* Experience */
     #experience { position: relative; height: 1000vh; }
-    #exp-sticky {
-      position: sticky; top: 0; height: 100svh; overflow: hidden;
-    }
-    #exp-canvas { display: block; position: absolute; inset: 0; }
+    #exp-sticky { position: sticky; top: 0; height: 100svh; overflow: hidden; }
+    #exp-canvas { display: block; width: 100%; height: 100%; }
 
-    /* scene text overlay */
     .scene-caption {
-      position: absolute; bottom: 0; left: 0; right: 0;
-      padding: 2rem 2rem 3rem; pointer-events: none;
-      background: linear-gradient(to top, rgba(18,6,8,.8) 0%, transparent 100%);
+      position: absolute; bottom: 0; left: 0; right: 0; pointer-events: none;
+      padding: 2rem 2rem 3rem;
+      background: linear-gradient(to top, rgba(14,5,7,.85) 0%, transparent 100%);
     }
     .scene-num { font-size: .65rem; letter-spacing: .22em; color: var(--gold); text-transform: uppercase; margin-bottom: .4rem; }
     .scene-title { font-size: clamp(1.5rem, 5vw, 2.8rem); color: var(--cream); line-height: 1.15; margin-bottom: .35rem; }
     .scene-desc { font-size: clamp(.82rem, 2vw, .97rem); color: var(--muted); max-width: 420px; line-height: 1.7; }
+    .progress-bar { position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: rgba(201,168,76,.15); }
+    .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #6b0a1d, var(--gold)); transition: width .08s linear; }
 
-    .progress-bar {
-      position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
-      background: rgba(201,168,76,.15);
-    }
-    .progress-fill {
-      height: 100%; width: 0%;
-      background: linear-gradient(90deg, var(--bordeaux2), var(--gold));
-      transition: width .08s linear;
-    }
+    /* Canvas 2D overlay for aroma words / taste wheel */
+    #overlay-canvas { position: absolute; inset: 0; pointer-events: none; }
 
-    /* ── Offer / Contact ── */
-    #offer {
-      background: var(--dark2);
-      border-top: 1px solid rgba(201,168,76,.12);
-      padding: 5.5rem 1.4rem 5rem;
-    }
+    /* Offer */
+    #offer { background: var(--dark2); border-top: 1px solid rgba(201,168,76,.12); padding: 5.5rem 1.4rem 5rem; }
     .offer-inner { max-width: 600px; margin: 0 auto; }
     .sec-header { text-align: center; margin-bottom: 2.8rem; }
     .sec-header h2 { font-size: clamp(1.6rem, 4vw, 2.5rem); color: var(--cream); margin-bottom: .55rem; }
@@ -159,33 +93,16 @@
     .frow { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
     @media (max-width: 480px) { .frow { grid-template-columns: 1fr; } }
     label { font-size: .8rem; color: var(--muted); display: block; margin-bottom: .32rem; letter-spacing: .04em; }
-    input, select, textarea {
-      width: 100%; padding: .72rem 1rem;
-      background: rgba(255,255,255,.04); border: 1px solid rgba(201,168,76,.18);
-      border-radius: 8px; color: var(--text); font-family: inherit; font-size: .93rem;
-      transition: border-color .2s, background .2s; -webkit-appearance: none;
-    }
+    input, select, textarea { width: 100%; padding: .72rem 1rem; background: rgba(255,255,255,.04); border: 1px solid rgba(201,168,76,.18); border-radius: 8px; color: var(--text); font-family: inherit; font-size: .93rem; transition: border-color .2s, background .2s; -webkit-appearance: none; }
     input:focus, select:focus, textarea:focus { outline: none; border-color: var(--gold); background: rgba(201,168,76,.04); }
     input.err, select.err { border-color: #d05050; }
     .ferr { color: #d07070; font-size: .73rem; margin-top: .18rem; }
     select option { background: var(--dark2); }
     textarea { resize: vertical; min-height: 90px; }
 
-    .toast {
-      position: fixed; bottom: 1.6rem; left: 50%;
-      transform: translateX(-50%) translateY(90px);
-      background: var(--bordeaux2); border: 1px solid var(--gold);
-      color: var(--cream); padding: .88rem 1.6rem; border-radius: 10px;
-      font-size: .9rem; z-index: 999; transition: transform .35s ease;
-      box-shadow: 0 8px 32px rgba(0,0,0,.6); white-space: nowrap;
-    }
+    .toast { position: fixed; bottom: 1.6rem; left: 50%; transform: translateX(-50%) translateY(90px); background: #6b0a1d; border: 1px solid var(--gold); color: var(--cream); padding: .88rem 1.6rem; border-radius: 10px; font-size: .9rem; z-index: 999; transition: transform .35s ease; box-shadow: 0 8px 32px rgba(0,0,0,.6); white-space: nowrap; }
     .toast.show { transform: translateX(-50%) translateY(0); }
-
-    footer {
-      text-align: center; padding: 2.2rem 1.4rem;
-      border-top: 1px solid rgba(201,168,76,.1);
-      color: var(--muted); font-size: .8rem;
-    }
+    footer { text-align: center; padding: 2.2rem 1.4rem; border-top: 1px solid rgba(201,168,76,.1); color: var(--muted); font-size: .8rem; }
     footer strong { color: var(--gold); }
   </style>
 </head>
@@ -201,7 +118,6 @@
   <button class="nav-btn" onclick="document.getElementById('offer').scrollIntoView({behavior:'smooth'})">Wijn Aanbieden</button>
 </nav>
 
-<!-- ── Hero ── -->
 <section id="hero">
   <canvas id="hero-canvas"></canvas>
   <div class="hero-text">
@@ -216,17 +132,16 @@
   <div class="scroll-hint">Scroll</div>
 </section>
 
-<!-- ── Wine selector ── -->
 <section id="selector">
   <p class="sec-label">Kies jouw wijn</p>
   <div class="tabs" id="tabs"></div>
   <div class="wine-bar" id="wine-bar"></div>
 </section>
 
-<!-- ── 4-scene experience ── -->
 <section id="experience">
   <div id="exp-sticky">
     <canvas id="exp-canvas"></canvas>
+    <canvas id="overlay-canvas"></canvas>
     <div class="scene-caption" id="scene-caption">
       <p class="scene-num" id="sc-num"></p>
       <h2 class="scene-title" id="sc-title"></h2>
@@ -236,7 +151,6 @@
   </div>
 </section>
 
-<!-- ── Offer form ── -->
 <section id="offer">
   <div class="offer-inner">
     <div class="sec-header">
@@ -292,50 +206,226 @@
   <strong>VinRare</strong> &mdash; Beleef, deel en waardeer de mooiste wijnen ter wereld.<br>
   <span style="margin-top:.4rem;display:block">© 2026 VinRare &nbsp;·&nbsp; Alleen voor personen van 18 jaar en ouder.</span>
 </footer>
-
 <div class="toast" id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-/* ════════════════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════════════
    DATA
-════════════════════════════════════════════════════════════════ */
+══════════════════════════════════════════════════════════════ */
 const WINES = [
-  {
-    id: 'bordeaux', name: 'Bordeaux Blend', region: 'Bordeaux, FR', year: '2019',
-    color: '#5c0015', cHex: 0x5c0015, liquid: '#7a0a20',
-    notes: ['Cassis', 'Cederhout', 'Pruim', 'Tabak', 'Violet'],
-    desc: 'Diep granaatrood met aroma\'s van zwarte bes, cederhout en een elegante taninestructuur.',
-    taste: 'Lang en complex — droge tannines, frisse zuurgraad, eindeloze afdronk.',
-  },
-  {
-    id: 'merlot', name: 'Merlot', region: 'Saint-Émilion, FR', year: '2020',
-    color: '#7a0020', cHex: 0x7a0020, liquid: '#921030',
-    notes: ['Rode pruim', 'Chocolade', 'Vanille', 'Koffie', 'Kaneel'],
-    desc: 'Fluwelen textuur met rode pruim, chocolade en een zachte, ronde afdronk.',
-    taste: 'Zacht en vol — fluweelzacht, rijpe tannines, lang en warm.',
-  },
-  {
-    id: 'cabernet', name: 'Cabernet Sauvignon', region: 'Napa Valley, US', year: '2018',
-    color: '#4a0008', cHex: 0x4a0008, liquid: '#600010',
-    notes: ['Zwarte kers', 'Munt', 'Leer', 'Aarde', 'Steenvruchten'],
-    desc: 'Krachtig en gestructureerd — zwarte kersen, tabak, en een lange minerale afdronk.',
-    taste: 'Krachtig en structureel — volle body, intense tannines, oneindig lang.',
-  },
-  {
-    id: 'pinot', name: 'Pinot Noir', region: 'Bourgogne, FR', year: '2021',
-    color: '#8b1a2a', cHex: 0x8b1a2a, liquid: '#a8253a',
-    notes: ['Framboos', 'Aarde', 'Roos', 'Champignon', 'Kruid'],
-    desc: 'Sierlijk en subtiel — rode bosvruchten, aarde en subtiele kruiden.',
-    taste: 'Licht en elegant — fijne tannines, levendig fruit, silky afdronk.',
-  },
+  { id:'bordeaux', name:'Bordeaux Blend',      region:'Bordeaux, FR',      year:'2019', color:'#5c0015', cHex:0x5c0015, lHex:0x7a0a20, liquid:'#7a0a20', notes:['Cassis','Cederhout','Pruim','Tabak','Violet'],       taste:'Lang en complex — droge tannines, frisse zuurgraad.' },
+  { id:'merlot',   name:'Merlot',              region:'Saint-Émilion, FR', year:'2020', color:'#7a0020', cHex:0x7a0020, lHex:0x921030, liquid:'#921030', notes:['Rode pruim','Chocolade','Vanille','Koffie','Kaneel'],  taste:'Zacht en vol — fluweelzacht, rijpe tannines.' },
+  { id:'cabernet', name:'Cabernet Sauvignon',  region:'Napa Valley, US',   year:'2018', color:'#4a0008', cHex:0x4a0008, lHex:0x600010, liquid:'#600010', notes:['Zwarte kers','Munt','Leer','Aarde','Steenvruchten'],  taste:'Krachtig — volle body, intense tannines, oneindig lang.' },
+  { id:'pinot',    name:'Pinot Noir',          region:'Bourgogne, FR',     year:'2021', color:'#8b1a2a', cHex:0x8b1a2a, lHex:0xa8253a, liquid:'#a8253a', notes:['Framboos','Aarde','Roos','Champignon','Kruid'],       taste:'Licht en elegant — fijne tannines, levendig fruit.' },
 ];
-
 let activeWine = WINES[0];
 
-/* ════════════════════════════════════════════════════════════════
-   HERO — Three.js
-════════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════
+   SHARED THREE.JS GLASS BUILDER
+   Returns a Group: glass bowl, stem, base, liquid mesh
+══════════════════════════════════════════════════════════════ */
+function buildWineGlass(scale) {
+  const s = scale || 1;
+  const group = new THREE.Group();
+
+  // --- Glass profile (Bordeaux / Cabernet shape) ---
+  const glassPoints = [
+    new THREE.Vector2(0.195 * s, -0.66 * s),
+    new THREE.Vector2(0.200 * s, -0.64 * s),
+    new THREE.Vector2(0.200 * s, -0.62 * s),
+    new THREE.Vector2(0.028 * s, -0.60 * s),
+    new THREE.Vector2(0.024 * s, -0.38 * s),
+    new THREE.Vector2(0.024 * s, -0.18 * s),
+    new THREE.Vector2(0.036 * s, -0.14 * s),
+    new THREE.Vector2(0.080 * s, -0.02 * s),
+    new THREE.Vector2(0.140 * s,  0.15 * s),
+    new THREE.Vector2(0.205 * s,  0.35 * s),
+    new THREE.Vector2(0.255 * s,  0.55 * s),
+    new THREE.Vector2(0.278 * s,  0.72 * s),
+    new THREE.Vector2(0.280 * s,  0.82 * s),
+    new THREE.Vector2(0.272 * s,  0.90 * s),
+    new THREE.Vector2(0.265 * s,  0.94 * s),
+  ];
+
+  const glassMat = new THREE.MeshPhysicalMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.18,
+    roughness: 0.0,
+    metalness: 0.0,
+    reflectivity: 1.0,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+
+  const glassGeo = new THREE.LatheGeometry(glassPoints, 64);
+  const glassMesh = new THREE.Mesh(glassGeo, glassMat);
+  group.add(glassMesh);
+
+  // Rim ring for visibility
+  const rimRing = new THREE.Mesh(
+    new THREE.TorusGeometry(0.265 * s, 0.006 * s, 8, 64),
+    new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.45, roughness: 0.0 })
+  );
+  rimRing.position.y = 0.94 * s;
+  group.add(rimRing);
+
+  // Liquid (wine) — starts empty, scaled up on pour
+  const liquidPoints = [
+    new THREE.Vector2(0.000 * s,  -0.14 * s),
+    new THREE.Vector2(0.070 * s,  -0.01 * s),
+    new THREE.Vector2(0.130 * s,   0.15 * s),
+    new THREE.Vector2(0.185 * s,   0.33 * s),
+    new THREE.Vector2(0.230 * s,   0.52 * s),
+    new THREE.Vector2(0.255 * s,   0.68 * s),
+    new THREE.Vector2(0.262 * s,   0.80 * s),
+    new THREE.Vector2(0.255 * s,   0.86 * s),
+  ];
+
+  const liquidMat = new THREE.MeshPhysicalMaterial({
+    color: new THREE.Color(activeWine.lHex),
+    transparent: true,
+    opacity: 0.92,
+    roughness: 0.04,
+    metalness: 0.0,
+    side: THREE.DoubleSide,
+  });
+  const liquidGeo = new THREE.LatheGeometry(liquidPoints, 64);
+  const liquidMesh = new THREE.Mesh(liquidGeo, liquidMat);
+  liquidMesh.scale.y = 0.001;
+  liquidMesh.visible = false;
+  group.add(liquidMesh);
+
+  // Surface disc (top of wine)
+  const surfaceMat = new THREE.MeshPhysicalMaterial({
+    color: new THREE.Color(activeWine.lHex),
+    transparent: true, opacity: 0.88, roughness: 0.04, metalness: 0.0,
+  });
+  const surfaceMesh = new THREE.Mesh(new THREE.CircleGeometry(0.001, 48), surfaceMat);
+  surfaceMesh.rotation.x = -Math.PI / 2;
+  surfaceMesh.position.y = -0.14 * s;
+  group.add(surfaceMesh);
+
+  group._liquid     = liquidMesh;
+  group._surface    = surfaceMesh;
+  group._liquidMat  = liquidMat;
+  group._surfaceMat = surfaceMat;
+  group._s          = s;
+
+  group.setFill = function(t) {
+    const f = Math.max(0, Math.min(1, t));
+    if (f > 0.01) {
+      liquidMesh.visible = true;
+      liquidMesh.scale.y = f;
+      // surface at top of fill
+      const topY = -0.14 * s + (0.86 - (-0.14)) * s * f;
+      surfaceMesh.position.y = topY;
+      // surface radius interpolated
+      const r = 0.07 * s + (0.262 - 0.07) * s * f * 0.88;
+      surfaceMesh.scale.setScalar(r / 0.001);
+    } else {
+      liquidMesh.visible = false;
+    }
+  };
+
+  group.setColor = function(hex) {
+    liquidMat.color.set(hex);
+    surfaceMat.color.set(hex);
+  };
+
+  return group;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SHARED BOTTLE BUILDER
+══════════════════════════════════════════════════════════════ */
+function buildBottle(scale) {
+  const s = scale || 1;
+  const group = new THREE.Group();
+
+  const bottleProfile = [
+    new THREE.Vector2(0.000 * s, -0.95 * s),
+    new THREE.Vector2(0.145 * s, -0.93 * s),
+    new THREE.Vector2(0.150 * s, -0.88 * s),
+    new THREE.Vector2(0.150 * s,  0.28 * s),
+    new THREE.Vector2(0.145 * s,  0.34 * s),
+    new THREE.Vector2(0.110 * s,  0.48 * s),
+    new THREE.Vector2(0.058 * s,  0.60 * s),
+    new THREE.Vector2(0.050 * s,  0.92 * s),
+    new THREE.Vector2(0.055 * s,  0.96 * s),
+    new THREE.Vector2(0.055 * s,  1.00 * s),
+  ];
+
+  const glassMat = new THREE.MeshPhysicalMaterial({
+    color: 0x1a3a1a,
+    transparent: true,
+    opacity: 0.82,
+    roughness: 0.06,
+    metalness: 0.05,
+    reflectivity: 0.9,
+    side: THREE.FrontSide,
+  });
+
+  const bottleGeo = new THREE.LatheGeometry(bottleProfile, 64);
+  const bottleMesh = new THREE.Mesh(bottleGeo, glassMat);
+  group.add(bottleMesh);
+
+  // Bottom cap
+  const cap = new THREE.Mesh(
+    new THREE.CircleGeometry(0.145 * s, 48),
+    new THREE.MeshStandardMaterial({ color: 0x0d200d, roughness: 0.8 })
+  );
+  cap.rotation.x = Math.PI / 2;
+  cap.position.y = -0.93 * s;
+  group.add(cap);
+
+  // Foil capsule
+  const foilProfile = [
+    new THREE.Vector2(0.058 * s, 0.78 * s),
+    new THREE.Vector2(0.060 * s, 0.78 * s),
+    new THREE.Vector2(0.060 * s, 1.02 * s),
+    new THREE.Vector2(0.058 * s, 1.04 * s),
+  ];
+  const foil = new THREE.Mesh(
+    new THREE.LatheGeometry(foilProfile, 32),
+    new THREE.MeshStandardMaterial({ color: 0xc9a84c, roughness: 0.25, metalness: 0.75 })
+  );
+  group.add(foil);
+
+  // Label
+  const labelGeo = new THREE.CylinderGeometry(0.152 * s, 0.152 * s, 0.46 * s, 32, 1, true, -0.9, 2.5);
+  const label = new THREE.Mesh(labelGeo, new THREE.MeshStandardMaterial({ color: 0xf5ede0, roughness: 0.9, side: THREE.FrontSide }));
+  label.position.y = -0.08 * s;
+  group.add(label);
+
+  // Wine inside bottle
+  const wineProfile = [
+    new THREE.Vector2(0.000 * s, -0.92 * s),
+    new THREE.Vector2(0.138 * s, -0.90 * s),
+    new THREE.Vector2(0.138 * s,  0.20 * s),
+    new THREE.Vector2(0.048 * s,  0.55 * s),
+    new THREE.Vector2(0.038 * s,  0.62 * s),
+  ];
+  const wineMat = new THREE.MeshPhysicalMaterial({
+    color: new THREE.Color(activeWine.lHex),
+    transparent: true, opacity: 0.9, roughness: 0.05,
+  });
+  const wineInBottle = new THREE.Mesh(new THREE.LatheGeometry(wineProfile, 48), wineMat);
+  group.add(wineInBottle);
+
+  group._wineMat = wineMat;
+  group.setColor = function(hex) { wineMat.color.set(hex); };
+
+  // Neck tip position (local space, top of bottle)
+  group._neckTip = new THREE.Vector3(0, 1.04 * s, 0);
+
+  return group;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   HERO SCENE
+══════════════════════════════════════════════════════════════ */
 (function() {
   const canvas = document.getElementById('hero-canvas');
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -343,94 +433,60 @@ let activeWine = WINES[0];
   renderer.setSize(canvas.parentElement.offsetWidth, canvas.parentElement.offsetHeight);
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(45, canvas.offsetWidth / canvas.offsetHeight, .1, 100);
-  camera.position.set(0, .4, 5);
+  const camera = new THREE.PerspectiveCamera(42, canvas.offsetWidth / canvas.offsetHeight, 0.01, 50);
+  camera.position.set(0, 0.15, 3.8);
+  camera.lookAt(0, 0.1, 0);
 
-  scene.add(new THREE.AmbientLight(0xffeedd, .45));
-  const p1 = new THREE.PointLight(0xc9a84c, 2.2, 15); p1.position.set(3, 4, 3); scene.add(p1);
-  const p2 = new THREE.PointLight(0x8b0000, 1.6, 12); p2.position.set(-3, -2, 2); scene.add(p2);
+  scene.add(new THREE.AmbientLight(0xfff5ee, 0.35));
+  const k = new THREE.DirectionalLight(0xfff0e0, 2.2); k.position.set(2, 3, 2); scene.add(k);
+  const r = new THREE.DirectionalLight(0xc9a84c, 1.6); r.position.set(-2, 1, -1); scene.add(r);
+  const f = new THREE.PointLight(0x8b1020, 1.2, 8); f.position.set(0, -1.5, 1.5); scene.add(f);
 
-  const gMat = new THREE.MeshPhysicalMaterial({ color: 0x1a3a1a, transparent: true, opacity: .78, roughness: .05, metalness: .1 });
-
-  function makeBottle(ox, oy) {
-    const g = new THREE.Group();
-    const add = (geo, mat, py) => { const m = new THREE.Mesh(geo, mat); m.position.y = py; g.add(m); };
-    add(new THREE.CylinderGeometry(.28,.28,1.6,32), gMat, 0);
-    add(new THREE.CylinderGeometry(.1,.22,.55,32), gMat, 1.075);
-    add(new THREE.CylinderGeometry(.08,.1,.3,32), gMat, 1.5);
-    add(new THREE.CylinderGeometry(.28,.28,.04,32), new THREE.MeshStandardMaterial({color:0x0d200d,roughness:.8}), -.82);
-    const liqMat = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(activeWine.cHex), transparent: true, opacity: .88, roughness: .1 });
-    add(new THREE.CylinderGeometry(.25,.25,1.1,32), liqMat, -.2);
-    add(new THREE.CylinderGeometry(.115,.115,.22,32), new THREE.MeshStandardMaterial({color:0xc9a84c,roughness:.3,metalness:.7}), 1.6);
-    const lbl = new THREE.Mesh(new THREE.PlaneGeometry(.44,.58), new THREE.MeshStandardMaterial({color:0xf5ede0,roughness:.9}));
-    lbl.position.set(0,.05,.286); g.add(lbl);
-    g.position.set(ox, oy, 0); g.rotation.z = .1;
-    g._liqMat = liqMat;
-    return g;
-  }
-
-  const bottle = makeBottle(-.5, -.3);
+  const bottle = buildBottle(0.9);
+  bottle.position.set(-0.7, -0.15, 0);
+  bottle.rotation.z = 0.08;
   scene.add(bottle);
 
-  // Glass
-  const glassG = new THREE.Group();
-  const sMat = new THREE.MeshPhysicalMaterial({color:0xddcccc,transparent:true,opacity:.52,roughness:.05});
-  const addG = (geo, py) => { const m = new THREE.Mesh(geo, sMat); m.position.y = py; glassG.add(m); };
-  addG(new THREE.CylinderGeometry(.38,.18,.7,32,1,true), .35);
-  addG(new THREE.TorusGeometry(.38,.015,8,32), .7);
-  addG(new THREE.CylinderGeometry(.18,.18,.02,32), 0);
-  addG(new THREE.CylinderGeometry(.025,.025,.65,12), -.325);
-  addG(new THREE.CylinderGeometry(.28,.3,.03,32), -.665);
-  const wineInGlass = new THREE.Mesh(new THREE.CylinderGeometry(.34,.15,.6,32), new THREE.MeshPhysicalMaterial({color:new THREE.Color(activeWine.cHex),transparent:true,opacity:.84,roughness:.05}));
-  wineInGlass.position.y = -.05; wineInGlass.scale.y = .001; glassG.add(wineInGlass);
-  glassG.position.set(1.2, -.2, .5); glassG.scale.setScalar(.85); scene.add(glassG);
-
-  // Particles
-  const pPos = new Float32Array(100 * 3);
-  for (let i = 0; i < 100; i++) { pPos[i*3]=(Math.random()-.5)*8; pPos[i*3+1]=(Math.random()-.5)*6; pPos[i*3+2]=(Math.random()-.5)*4-1; }
-  const pts = new THREE.Points(
-    Object.assign(new THREE.BufferGeometry(), {}).setAttribute('position', new THREE.BufferAttribute(pPos,3)),
-    new THREE.PointsMaterial({color:0xc9a84c,size:.04,transparent:true,opacity:.38})
-  );
-  scene.add(pts);
+  const glass = buildWineGlass(0.88);
+  glass.position.set(0.65, -0.1, 0);
+  scene.add(glass);
 
   let t = 0, heroFill = 0, tHeroFill = 0;
-  window._setHeroFill = v => tHeroFill = v;
+  window._setHeroFill = v => { tHeroFill = v; };
   window._setWineColor = hex => {
-    bottle._liqMat.color.set(hex);
-    wineInGlass.material.color.set(hex);
+    bottle.setColor(hex);
+    glass.setColor(hex);
   };
 
   (function animate() {
     requestAnimationFrame(animate);
-    t += .008;
-    bottle.rotation.y = t * .4 + Math.sin(t * .3) * .15;
-    bottle.position.y = -.3 + Math.sin(t * .5) * .06;
-    glassG.rotation.y = -t * .25;
-    pts.rotation.y = t * .05; pts.rotation.x = t * .03;
-    heroFill += (tHeroFill - heroFill) * .04;
-    wineInGlass.scale.y = Math.max(.001, heroFill);
-    wineInGlass.position.y = -.05 + (heroFill - .001) * .3;
+    t += 0.008;
+    bottle.rotation.y = t * 0.38 + Math.sin(t * 0.28) * 0.14;
+    bottle.position.y = -0.15 + Math.sin(t * 0.5) * 0.05;
+    glass.rotation.y  = -t * 0.22;
+    heroFill += (tHeroFill - heroFill) * 0.04;
+    glass.setFill(heroFill);
     renderer.render(scene, camera);
   })();
 
   window.addEventListener('resize', () => {
     const w = canvas.parentElement.offsetWidth, h = canvas.parentElement.offsetHeight;
-    camera.aspect = w / h; camera.updateProjectionMatrix(); renderer.setSize(w, h);
+    camera.aspect = w / h; camera.updateProjectionMatrix();
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(w, h);
   });
 })();
 
-/* ════════════════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════════════
    WINE SELECTOR
-════════════════════════════════════════════════════════════════ */
+══════════════════════════════════════════════════════════════ */
 (function() {
-  const tabsEl  = document.getElementById('tabs');
-  const barEl   = document.getElementById('wine-bar');
-
-  function setBar(w) {
-    barEl.innerHTML = `<h3>${w.name} · ${w.year}</h3><p>${w.region} — ${w.desc}</p>`;
-  }
-
+  const tabsEl = document.getElementById('tabs');
+  const barEl  = document.getElementById('wine-bar');
+  const descs  = ['Diep granaatrood met aroma\'s van zwarte bes, cederhout en elegante tannines.',
+                   'Fluwelen textuur met rode pruim, chocolade en een zachte, ronde afdronk.',
+                   'Krachtig en gestructureerd — zwarte kersen, tabak, lange minerale afdronk.',
+                   'Sierlijk en subtiel — rode bosvruchten, aarde en subtiele kruiden.'];
   WINES.forEach((w, i) => {
     const btn = document.createElement('button');
     btn.className = 'tab' + (i === 0 ? ' active' : '');
@@ -439,479 +495,429 @@ let activeWine = WINES[0];
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       btn.classList.add('active');
       activeWine = w;
-      setBar(w);
-      if (window._setWineColor) window._setWineColor(w.cHex);
+      barEl.innerHTML = `<h3>${w.name} · ${w.year}</h3><p>${w.region} — ${descs[i]}</p>`;
+      if (window._setWineColor) window._setWineColor(w.lHex);
+      if (window._expSetColor)  window._expSetColor(w.lHex);
     });
     tabsEl.appendChild(btn);
   });
-  setBar(WINES[0]);
+  barEl.innerHTML = `<h3>${WINES[0].name} · ${WINES[0].year}</h3><p>${WINES[0].region} — ${descs[0]}</p>`;
 })();
 
-/* ════════════════════════════════════════════════════════════════
-   4-SCENE SCROLL EXPERIENCE
-════════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════
+   EXPERIENCE — Three.js 4-scene scroll
+══════════════════════════════════════════════════════════════ */
 (function() {
-  const canvas = document.getElementById('exp-canvas');
-  const ctx    = canvas.getContext('2d');
-  let rafId    = null;
+  const expCanvas = document.getElementById('exp-canvas');
+  const ovCanvas  = document.getElementById('overlay-canvas');
+  const ovCtx     = ovCanvas.getContext('2d');
 
-  /* scene definitions */
+  /* renderer */
+  const renderer = new THREE.WebGLRenderer({ canvas: expCanvas, antialias: true, alpha: false });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setClearColor(0x0e0507, 1);
+  renderer.shadowMap.enabled = false;
+
+  const scene  = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(42, 1, 0.01, 50);
+  camera.position.set(0, 0.2, 3.4);
+  camera.lookAt(0, 0.1, 0);
+
+  function resizeAll() {
+    const w = window.innerWidth, h = window.innerHeight;
+    renderer.setSize(w, h);
+    camera.aspect = w / h; camera.updateProjectionMatrix();
+    ovCanvas.width  = w * devicePixelRatio;
+    ovCanvas.height = h * devicePixelRatio;
+    ovCanvas.style.width  = w + 'px';
+    ovCanvas.style.height = h + 'px';
+  }
+  resizeAll();
+  window.addEventListener('resize', resizeAll, { passive: true });
+
+  /* lighting */
+  scene.add(new THREE.AmbientLight(0xfff5ee, 0.28));
+  const keyL = new THREE.DirectionalLight(0xfff8f0, 2.8); keyL.position.set(1.5, 3, 2.5); scene.add(keyL);
+  const rimL = new THREE.DirectionalLight(0xc9a84c, 2.0); rimL.position.set(-2, 0.5, -1); scene.add(rimL);
+  const fillL = new THREE.PointLight(0x8b1020, 1.4, 10); fillL.position.set(0.5, -1.5, 2); scene.add(fillL);
+  const backL = new THREE.PointLight(0x3a0010, 1.0, 8);  backL.position.set(-1, 1, -2); scene.add(backL);
+
+  /* objects */
+  const bottle = buildBottle(0.85);
+  bottle.position.set(0.9, 0.0, 0);
+  scene.add(bottle);
+
+  const glass = buildWineGlass(0.92);
+  glass.position.set(-0.05, -0.12, 0);
+  scene.add(glass);
+
+  /* pour stream — tube that follows a bezier from bottle neck to glass rim */
+  const STREAM_SEGMENTS = 20;
+  const streamCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0.9, 1.0, 0),
+    new THREE.Vector3(0.5, 0.6, 0),
+    new THREE.Vector3(0.1, 0.6, 0),
+    new THREE.Vector3(-0.05, 0.82, 0),
+  ]);
+  const streamGeo = new THREE.TubeGeometry(streamCurve, STREAM_SEGMENTS, 0.014, 8, false);
+  const streamMat = new THREE.MeshPhysicalMaterial({
+    color: new THREE.Color(activeWine.lHex),
+    transparent: true, opacity: 0.88, roughness: 0.05,
+  });
+  const streamMesh = new THREE.Mesh(streamGeo, streamMat);
+  streamMesh.visible = false;
+  scene.add(streamMesh);
+
+  /* splash particles at glass rim */
+  const SPLASH_COUNT = 80;
+  const splashGeo = new THREE.BufferGeometry();
+  const splashPos = new Float32Array(SPLASH_COUNT * 3);
+  const splashVel = [];
+  for (let i = 0; i < SPLASH_COUNT; i++) {
+    splashPos[i*3] = splashPos[i*3+1] = splashPos[i*3+2] = 999;
+    splashVel.push({ vx:0, vy:0, vz:0, life:0, maxLife:1 });
+  }
+  splashGeo.setAttribute('position', new THREE.BufferAttribute(splashPos, 3));
+  const splashMesh = new THREE.Points(splashGeo, new THREE.PointsMaterial({
+    color: new THREE.Color(activeWine.lHex), size: 0.018, transparent: true, opacity: 0.85, sizeAttenuation: true,
+  }));
+  splashMesh.visible = false;
+  scene.add(splashMesh);
+
+  /* aroma particles */
+  const AROMA_COUNT = 60;
+  const aromaGeo = new THREE.BufferGeometry();
+  const aromaPos = new Float32Array(AROMA_COUNT * 3);
+  const aromaData = [];
+  for (let i = 0; i < AROMA_COUNT; i++) {
+    aromaPos[i*3] = aromaPos[i*3+1] = aromaPos[i*3+2] = 999;
+    aromaData.push({ life: Math.random(), phase: Math.random() * Math.PI * 2 });
+  }
+  aromaGeo.setAttribute('position', new THREE.BufferAttribute(aromaPos, 3));
+  const aromaMesh = new THREE.Points(aromaGeo, new THREE.PointsMaterial({
+    color: new THREE.Color(activeWine.lHex), size: 0.012, transparent: true, opacity: 0.6, sizeAttenuation: true,
+  }));
+  aromaMesh.visible = false;
+  scene.add(aromaMesh);
+
+  window._expSetColor = function(hex) {
+    bottle.setColor(hex);
+    glass.setColor(hex);
+    streamMat.color.set(hex);
+    splashMesh.material.color.set(hex);
+    aromaMesh.material.color.set(hex);
+  };
+
+  /* scene state */
+  let globalP = 0;
+  let pourFill = 0, tPourFill = 0;
+  let bottleAngle = 0, tBottleAngle = 0;
+  let swirlAngle = 0;
+  let camX = 0, tCamX = 0, camY = 0.2, tCamY = 0.2, camZ = 3.4, tCamZ = 3.4;
+  let splashActive = false, splashTimer = 0;
+  let aromaT = 0;
+
+  function rebuildStream(tilt) {
+    if (tilt < 0.15) { streamMesh.visible = false; return; }
+    streamMesh.visible = true;
+
+    // bottle neck tip in world space
+    const s = 0.85;
+    const neckTipLocal = new THREE.Vector3(0, 1.04 * s, 0);
+    const neckWorld = neckTipLocal.clone().applyEuler(new THREE.Euler(0, 0, -tilt)).add(bottle.position);
+
+    // glass rim centre
+    const rimWorld = new THREE.Vector3(-0.05, 0.82 * 0.92 + glass.position.y, 0);
+
+    // bezier control points — arc through air
+    const mid1 = new THREE.Vector3(
+      neckWorld.x * 0.6 + rimWorld.x * 0.4,
+      Math.max(neckWorld.y, rimWorld.y) + 0.3 + tilt * 0.15,
+      0
+    );
+    const mid2 = new THREE.Vector3(
+      neckWorld.x * 0.2 + rimWorld.x * 0.8,
+      rimWorld.y + 0.25,
+      0
+    );
+
+    const curve = new THREE.CatmullRomCurve3([neckWorld, mid1, mid2, rimWorld]);
+    const newGeo = new THREE.TubeGeometry(curve, STREAM_SEGMENTS, 0.009 + tilt * 0.018, 8, false);
+    streamMesh.geometry.dispose();
+    streamMesh.geometry = newGeo;
+  }
+
+  function spawnSplash() {
+    const gx = -0.05, gy = 0.82 * 0.92 + glass.position.y;
+    for (let i = 0; i < SPLASH_COUNT; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const spd = 0.02 + Math.random() * 0.06;
+      splashVel[i].vx = Math.cos(a) * spd;
+      splashVel[i].vy = 0.04 + Math.random() * 0.06;
+      splashVel[i].vz = Math.sin(a) * spd;
+      splashVel[i].life = 1;
+      splashVel[i].maxLife = 0.6 + Math.random() * 0.5;
+      splashPos[i*3]   = gx + (Math.random() - 0.5) * 0.12;
+      splashPos[i*3+1] = gy;
+      splashPos[i*3+2] = (Math.random() - 0.5) * 0.12;
+    }
+    splashGeo.attributes.position.needsUpdate = true;
+    splashMesh.visible = true;
+    splashActive = true;
+    splashTimer = 60;
+  }
+
+  let lastPourFill = 0;
+
+  function updateScene1(sp) {
+    tBottleAngle = sp < 0.04 ? 0 : Math.min(1.55, sp * 2.05);
+    tPourFill    = Math.max(0, (sp - 0.06) / 0.94);
+    bottleAngle += (tBottleAngle - bottleAngle) * 0.07;
+    pourFill    += (tPourFill    - pourFill)    * 0.04;
+
+    bottle.rotation.z = -bottleAngle;
+    glass.setFill(pourFill);
+
+    rebuildStream(bottleAngle);
+
+    // splash when glass starts filling
+    if (pourFill > 0.02 && lastPourFill <= 0.02) { spawnSplash(); }
+    lastPourFill = pourFill;
+
+    // update splash
+    if (splashActive) {
+      splashTimer--;
+      for (let i = 0; i < SPLASH_COUNT; i++) {
+        const v = splashVel[i];
+        if (v.life <= 0) { splashPos[i*3+1] = 999; continue; }
+        v.life -= 0.022;
+        v.vy   -= 0.003;
+        splashPos[i*3]   += v.vx;
+        splashPos[i*3+1] += v.vy;
+        splashPos[i*3+2] += v.vz;
+      }
+      splashGeo.attributes.position.needsUpdate = true;
+      if (splashTimer <= 0) { splashMesh.visible = false; splashActive = false; }
+    }
+
+    tCamX = -0.1; tCamY = 0.2; tCamZ = 3.4;
+    bottle.visible = true; aromaMesh.visible = false;
+  }
+
+  function updateScene2(sp) {
+    // swirl — bottle exits stage, glass stays filled, camera slowly orbits
+    swirlAngle += 0.025;
+    bottle.rotation.z = Math.max(0, 1.55 - sp * 3);
+    bottle.position.x = 0.9 + sp * 2.5;  // slide off screen
+    glass.setFill(1);
+    streamMesh.visible = false;
+    splashMesh.visible = false;
+    aromaMesh.visible  = false;
+
+    // camera gentle orbit
+    tCamX = Math.sin(swirlAngle * 0.4) * 0.4;
+    tCamY = 0.28 + sp * 0.15;
+    tCamZ = 3.4 - sp * 0.4;
+
+    // wine surface swirl — rotate the surface mesh
+    if (glass._surface) glass._surface.rotation.y = swirlAngle * 2;
+  }
+
+  function updateScene3(sp) {
+    // aroma — glass centred, particles rise, camera close
+    aromaT += 0.018;
+    bottle.position.x = 99;
+    glass.setFill(0.88);
+    streamMesh.visible = false;
+    splashMesh.visible = false;
+    aromaMesh.visible  = true;
+
+    // update aroma particles
+    const glassX = glass.position.x, glassY = glass.position.y;
+    for (let i = 0; i < AROMA_COUNT; i++) {
+      const d = aromaData[i];
+      d.life -= 0.008;
+      if (d.life <= 0) {
+        d.life  = 0.7 + Math.random() * 0.3;
+        d.phase = Math.random() * Math.PI * 2;
+        aromaPos[i*3]   = glassX + (Math.random() - 0.5) * 0.36;
+        aromaPos[i*3+1] = glassY + 0.82 * 0.92 - 0.04;
+        aromaPos[i*3+2] = (Math.random() - 0.5) * 0.12;
+      }
+      aromaPos[i*3]   += Math.sin(aromaT * 1.1 + d.phase) * 0.006;
+      aromaPos[i*3+1] += 0.007;
+      aromaPos[i*3+2] += Math.cos(aromaT * 0.9 + d.phase) * 0.004;
+    }
+    aromaGeo.attributes.position.needsUpdate = true;
+
+    tCamX = 0; tCamY = 0.35 + sp * 0.1; tCamZ = 2.8 - sp * 0.3;
+  }
+
+  function updateScene4(sp) {
+    // taste — close-up, warm glow
+    bottle.position.x = 99;
+    glass.setFill(0.82);
+    streamMesh.visible = false;
+    splashMesh.visible = false;
+    aromaMesh.visible  = false;
+
+    // camera close in on glass
+    tCamX = 0; tCamY = 0.45 + sp * 0.1; tCamZ = 2.2 - sp * 0.5;
+
+    // warm pulsing fill light
+    const pulse = 0.5 + 0.5 * Math.sin(Date.now() * 0.002);
+    fillL.intensity = 1.4 + sp * 2.0 * pulse;
+    fillL.color.set(new THREE.Color(activeWine.lHex));
+  }
+
+  /* 2D overlay: aroma words (scene 3) + taste wheel (scene 4) */
+  let aromaOvT = 0;
+  function drawOverlay(W, H, sceneIdx, sp) {
+    ovCtx.clearRect(0, 0, W * devicePixelRatio, H * devicePixelRatio);
+    ovCtx.save();
+    ovCtx.scale(devicePixelRatio, devicePixelRatio);
+
+    if (sceneIdx === 2) {
+      // Aroma word cloud
+      aromaOvT += 0.012;
+      const notes = activeWine.notes;
+      notes.forEach((note, i) => {
+        const angle = (i / notes.length) * Math.PI * 1.1 - Math.PI * 0.55;
+        const dist  = H * 0.18 + Math.sin(aromaOvT + i * 1.3) * H * 0.02;
+        const wx    = W * 0.5  + Math.cos(angle) * W * 0.25;
+        const wy    = H * 0.35 - dist * sp;
+        const alpha = sp * (0.5 + 0.5 * Math.sin(aromaOvT * 0.8 + i * 1.1));
+        ovCtx.save();
+        ovCtx.globalAlpha = Math.max(0, Math.min(1, alpha));
+        ovCtx.font = `italic ${Math.min(W, H) * 0.034}px Georgia, serif`;
+        ovCtx.fillStyle = '#c9a84c';
+        ovCtx.textAlign = 'center';
+        ovCtx.fillText(note, wx, wy);
+        ovCtx.restore();
+      });
+    }
+
+    if (sceneIdx === 3) {
+      // Flavour wheel
+      const cx = W * 0.5, cy = H * 0.3;
+      const R  = Math.min(W, H) * 0.14;
+      const labels = ['Fruit', 'Structuur', 'Zuur', 'Tannine', 'Afdronk'];
+      const vals   = [0.85, 0.78, 0.62, 0.72, 0.9];
+
+      ovCtx.save();
+      ovCtx.globalAlpha = sp;
+
+      // filled polygon
+      ovCtx.beginPath();
+      labels.forEach((_, i) => {
+        const a = (i / labels.length) * Math.PI * 2 - Math.PI * 0.5;
+        const r = R * vals[i] * sp;
+        i === 0 ? ovCtx.moveTo(cx + Math.cos(a)*r, cy + Math.sin(a)*r)
+                : ovCtx.lineTo(cx + Math.cos(a)*r, cy + Math.sin(a)*r);
+      });
+      ovCtx.closePath();
+      ovCtx.fillStyle = activeWine.liquid + '55';
+      ovCtx.fill();
+      ovCtx.strokeStyle = '#c9a84c88';
+      ovCtx.lineWidth = 1.5;
+      ovCtx.stroke();
+
+      // labels
+      ovCtx.font = `${Math.min(W,H)*0.026}px Georgia, serif`;
+      ovCtx.fillStyle = '#c9a84c';
+      ovCtx.textAlign = 'center';
+      ovCtx.textBaseline = 'middle';
+      labels.forEach((lbl, i) => {
+        const a = (i / labels.length) * Math.PI * 2 - Math.PI * 0.5;
+        ovCtx.fillText(lbl, cx + Math.cos(a) * (R + Math.min(W,H)*0.07), cy + Math.sin(a) * (R + Math.min(W,H)*0.07));
+      });
+
+      // Proost
+      if (sp > 0.75) {
+        const fa = (sp - 0.75) / 0.25;
+        ovCtx.globalAlpha = fa;
+        ovCtx.font = `${Math.min(W,H)*0.1}px Georgia, serif`;
+        ovCtx.fillStyle = '#c9a84c';
+        ovCtx.textAlign = 'center';
+        ovCtx.textBaseline = 'middle';
+        ovCtx.fillText('Proost', W * 0.5, H * 0.62);
+      }
+      ovCtx.restore();
+    }
+
+    ovCtx.restore();
+  }
+
+  /* main render loop */
   const SCENES = [
-    { num: '01', title: 'Inschenken',   desc: 'Scroll en voel hoe de wijn langzaam in het glas vloeit.' },
-    { num: '02', title: 'Zwenken',      desc: 'Beweeg het glas — laat zuurstof zijn werk doen en de tannines openen.' },
-    { num: '03', title: 'Ruiken',       desc: 'Buig voorover — proef met je neus voor je lippen de rand raken.' },
-    { num: '04', title: 'Proeven',      desc: 'Laat de smaak zich ontvouwen. Frucht, structuur, de lange afdronk.' },
+    { num:'01', title:'Inschenken',  desc:'Scroll en voel hoe de wijn langzaam in het glas vloeit.' },
+    { num:'02', title:'Zwenken',     desc:'Beweeg het glas — laat zuurstof zijn werk doen.' },
+    { num:'03', title:'Ruiken',      desc:'Buig voorover — proef met je neus voor je lippen de rand raken.' },
+    { num:'04', title:'Proeven',     desc:'Laat de smaak zich ontvouwen. Fruit, structuur, de lange afdronk.' },
   ];
 
-  /* resize */
-  function resize() {
-    canvas.width  = window.innerWidth  * devicePixelRatio;
-    canvas.height = window.innerHeight * devicePixelRatio;
-    canvas.style.width  = window.innerWidth  + 'px';
-    canvas.style.height = window.innerHeight + 'px';
-  }
-  resize();
-  window.addEventListener('resize', resize, { passive: true });
-
-  /* ── drawing helpers ── */
-  function rrect(x, y, w, h, r) {
-    ctx.moveTo(x + r, y);
-    ctx.lineTo(x + w - r, y);
-    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-    ctx.lineTo(x + w, y + h - r);
-    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-    ctx.lineTo(x + r, y + h);
-    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-    ctx.lineTo(x, y + r);
-    ctx.quadraticCurveTo(x, y, x + r, y);
-    ctx.closePath();
-  }
-
-  /* glass geometry helper */
-  function glassGeom(W, H) {
-    const cx  = W * .5;
-    const sc  = Math.min(W, H) * .42;
-    const gTop  = H * .12;
-    const gBot  = H * .72;
-    const rimW  = sc * .38;
-    const botW  = sc * .16;
-    const stemT = H * .75;
-    const baseY = H * .84;
-    return { cx, gTop, gBot, rimW, botW, stemT, baseY };
-  }
-
-  /* draw the glass with optional fill */
-  function drawGlass(W, H, fill, wineColor) {
-    const { cx, gTop, gBot, rimW, botW, stemT, baseY } = glassGeom(W, H);
-
-    if (fill > 0.005) {
-      const fh = (gBot - gTop) * .88 * Math.min(1, fill);
-      const fy = gBot - fh;
-      const t  = Math.min(1, (gBot - fy) / (gBot - gTop));
-      const fw = botW + (rimW - botW) * t;
-
-      ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(cx - rimW, gTop); ctx.lineTo(cx + rimW, gTop);
-      ctx.lineTo(cx + botW, gBot); ctx.lineTo(cx - botW, gBot);
-      ctx.closePath(); ctx.clip();
-
-      const wg = ctx.createLinearGradient(0, fy, 0, gBot);
-      wg.addColorStop(0, wineColor + 'aa'); wg.addColorStop(1, wineColor + 'ff');
-      ctx.fillStyle = wg;
-      ctx.fillRect(cx - rimW, fy, rimW * 2, fh + 4);
-
-      /* surface shimmer */
-      ctx.beginPath();
-      ctx.ellipse(cx, fy, fw * .78, (gBot - gTop) * .016, 0, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.fill();
-      ctx.restore();
-    }
-
-    /* bowl */
-    ctx.strokeStyle = 'rgba(230,210,185,.6)'; ctx.lineWidth = 2.4;
-    ctx.beginPath();
-    ctx.moveTo(cx - rimW, gTop); ctx.lineTo(cx + rimW, gTop);
-    ctx.lineTo(cx + botW, gBot); ctx.lineTo(cx - botW, gBot);
-    ctx.closePath(); ctx.stroke();
-
-    /* rim ellipse */
-    ctx.beginPath();
-    ctx.ellipse(cx, gTop, rimW, (gBot - gTop) * .038, 0, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(230,210,185,.42)'; ctx.lineWidth = 1.8; ctx.stroke();
-
-    /* stem */
-    ctx.strokeStyle = 'rgba(230,210,185,.42)'; ctx.lineWidth = Math.min(W, H) * .018; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(cx, gBot); ctx.lineTo(cx, stemT); ctx.stroke();
-
-    /* base */
-    ctx.beginPath();
-    ctx.ellipse(cx, baseY, rimW * .62, (gBot - gTop) * .028, 0, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(230,210,185,.42)'; ctx.lineWidth = 2.2; ctx.stroke();
-
-    return { cx, gTop, gBot, rimW, botW };
-  }
-
-  /* draw bottle for pour scene */
-  function drawBottle(W, H, angle, wineColor, pourPct) {
-    const sc  = Math.min(W, H) * .22;
-    const cx  = W * .5, cy = H * .18;
-    const bw  = sc * .35, bh = sc * 1.05;
-    const nw  = sc * .175, nh = sc * .52;
-
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(angle);
-
-    const bg = ctx.createLinearGradient(-bw, 0, bw, 0);
-    bg.addColorStop(0, '#0d220d'); bg.addColorStop(.35, '#2a5a2a'); bg.addColorStop(1, '#0a1a0a');
-    ctx.fillStyle = bg;
-    ctx.beginPath(); rrect(-bw, -bh, bw*2, bh, bw*.2); ctx.fill();
-
-    /* liquid in bottle */
-    const lh = bh * .72 * Math.max(0, 1 - pourPct * 1.05);
-    if (lh > 4) {
-      ctx.save();
-      ctx.beginPath(); rrect(-bw+3, -bh+3, bw*2-6, bh-6, bw*.16); ctx.clip();
-      const lg = ctx.createLinearGradient(0, -lh, 0, 0);
-      lg.addColorStop(0, wineColor + 'cc'); lg.addColorStop(1, wineColor + 'ff');
-      ctx.fillStyle = lg;
-      ctx.fillRect(-bw+3, -lh * .5 - bh * .18, bw*2-6, lh);
-      ctx.restore();
-    }
-
-    /* highlight */
-    ctx.fillStyle = 'rgba(255,255,255,.07)';
-    ctx.beginPath(); rrect(-bw*.5, -bh*.9, bw*.22, bh*.62, bw*.08); ctx.fill();
-
-    /* neck */
-    const ng = ctx.createLinearGradient(-nw, 0, nw, 0);
-    ng.addColorStop(0,'#0d220d'); ng.addColorStop(.4,'#1e4a1e'); ng.addColorStop(1,'#0a1a0a');
-    ctx.fillStyle = ng;
-    ctx.beginPath(); rrect(-nw, -bh-nh, nw*2, nh+4, nw*.22); ctx.fill();
-
-    /* foil */
-    ctx.fillStyle = '#c9a84c';
-    ctx.beginPath(); rrect(-nw-2, -bh-nh-sc*.14, nw*2+4, sc*.18, nw*.22); ctx.fill();
-
-    /* label */
-    ctx.fillStyle = 'rgba(245,237,224,.92)';
-    ctx.beginPath(); rrect(-bw*.75, -bh*.7, bw*1.5, bh*.5, 4); ctx.fill();
-    ctx.strokeStyle = '#c9a84c'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); rrect(-bw*.75, -bh*.7, bw*1.5, bh*.5, 4); ctx.stroke();
-
-    ctx.restore();
-
-    /* return tip position for stream */
-    const tipLocalX = nw;
-    const tipLocalY = -(bh + nh + sc * .04);
-    return {
-      tx: cx + tipLocalX * Math.cos(angle) - tipLocalY * Math.sin(angle),
-      ty: cy + tipLocalX * Math.sin(angle) + tipLocalY * Math.cos(angle),
-    };
-  }
-
-  /* ── SCENE 1: POUR ── */
-  let pourFill = 0, tPourFill = 0;
-  let pourAngle = 0, tPourAngle = 0;
-  let droplets = [];
-
-  function renderPour(W, H, p) {
-    tPourAngle = p < .05 ? 0 : Math.min(1.52, p * 2.0);
-    tPourFill  = Math.max(0, (p - .08) / .92);
-    pourAngle += (tPourAngle - pourAngle) * .07;
-    pourFill  += (tPourFill  - pourFill)  * .04;
-
-    const wc = activeWine.liquid;
-    const tip = drawBottle(W, H, pourAngle, wc, pourFill);
-    const g   = drawGlass(W, H, pourFill, wc);
-
-    /* stream */
-    if (pourAngle > .2) {
-      const str  = Math.min(1, (pourAngle - .2) / .9);
-      const destX = g.cx;
-      const destY = g.gTop + 12;
-      const steps = 14;
-      for (let i = 0; i < steps; i++) {
-        const t0 = i/steps, t1=(i+1)/steps;
-        const x0 = tip.tx + (destX-tip.tx)*t0;
-        const y0 = tip.ty + (destY-tip.ty)*(t0*t0);
-        const x1 = tip.tx + (destX-tip.tx)*t1;
-        const y1 = tip.ty + (destY-tip.ty)*(t1*t1);
-        const a  = (.55 + .45*str) * (1 - t0*.25);
-        ctx.strokeStyle = wc + Math.round(a*255).toString(16).padStart(2,'0');
-        ctx.lineWidth   = (3 + str*9) * (1 - t0*.3);
-        ctx.lineCap = 'round';
-        ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke();
-      }
-      if (str > .25 && Math.random() < .45) {
-        droplets.push({ x: destX+(Math.random()-.5)*14, y: destY, vx:(Math.random()-.5)*4.5, vy:-(1+Math.random()*3.5), r:2+Math.random()*4, life:1 });
-      }
-    }
-
-    /* droplets */
-    droplets = droplets.filter(d => d.life > .04);
-    for (const d of droplets) {
-      ctx.beginPath(); ctx.arc(d.x, d.y, d.r*d.life, 0, Math.PI*2);
-      ctx.fillStyle = wc + Math.round(d.life*210).toString(16).padStart(2,'0');
-      ctx.fill();
-      d.x += d.vx; d.y += d.vy; d.vy += .2; d.life -= .038;
-    }
-  }
-
-  /* ── SCENE 2: SWIRL ── */
-  let swirlAngle = 0;
-
-  function renderSwirl(W, H, p) {
-    swirlAngle += .04 + p * .08;
-    drawGlass(W, H, 1, activeWine.liquid);
-
-    const { cx, gTop, gBot, rimW, botW } = glassGeom(W, H);
-    const fillY = gBot - (gBot - gTop) * .88 * .85;
-
-    /* rotating wine surface */
-    const wTilt = Math.sin(swirlAngle) * .25 * p;
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(cx - rimW, gTop); ctx.lineTo(cx + rimW, gTop);
-    ctx.lineTo(cx + botW, gBot); ctx.lineTo(cx - botW, gBot);
-    ctx.closePath(); ctx.clip();
-
-    ctx.beginPath();
-    ctx.ellipse(cx, fillY + wTilt * 30, rimW * .8, (gBot-gTop)*.028 + Math.abs(wTilt)*18, 0, 0, Math.PI*2);
-    ctx.fillStyle = 'rgba(255,255,255,.14)'; ctx.fill();
-    ctx.restore();
-
-    /* swirl particles */
-    const count = 18;
-    for (let i = 0; i < count; i++) {
-      const a = (i/count)*Math.PI*2 + swirlAngle*.8;
-      const r = (rimW * .5) * (1 - Math.abs(Math.sin(a*.5))*.35);
-      const px = cx + Math.cos(a) * r;
-      const py = fillY + Math.sin(a) * r * .22 + 8;
-      if (py < gBot && py > gTop) {
-        const alpha = (.3 + .4*p) * (.5 + .5*Math.sin(i+swirlAngle));
-        ctx.beginPath(); ctx.arc(px, py, 2.5, 0, Math.PI*2);
-        ctx.fillStyle = activeWine.liquid + Math.round(alpha*255).toString(16).padStart(2,'0');
-        ctx.fill();
-      }
-    }
-  }
-
-  /* ── SCENE 3: NOSE / AROMA ── */
-  let aromaT = 0;
-  const aromaParticles = Array.from({length: 40}, (_, i) => ({
-    x: 0, y: 0, vx: (Math.random()-.5)*.8, vy: -.6 - Math.random()*.9,
-    life: Math.random(), maxLife: 1, r: 1.5+Math.random()*3,
-    word: null,
-  }));
-
-  function renderAroma(W, H, p) {
-    aromaT += .016;
-    drawGlass(W, H, .85, activeWine.liquid);
-    const { cx, gTop, rimW } = glassGeom(W, H);
-
-    /* rising aroma particles */
-    for (const d of aromaParticles) {
-      d.life -= .008;
-      if (d.life <= 0) {
-        d.x = cx + (Math.random()-.5)*rimW*.7;
-        d.y = gTop - 6;
-        d.vx = (Math.random()-.5)*.8;
-        d.vy = -.5 - Math.random()*.7;
-        d.life = .7 + Math.random()*.3;
-        d.maxLife = d.life;
-      }
-      d.x += d.vx + Math.sin(aromaT * 1.2 + d.life * 4) * .5;
-      d.y += d.vy;
-
-      const a = (d.life / d.maxLife) * p * .7;
-      ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, Math.PI*2);
-      ctx.fillStyle = activeWine.liquid + Math.round(a*255).toString(16).padStart(2,'0');
-      ctx.fill();
-    }
-
-    /* aroma word clouds */
-    const notes = activeWine.notes;
-    notes.forEach((note, i) => {
-      const angle = (i / notes.length) * Math.PI * .9 - Math.PI * .45;
-      const dist  = H * .22 + Math.sin(aromaT + i) * H * .015;
-      const wx    = cx + Math.cos(angle) * rimW * 1.6;
-      const wy    = gTop - dist;
-      const alpha = p * (.5 + .5 * Math.sin(aromaT*.7 + i*1.2));
-
-      ctx.save();
-      ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
-      ctx.font = `italic ${Math.min(W,H)*.032}px Georgia, serif`;
-      ctx.fillStyle = '#c9a84c';
-      ctx.textAlign = 'center';
-      ctx.fillText(note, wx, wy);
-      ctx.restore();
-    });
-  }
-
-  /* ── SCENE 4: TASTE ── */
-  let tasteT = 0;
-
-  function renderTaste(W, H, p) {
-    tasteT += .012;
-
-    /* subtle zoom — draw glass slightly larger */
-    const zoom = 1 + p * .18;
-    ctx.save();
-    ctx.translate(W*.5, H*.5);
-    ctx.scale(zoom, zoom);
-    ctx.translate(-W*.5, -H*.5);
-    drawGlass(W, H, .82, activeWine.liquid);
-    ctx.restore();
-
-    const { cx, gTop, gBot, rimW } = glassGeom(W, H);
-
-    /* pulse glow on wine surface */
-    const pulse = .5 + .5 * Math.sin(tasteT * 2.5);
-    const fy = gBot - (gBot - gTop) * .88 * .82;
-    const grd = ctx.createRadialGradient(cx, fy, 0, cx, fy, rimW * .9);
-    grd.addColorStop(0, activeWine.liquid + Math.round(pulse * 80).toString(16).padStart(2,'0'));
-    grd.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(cx - rimW, gTop); ctx.lineTo(cx + rimW, gTop);
-    ctx.lineTo(cx + glassGeom(W,H).botW, gBot); ctx.lineTo(cx - glassGeom(W,H).botW, gBot);
-    ctx.closePath(); ctx.clip();
-    ctx.fillStyle = grd; ctx.fillRect(cx-rimW, gTop, rimW*2, gBot-gTop);
-    ctx.restore();
-
-    /* taste descriptor wheel */
-    const labels = ['Fruit', 'Structuur', 'Zuur', 'Tannine', 'Afdronk'];
-    const vals   = [.85, .78, .62, .72, .9];
-    const wR     = Math.min(W, H) * .14;
-    const wCX    = cx, wCY = gTop - Math.min(W,H)*.25;
-
-    ctx.save();
-    ctx.globalAlpha = p;
-    labels.forEach((lbl, i) => {
-      const a0 = (i/labels.length)*Math.PI*2 - Math.PI*.5;
-      const a1 = ((i+1)/labels.length)*Math.PI*2 - Math.PI*.5;
-      const v  = vals[i] * p;
-      ctx.beginPath();
-      ctx.moveTo(wCX, wCY);
-      ctx.arc(wCX, wCY, wR * v, a0, a1);
-      ctx.closePath();
-      ctx.fillStyle = activeWine.liquid + 'aa';
-      ctx.fill();
-      ctx.strokeStyle = '#c9a84c66'; ctx.lineWidth = 1; ctx.stroke();
-
-      /* spoke labels */
-      const midA = (a0 + a1) * .5;
-      ctx.font = `${Math.min(W,H)*.025}px Georgia, serif`;
-      ctx.fillStyle = '#c9a84c';
-      ctx.textAlign  = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(lbl, wCX + Math.cos(midA)*(wR+Math.min(W,H)*.065), wCY + Math.sin(midA)*(wR+Math.min(W,H)*.065));
-    });
-    /* web outline */
-    ctx.beginPath();
-    labels.forEach((_, i) => {
-      const a = (i/labels.length)*Math.PI*2 - Math.PI*.5;
-      i===0 ? ctx.moveTo(wCX+Math.cos(a)*wR, wCY+Math.sin(a)*wR)
-             : ctx.lineTo(wCX+Math.cos(a)*wR, wCY+Math.sin(a)*wR);
-    });
-    ctx.closePath();
-    ctx.strokeStyle = '#c9a84c33'; ctx.lineWidth = 1; ctx.stroke();
-    ctx.restore();
-
-    /* "Proost" flash */
-    if (p > .8) {
-      const fa = (p - .8) / .2;
-      ctx.save();
-      ctx.globalAlpha = fa * (.5 + .5*Math.sin(tasteT*4));
-      ctx.font = `${Math.min(W,H)*.09}px Georgia, serif`;
-      ctx.fillStyle = '#c9a84c';
-      ctx.textAlign  = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('Proost', cx, H * .5);
-      ctx.restore();
-    }
-  }
-
-  /* ════ main render ════ */
-  let scrollP = 0;
+  let rafId = null;
 
   function frame() {
-    const W = canvas.width  / devicePixelRatio;
-    const H = canvas.height / devicePixelRatio;
-    ctx.clearRect(0, 0, W, H);
+    const W = window.innerWidth, H = window.innerHeight;
+    const sceneIdx = Math.min(3, Math.floor(globalP * 4));
+    const sp       = Math.max(0, Math.min(1, (globalP * 4) % 1));
 
-    /* background gradient that shifts with scene */
-    const sceneIdx = Math.min(3, Math.floor(scrollP * 4));
-    const scenePct = (scrollP * 4) % 1;
+    // reset bottle position each scene
+    if (sceneIdx === 0) bottle.position.x = 0.9;
 
-    const bgGrd = ctx.createLinearGradient(0, 0, 0, H);
-    bgGrd.addColorStop(0, '#120608');
-    bgGrd.addColorStop(1, '#1c080d');
-    ctx.fillStyle = bgGrd;
-    ctx.fillRect(0, 0, W, H);
+    if (sceneIdx === 0) updateScene1(sp);
+    if (sceneIdx === 1) updateScene2(sp);
+    if (sceneIdx === 2) updateScene3(sp);
+    if (sceneIdx === 3) updateScene4(sp);
 
-    /* scene sub-progress */
-    const sp = Math.max(0, Math.min(1, scenePct));
+    // smooth camera
+    camX += (tCamX - camX) * 0.04;
+    camY += (tCamY - camY) * 0.04;
+    camZ += (tCamZ - camZ) * 0.04;
+    camera.position.set(camX, camY, camZ);
+    camera.lookAt(glass.position.x, glass.position.y + 0.3 * 0.92, 0);
 
-    if (sceneIdx === 0) renderPour(W, H, sp);
-    if (sceneIdx === 1) renderSwirl(W, H, sp);
-    if (sceneIdx === 2) renderAroma(W, H, sp);
-    if (sceneIdx === 3) renderTaste(W, H, sp);
-
-    /* cross-fade transition (brief overlap) */
-    if (scenePct < .06 && sceneIdx > 0) {
-      const prev = sceneIdx - 1;
-      ctx.save(); ctx.globalAlpha = 1 - scenePct / .06;
-      if (prev === 0) renderPour(W, H, 1);
-      if (prev === 1) renderSwirl(W, H, 1);
-      if (prev === 2) renderAroma(W, H, 1);
-      ctx.restore();
-    }
-
+    drawOverlay(W, H, sceneIdx, sp);
+    renderer.render(scene, camera);
     rafId = requestAnimationFrame(frame);
   }
 
-  /* scroll driver */
-  const section = document.getElementById('experience');
-  const numEl   = document.getElementById('sc-num');
-  const titleEl = document.getElementById('sc-title');
-  const descEl  = document.getElementById('sc-desc');
-  const progEl  = document.getElementById('prog-fill');
+  /* scroll */
+  const section  = document.getElementById('experience');
+  const numEl    = document.getElementById('sc-num');
+  const titleEl  = document.getElementById('sc-title');
+  const descEl   = document.getElementById('sc-desc');
+  const progFill = document.getElementById('prog-fill');
 
   function onScroll() {
     const rect  = section.getBoundingClientRect();
     const total = rect.height - window.innerHeight;
-    scrollP = Math.max(0, Math.min(1, -rect.top / total));
+    globalP = Math.max(0, Math.min(1, -rect.top / total));
 
-    const si = Math.min(3, Math.floor(scrollP * 4));
-    const s  = SCENES[si];
-    numEl.textContent   = s.num;
-    titleEl.textContent = s.title;
-    descEl.textContent  = s.desc;
-    progEl.style.width  = (scrollP * 100) + '%';
-
-    if (window._setHeroFill) window._setHeroFill(scrollP);
+    const si = Math.min(3, Math.floor(globalP * 4));
+    const sc = SCENES[si];
+    numEl.textContent  = sc.num;
+    titleEl.textContent = sc.title;
+    descEl.textContent = sc.desc;
+    progFill.style.width = (globalP * 100) + '%';
+    if (window._setHeroFill) window._setHeroFill(globalP);
   }
-
   window.addEventListener('scroll', onScroll, { passive: true });
 
   new IntersectionObserver(entries => {
     if (entries[0].isIntersecting) { if (!rafId) frame(); }
     else { if (rafId) { cancelAnimationFrame(rafId); rafId = null; } }
-  }, { threshold: .01 }).observe(section);
+  }, { threshold: 0.01 }).observe(section);
 
-  /* trigger once on load */
   onScroll();
 })();
 
-/* ════════════════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════════════
    OFFER FORM
-════════════════════════════════════════════════════════════════ */
+══════════════════════════════════════════════════════════════ */
 (function() {
-  const form = document.getElementById('offer-form');
-
+  const form  = document.getElementById('offer-form');
   const rules = [
     { id:'f-name',  err:'e-name',  msg:'Naam is verplicht' },
     { id:'f-type',  err:'e-type',  msg:'Druivensoort is verplicht' },
@@ -919,7 +925,6 @@ let activeWine = WINES[0];
     { id:'f-year',  err:'e-year',  msg:'Jaar 1900–2025 is verplicht' },
     { id:'f-email', err:'e-email', msg:'Geldig e-mailadres is verplicht' },
   ];
-
   function validate() {
     let ok = true;
     rules.forEach(r => {
@@ -928,13 +933,11 @@ let activeWine = WINES[0];
       let v = el.value.trim() !== '' && el.value.trim() !== '0';
       if (r.id === 'f-email') v = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(el.value.trim());
       if (r.id === 'f-year')  v = el.value >= 1900 && el.value <= 2025;
-      el.classList.toggle('err', !v);
-      ee.textContent = v ? '' : r.msg;
+      el.classList.toggle('err', !v); ee.textContent = v ? '' : r.msg;
       if (!v) ok = false;
     });
     return ok;
   }
-
   form.addEventListener('submit', e => {
     e.preventDefault();
     if (!validate()) return;
@@ -947,9 +950,6 @@ let activeWine = WINES[0];
   );
 })();
 
-/* ════════════════════════════════════════════════════════════════
-   TOAST
-════════════════════════════════════════════════════════════════ */
 let _tt;
 function showToast(msg) {
   const t = document.getElementById('toast');
