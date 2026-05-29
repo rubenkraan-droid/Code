@@ -167,34 +167,30 @@
 
     /* ─── Pour section ───────────────────────────────────────────── */
     #pour-section {
-      position: relative; min-height: 80vh;
-      display: flex; align-items: center; justify-content: center;
+      position: relative;
+      height: 300vh;
       background: linear-gradient(180deg, var(--dark) 0%, var(--dark2) 100%);
-      overflow: hidden;
     }
     #pour-canvas-wrap {
       position: sticky; top: 0; height: 100vh; width: 100%;
       display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
     }
     #pour-canvas { display: block; }
-    .pour-text {
-      position: absolute; right: clamp(1rem, 5vw, 8rem);
-      top: 50%; transform: translateY(-50%);
-      max-width: 280px; z-index: 3;
+    .pour-overlay {
+      position: absolute; inset: 0; pointer-events: none;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: flex-end;
+      padding-bottom: 2.5rem;
     }
-    .pour-text h2 {
-      font-size: clamp(1.4rem, 3.5vw, 2rem); color: var(--cream);
-      margin-bottom: .75rem; line-height: 1.2;
-    }
-    .pour-text p { color: var(--muted); font-size: .92rem; line-height: 1.7; }
     .pour-progress {
-      margin-top: 1rem; height: 3px;
+      width: min(320px, 80vw); height: 3px;
       background: rgba(201,168,76,.2); border-radius: 2px; overflow: hidden;
     }
     .pour-progress-fill {
       height: 100%; width: 0%;
       background: linear-gradient(90deg, var(--ruby), var(--gold));
-      border-radius: 2px; transition: width .1s linear;
+      border-radius: 2px;
     }
 
     /* ─── Section: Marketplace ───────────────────────────────────── */
@@ -327,13 +323,9 @@
       .pour-text { display: none; }
       .wine-tab { min-width: 80px; padding: .75rem .9rem; }
     }
-    @media (min-width: 769px) {
-      #pour-section { height: 250vh; }
-      #pour-canvas-wrap { position: sticky; }
-    }
     @media (max-width: 768px) {
-      #pour-section { height: auto; padding: 2rem 0; }
-      #pour-canvas-wrap { position: relative; height: auto; }
+      .nav-links { display: none; }
+      .wine-tab { min-width: 80px; padding: .75rem .9rem; }
     }
   </style>
 </head>
@@ -378,11 +370,9 @@
 <section id="pour-section">
   <div id="pour-canvas-wrap">
     <canvas id="pour-canvas"></canvas>
-  </div>
-  <div class="pour-text" id="pour-text">
-    <h2>Schep de perfecte sfeer</h2>
-    <p>Scroll om de wijn in te schenken en ontdek hoe iedere druppel een verhaal vertelt van terroir, traditie en passie.</p>
-    <div class="pour-progress"><div class="pour-progress-fill" id="pour-progress-fill"></div></div>
+    <div class="pour-overlay">
+      <div class="pour-progress"><div class="pour-progress-fill" id="pour-progress-fill"></div></div>
+    </div>
   </div>
 </section>
 
@@ -728,256 +718,314 @@ let activeWine = WINES[0];
 })();
 
 /* ═══════════════════════════════════════════════════════════════════
-   POUR SCENE (second canvas — 2D canvas-based for mobile perf)
+   POUR SCENE — full-viewport sticky scroll animation
 ═══════════════════════════════════════════════════════════════════ */
 (function initPourScene() {
   const canvas = document.getElementById('pour-canvas');
   const ctx = canvas.getContext('2d');
-  let fillLevel = 0;   // 0..1
-  let targetFill = 0;
-  let pouringAngle = 0;
-  let targetAngle = 0;
+
+  let fillLevel = 0, targetFill = 0;
+  let tiltAngle = 0, targetTilt = 0;
   let droplets = [];
-  let animRunning = false;
+  let rafId = null;
 
   function resize() {
-    const wrap = document.getElementById('pour-canvas-wrap');
-    const size = Math.min(wrap.offsetWidth, window.innerHeight, 480);
-    canvas.width = size * window.devicePixelRatio;
-    canvas.height = size * window.devicePixelRatio;
-    canvas.style.width = size + 'px';
-    canvas.style.height = size + 'px';
-    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    canvas.width  = window.innerWidth  * window.devicePixelRatio;
+    canvas.height = window.innerHeight * window.devicePixelRatio;
+    canvas.style.width  = window.innerWidth  + 'px';
+    canvas.style.height = window.innerHeight + 'px';
   }
   resize();
-  window.addEventListener('resize', resize);
+  window.addEventListener('resize', resize, { passive: true });
 
-  function drawGlass(size, fill, wineColor) {
-    const cx = size / 2, cy = size / 2;
-    const h = size * 0.55, w = size * 0.28;
-    const top = cy - h * 0.5, bottom = cy + h * 0.5;
-    const topW = w * 0.9, botW = w * 0.48;
-
-    ctx.save();
-
-    // Wine fill (clipped to glass shape)
-    if (fill > 0) {
-      const fillH = h * 0.82 * fill;
-      const fillY = bottom - fillH;
-
-      ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(cx - topW, top);
-      ctx.lineTo(cx + topW, top);
-      ctx.lineTo(cx + botW, bottom);
-      ctx.lineTo(cx - botW, bottom);
-      ctx.closePath();
-      ctx.clip();
-
-      const grad = ctx.createLinearGradient(cx - topW, fillY, cx + topW, bottom);
-      grad.addColorStop(0, wineColor + 'cc');
-      grad.addColorStop(1, wineColor + 'ff');
-      ctx.fillStyle = grad;
-      ctx.fillRect(cx - topW, fillY, topW * 2, fillH);
-
-      // Surface shimmer
-      ctx.beginPath();
-      ctx.ellipse(cx, fillY, topW * fill * 0.9 + botW * (1 - fill) * 0.9, 6, 0, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255,255,255,0.12)';
-      ctx.fill();
-
-      ctx.restore();
-    }
-
-    // Glass outline
-    ctx.beginPath();
-    ctx.moveTo(cx - topW, top);
-    ctx.lineTo(cx + topW, top);
-    ctx.lineTo(cx + botW, bottom);
-    ctx.lineTo(cx - botW, bottom);
+  // ── helpers ───────────────────────────────────────────────────────
+  function rrect(x, y, w, h, r) {
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
     ctx.closePath();
-    ctx.strokeStyle = 'rgba(220,200,180,0.55)';
-    ctx.lineWidth = 2.5;
-    ctx.stroke();
-
-    // Rim
-    ctx.beginPath();
-    ctx.ellipse(cx, top, topW, 8, 0, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(220,200,180,0.4)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // Stem
-    ctx.beginPath();
-    ctx.moveTo(cx - 4, bottom);
-    ctx.lineTo(cx + 4, bottom);
-    ctx.lineTo(cx + 6, bottom + h * 0.28);
-    ctx.lineTo(cx - 6, bottom + h * 0.28);
-    ctx.closePath();
-    ctx.fillStyle = 'rgba(200,180,160,0.3)';
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(220,200,180,0.4)';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    // Base
-    ctx.beginPath();
-    ctx.ellipse(cx, bottom + h * 0.29, h * 0.13, 7, 0, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(220,200,180,0.4)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    ctx.restore();
   }
 
-  // Safari-safe rounded rect (ctx.roundRect not available on Safari < 16)
-  function roundRect(x, y, w, h, r) {
-    const tl = Array.isArray(r) ? r[0] : r, tr = Array.isArray(r) ? (r[1] || r[0]) : r;
-    const br = Array.isArray(r) ? (r[2] || r[0]) : r, bl = Array.isArray(r) ? (r[3] || r[0]) : r;
-    ctx.moveTo(x + tl, y);
-    ctx.lineTo(x + w - tr, y);
-    ctx.quadraticCurveTo(x + w, y, x + w, y + tr);
-    ctx.lineTo(x + w, y + h - br);
-    ctx.quadraticCurveTo(x + w, y + h, x + w - br, y + h);
-    ctx.lineTo(x + bl, y + h);
-    ctx.quadraticCurveTo(x, y + h, x, y + h - bl);
-    ctx.lineTo(x, y + tl);
-    ctx.quadraticCurveTo(x, y, x + tl, y);
-  }
+  // ── draw bottle (pivot = base-centre) ────────────────────────────
+  function drawBottle(W, H, angle, wineColor, pct) {
+    const cx = W * 0.5;
+    const cy = H * 0.22;           // bottle base anchor
+    const sc = Math.min(W, H) / 5; // scale relative to viewport
 
-  function drawBottle(size, angle, wineColor) {
-    const cx = size / 2, cy = size * 0.25;
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate(angle);
 
-    // Bottle body
-    const grad = ctx.createLinearGradient(-16, 0, 16, 0);
-    grad.addColorStop(0, '#1a3a1a');
-    grad.addColorStop(0.4, '#2a5a2a');
-    grad.addColorStop(1, '#0d200d');
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    roundRect(-16, -30, 32, 80, 8);
-    ctx.fill();
+    const bw = sc * 0.38, bh = sc * 1.1;
+    const nw = sc * 0.19, nh = sc * 0.55;
 
-    // Liquid inside
-    if (angle < 0.3) {
-      const liquidH = 60 * 0.7;
-      ctx.fillStyle = wineColor + 'bb';
-      ctx.beginPath();
-      roundRect(-14, 20 - liquidH, 28, liquidH, 6);
-      ctx.fill();
-    }
+    // body gradient
+    const bg = ctx.createLinearGradient(-bw, 0, bw, 0);
+    bg.addColorStop(0,   '#0d220d');
+    bg.addColorStop(0.35,'#2a5a2a');
+    bg.addColorStop(1,   '#0a1a0a');
+    ctx.fillStyle = bg;
+    ctx.beginPath(); rrect(-bw, -bh, bw*2, bh, bw*0.22); ctx.fill();
 
-    // Neck
-    ctx.fillStyle = '#1a3a1a';
-    ctx.beginPath();
-    roundRect(-8, -65, 16, 40, 4);
-    ctx.fill();
-
-    // Foil
-    ctx.fillStyle = '#c9a84c';
-    ctx.beginPath();
-    roundRect(-8, -68, 16, 14, [4, 4, 0, 0]);
-    ctx.fill();
-
-    // Pour stream (when tilted)
-    if (angle > 0.5 && fillLevel < 1) {
-      const streamStrength = Math.min(1, (angle - 0.5) / 0.8);
-      const streamX = 14;
-      const streamY = -60;
+    // wine level inside
+    const wh = bh * 0.75 * Math.max(0, 1 - pct * 1.1);
+    if (wh > 4) {
       ctx.save();
-      ctx.rotate(-angle);
-      const streamGrad = ctx.createLinearGradient(streamX, streamY, streamX + 30 * streamStrength, streamY + 80);
-      streamGrad.addColorStop(0, wineColor + 'ee');
-      streamGrad.addColorStop(1, wineColor + '44');
-      ctx.strokeStyle = streamGrad;
-      ctx.lineWidth = 3 * streamStrength + 1;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(streamX, streamY);
-      ctx.bezierCurveTo(
-        streamX + 15 * streamStrength, streamY + 20,
-        streamX + 25 * streamStrength, streamY + 50,
-        size / 2 - cx + (Math.random() * 4 - 2), size * 0.32 - cy
-      );
-      ctx.stroke();
+      ctx.beginPath(); rrect(-bw + 3, -bh + 3, bw*2 - 6, bh - 6, bw*0.18); ctx.clip();
+      const wg = ctx.createLinearGradient(0, -bh + bh*0.25 - wh, 0, -bh + bh*0.25);
+      wg.addColorStop(0, wineColor + 'cc');
+      wg.addColorStop(1, wineColor + 'ff');
+      ctx.fillStyle = wg;
+      ctx.fillRect(-bw + 3, -bh*0.72 - wh*0.5, bw*2 - 6, wh);
       ctx.restore();
-
-      // Droplets
-      if (Math.random() < 0.3) {
-        droplets.push({
-          x: cx + streamX * Math.cos(angle) - (-60) * Math.sin(angle),
-          y: cy + streamX * Math.sin(angle) + (-60) * Math.cos(angle),
-          vx: (Math.random() - 0.5) * 2,
-          vy: 1 + Math.random() * 2,
-          r: 2 + Math.random() * 3,
-          life: 1,
-          color: wineColor,
-        });
-      }
     }
+
+    // bottle highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.07)';
+    ctx.beginPath(); rrect(-bw*0.55, -bh*0.92, bw*0.25, bh*0.65, bw*0.1); ctx.fill();
+
+    // neck
+    const ng = ctx.createLinearGradient(-nw, 0, nw, 0);
+    ng.addColorStop(0, '#0d220d'); ng.addColorStop(0.4,'#1e4a1e'); ng.addColorStop(1,'#0a1a0a');
+    ctx.fillStyle = ng;
+    ctx.beginPath(); rrect(-nw, -bh - nh, nw*2, nh + 4, nw*0.25); ctx.fill();
+
+    // foil capsule
+    ctx.fillStyle = '#c9a84c';
+    ctx.beginPath(); rrect(-nw - 2, -bh - nh - sc*0.15, nw*2 + 4, sc*0.2, nw*0.25); ctx.fill();
+    ctx.fillStyle = '#e8c97a';
+    ctx.beginPath(); rrect(-nw - 2, -bh - nh - sc*0.15, nw*2 + 4, sc*0.04, nw*0.1); ctx.fill();
+
+    // label on body
+    ctx.fillStyle = 'rgba(245,237,224,0.92)';
+    ctx.beginPath(); rrect(-bw*0.78, -bh*0.72, bw*1.56, bh*0.52, 4); ctx.fill();
+    ctx.strokeStyle = '#c9a84c'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); rrect(-bw*0.78, -bh*0.72, bw*1.56, bh*0.52, 4); ctx.stroke();
+
     ctx.restore();
   }
 
-  function drawDroplets() {
-    droplets = droplets.filter(d => d.life > 0);
-    for (const d of droplets) {
+  // ── compute bottle neck tip world position ────────────────────────
+  function bottleNeckTip(W, H, angle) {
+    const cx = W * 0.5, cy = H * 0.22;
+    const sc = Math.min(W, H) / 5;
+    const bh = sc * 1.1, nh = sc * 0.55, nw = sc * 0.19;
+    // tip is at local (nw, -(bh+nh+sc*0.05)) rotated by angle
+    const lx = nw, ly = -(bh + nh + sc * 0.05);
+    return {
+      x: cx + lx * Math.cos(angle) - ly * Math.sin(angle),
+      y: cy + lx * Math.sin(angle) + ly * Math.cos(angle),
+    };
+  }
+
+  // ── draw wine glass ───────────────────────────────────────────────
+  function drawGlass(W, H, fill, wineColor) {
+    const cx = W * 0.5;
+    const sc = Math.min(W, H) / 5;
+    const gh = sc * 1.5;           // bowl height
+    const gw = sc * 0.95;          // bowl top half-width
+    const gb = sc * 0.42;          // bowl bottom half-width
+    const gy = H * 0.88;           // glass base Y
+    const bowlTop  = gy - gh * 0.95;
+    const bowlBot  = gy - gh * 0.35;
+
+    // wine fill clipped to bowl shape
+    if (fill > 0.01) {
+      const maxFillH = (bowlBot - bowlTop) * 0.9;
+      const fh = maxFillH * Math.min(1, fill);
+      const fy = bowlBot - fh;
+      // interpolate width at fill level
+      const t  = (bowlBot - fy) / (bowlBot - bowlTop);
+      const fw = gb + (gw - gb) * t;
+
+      ctx.save();
       ctx.beginPath();
-      ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
-      ctx.fillStyle = d.color + Math.round(d.life * 255).toString(16).padStart(2, '0');
+      ctx.moveTo(cx - gw, bowlTop);
+      ctx.lineTo(cx + gw, bowlTop);
+      ctx.lineTo(cx + gb, bowlBot);
+      ctx.lineTo(cx - gb, bowlBot);
+      ctx.closePath();
+      ctx.clip();
+
+      const wg = ctx.createLinearGradient(0, fy, 0, bowlBot);
+      wg.addColorStop(0, wineColor + 'aa');
+      wg.addColorStop(1, wineColor + 'ff');
+      ctx.fillStyle = wg;
+      ctx.fillRect(cx - gw, fy, gw * 2, fh + 4);
+
+      // surface shimmer
+      ctx.beginPath();
+      ctx.ellipse(cx, fy, fw * 0.82, gh * 0.018, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.18)';
       ctx.fill();
-      d.x += d.vx; d.y += d.vy; d.vy += 0.15; d.life -= 0.04;
+      ctx.restore();
+    }
+
+    // bowl outline
+    ctx.strokeStyle = 'rgba(230,210,185,0.65)';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(cx - gw, bowlTop);
+    ctx.lineTo(cx + gw, bowlTop);
+    ctx.lineTo(cx + gb, bowlBot);
+    ctx.lineTo(cx - gb, bowlBot);
+    ctx.closePath();
+    ctx.stroke();
+
+    // rim ellipse
+    ctx.beginPath();
+    ctx.ellipse(cx, bowlTop, gw, gh * 0.04, 0, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(230,210,185,0.5)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // stem
+    const stemW = sc * 0.04;
+    ctx.strokeStyle = 'rgba(230,210,185,0.45)';
+    ctx.lineWidth = stemW;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(cx, bowlBot);
+    ctx.lineTo(cx, gy - gh * 0.06);
+    ctx.stroke();
+
+    // base
+    ctx.beginPath();
+    ctx.ellipse(cx, gy, gw * 0.72, gh * 0.04, 0, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(230,210,185,0.45)';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    return { rimX: cx, rimY: bowlTop };
+  }
+
+  // ── draw pour stream ──────────────────────────────────────────────
+  function drawStream(W, H, angle, wineColor, glassRimY) {
+    if (angle < 0.18) return;
+    const strength = Math.min(1, (angle - 0.18) / 0.9);
+    const tip = bottleNeckTip(W, H, angle);
+    const destX = W * 0.5 + (Math.sin(Date.now() * 0.005) * 3);
+    const destY = glassRimY + 10;
+
+    // stream thickness varies with pour strength
+    const thick = 2 + strength * 7;
+    const steps = 12;
+    for (let i = 0; i < steps; i++) {
+      const t0 = i / steps, t1 = (i + 1) / steps;
+      const x0 = tip.x + (destX - tip.x) * t0;
+      const y0 = tip.y + (destY - tip.y) * (t0 * t0);
+      const x1 = tip.x + (destX - tip.x) * t1;
+      const y1 = tip.y + (destY - tip.y) * (t1 * t1);
+      const alpha = (0.5 + 0.5 * strength) * (1 - t0 * 0.3);
+      ctx.strokeStyle = wineColor + Math.round(alpha * 255).toString(16).padStart(2,'0');
+      ctx.lineWidth = thick * (1 - t0 * 0.35);
+      ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+    }
+
+    // splash droplets at glass rim
+    if (strength > 0.3 && Math.random() < 0.4) {
+      droplets.push({
+        x: destX + (Math.random() - 0.5) * 12,
+        y: destY,
+        vx: (Math.random() - 0.5) * 4,
+        vy: -(1 + Math.random() * 3),
+        r: 2 + Math.random() * 4,
+        life: 1,
+      });
     }
   }
+
+  function drawDroplets(wineColor) {
+    droplets = droplets.filter(d => d.life > 0.05);
+    for (const d of droplets) {
+      const hex = Math.round(d.life * 220).toString(16).padStart(2, '0');
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, d.r * d.life, 0, Math.PI * 2);
+      ctx.fillStyle = wineColor + hex;
+      ctx.fill();
+      d.x += d.vx; d.y += d.vy; d.vy += 0.18; d.life -= 0.035;
+    }
+  }
+
+  // ── label overlays ────────────────────────────────────────────────
+  function drawLabel(W, H, progress) {
+    const msgs = [
+      { at: 0.02, text: 'Scroll om in te schenken…' },
+      { at: 0.45, text: 'Kies jouw wijn hierboven' },
+      { at: 0.85, text: 'Proost! 🍷' },
+    ];
+    for (const m of msgs) {
+      const dist = Math.abs(progress - m.at);
+      const alpha = Math.max(0, 1 - dist / 0.18);
+      if (alpha < 0.02) continue;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.font = `${Math.min(W, H) * 0.038}px Georgia, serif`;
+      ctx.fillStyle = '#c9a84c';
+      ctx.textAlign = 'center';
+      ctx.fillText(m.text, W * 0.5, H * 0.5);
+      ctx.restore();
+    }
+  }
+
+  // ── main render loop ──────────────────────────────────────────────
+  let progress = 0;
 
   function frame() {
-    if (!animRunning) return;
-    const size = canvas.width / window.devicePixelRatio;
-    ctx.clearRect(0, 0, size, size);
+    const W = canvas.width  / window.devicePixelRatio;
+    const H = canvas.height / window.devicePixelRatio;
 
-    fillLevel += (targetFill - fillLevel) * 0.025;
-    pouringAngle += (targetAngle - pouringAngle) * 0.04;
+    ctx.clearRect(0, 0, W, H);
+
+    // lerp toward targets
+    tiltAngle  += (targetTilt  - tiltAngle)  * 0.06;
+    fillLevel  += (targetFill  - fillLevel)  * 0.035;
 
     const wineColor = activeWine.liquidColor;
-    drawBottle(size, pouringAngle, wineColor);
-    drawDroplets();
-    drawGlass(size, fillLevel, wineColor);
 
-    // Progress bar
+    // draw elements back→front
+    const { rimY } = drawGlass(W, H, fillLevel, wineColor);
+    drawStream(W, H, tiltAngle, wineColor, rimY);
+    drawDroplets(wineColor);
+    drawBottle(W, H, tiltAngle, wineColor, fillLevel);
+    drawLabel(W, H, progress);
+
     document.getElementById('pour-progress-fill').style.width = (fillLevel * 100) + '%';
 
-    requestAnimationFrame(frame);
+    rafId = requestAnimationFrame(frame);
   }
 
-  // Scroll → pour
+  // ── scroll driver ─────────────────────────────────────────────────
   const section = document.getElementById('pour-section');
+
   function onScroll() {
     const rect = section.getBoundingClientRect();
-    const viewH = window.innerHeight;
-    const progress = Math.max(0, Math.min(1, (-rect.top) / (rect.height - viewH)));
-    targetFill = progress;
-    targetAngle = progress < 0.05 ? 0 : Math.min(1.4, progress * 1.8);
+    const scrollable = rect.height - window.innerHeight;
+    progress = Math.max(0, Math.min(1, -rect.top / scrollable));
 
-    if (progress > 0.02 && !animRunning) {
-      animRunning = true;
-      frame();
-    }
+    targetTilt = progress < 0.05 ? 0 : Math.min(1.55, progress * 1.9);
+    targetFill = Math.max(0, (progress - 0.1) / 0.9);
+
     if (window._setHeroFill) window._setHeroFill(progress);
   }
+
   window.addEventListener('scroll', onScroll, { passive: true });
 
-  // Kick off initial render when section enters view
-  const obs = new IntersectionObserver(entries => {
-    if (entries[0].isIntersecting) { animRunning = true; frame(); }
-    else { animRunning = false; }
-  }, { threshold: 0.05 });
-  obs.observe(section);
-
-  window._updatePourColor = function() {
-    if (window._setWineColor) window._setWineColor(activeWine.colorHex);
-  };
+  // start/stop loop with IntersectionObserver
+  new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting) {
+      if (!rafId) frame();
+    } else {
+      if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    }
+  }, { threshold: 0.01 }).observe(section);
 })();
 
 /* ═══════════════════════════════════════════════════════════════════
