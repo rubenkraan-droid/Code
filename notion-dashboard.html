@@ -446,34 +446,39 @@ const state = {
 // ════════════════════════════════════════════════════════════
 async function fetchWebhook(url) {
   const res = await fetch(url, { method: 'POST' });
+  const text = await res.text();
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(`Webhook fout ${res.status}: ${err.message || 'Onbekende fout'}`);
+    let msg = 'Onbekende fout';
+    try { msg = JSON.parse(text).message || text || msg; } catch(e) { msg = text || msg; }
+    throw new Error(`Webhook fout ${res.status}: ${msg}`);
   }
-  return res.json();
+  if (!text || text.trim() === '') return [];
+  return JSON.parse(text);
 }
 
 function parseDailyLog(page) {
-  // n8n Notion node geeft properties terug als property_<naam> (lowercase, spaties → _)
   const dateRaw = page.property_date?.start ?? null;
+  const spendRaw = page.property_spend;
+  const leadsRaw = page.property_leads;
+  const salesRaw = page.property_sales;
   return {
     date:         dateRaw ? dateRaw.slice(0, 10) : null,
     adId:         Array.isArray(page.property_ad) ? page.property_ad[0] : null,
     adName:       page.name ? page.name.replace(/^\d{4}-\d{2}-\d{2}\s*\|\s*/, '') : null,
-    spend:        page.property_spend        ?? 0,
-    impressions:  page.property_impressions  ?? 0,
-    clicks:       page.property_clicks       ?? 0,
-    appointments: page.property_leads        ?? 0,
-    signed:       page.property_signed       ?? page.property_getekend    ?? 0,
-    closed:       page.property_sales        ?? page.property_definitief  ?? 0,
+    spend:        typeof spendRaw === 'number' ? spendRaw : 0,
+    impressions:  typeof page.property_impressions === 'number' ? page.property_impressions : 0,
+    clicks:       typeof page.property_clicks === 'number' ? page.property_clicks : 0,
+    appointments: typeof leadsRaw === 'number' ? leadsRaw : 0,
+    signed:       typeof page.property_signed === 'number' ? page.property_signed : (typeof page.property_getekend === 'number' ? page.property_getekend : 0),
+    closed:       typeof salesRaw === 'number' ? salesRaw : 0,
   };
 }
 
 function parseAllTime(page) {
   return {
     adId:     page.id,
-    adName:   page.name ?? null,
-    status:   page.property_status   ?? null,
+    adName:   page.property_ad_name ?? page.name ?? null,
+    status:   page.property_status  ?? null,
     imageUrl: page.property_image_url
            ?? page.property_google_drive_image_url
            ?? page.property_afbeelding
