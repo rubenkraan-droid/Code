@@ -238,17 +238,17 @@
     .creative-card {
       background: var(--bg); border: 1px solid var(--border);
       border-radius: 12px; overflow: hidden;
-      width: 210px; flex-shrink: 0;
+      width: 240px; flex-shrink: 0;
       transition: border-color .2s;
     }
     .creative-card:hover { border-color: var(--blue); }
     .creative-img-wrap {
-      position: relative; height: 155px;
+      position: relative; height: 280px;
       background: #182438; overflow: hidden;
       display: flex; align-items: center; justify-content: center;
     }
     .creative-img {
-      width: 100%; height: 100%; object-fit: cover; display: block;
+      width: 100%; height: 100%; object-fit: contain; display: block;
     }
     .creative-placeholder {
       font-size: 12px; color: var(--muted);
@@ -290,8 +290,8 @@
     /* ── Mobile ── */
     @media (max-width: 720px) {
       .stat-value { font-size: 18px; }
-      .creative-card { width: 160px; }
-      .creative-img-wrap { height: 120px; }
+      .creative-card { width: 180px; }
+      .creative-img-wrap { height: 200px; }
       .dash-header h1 { font-size: 17px; }
     }
   </style>
@@ -455,22 +455,38 @@ const state = {
 // ════════════════════════════════════════════════════════════
 
 function pickImageUrl(page) {
+  // Recursively extract a URL string from any value shape n8n may return
+  function extractUrl(v) {
+    if (!v) return null;
+    if (typeof v === 'string') return v || null;
+    if (Array.isArray(v)) {
+      for (const item of v) { const u = extractUrl(item); if (u) return u; }
+      return null;
+    }
+    if (typeof v === 'object') {
+      // Notion URL type: {type:'url', url:'...'} or plain {url:'...'}
+      for (const key of ['url', 'href', 'value', 'text', 'plain_text']) {
+        if (typeof v[key] === 'string' && v[key]) return v[key];
+      }
+    }
+    return null;
+  }
+
   const knownKeys = [
-    'property_image_url', 'property_google_drive_image_url',
+    'property_url', 'property_image_url', 'property_google_drive_image_url',
     'property_google_drive_url', 'property_afbeelding', 'property_foto',
-    'property_foto_url', 'property_drive_url', 'property_url',
-    'property_afbeelding_url', 'property_image',
+    'property_foto_url', 'property_drive_url', 'property_afbeelding_url', 'property_image',
   ];
   for (const k of knownKeys) {
     if (page[k] == null) continue;
-    const v = Array.isArray(page[k]) ? page[k][0] : page[k];
-    if (v) return v;
+    const u = extractUrl(page[k]);
+    if (u) return u;
   }
-  // Scan all properties for any Google Drive URL
+  // Scan all remaining properties for any Google Drive URL
   for (const [k, raw] of Object.entries(page)) {
     if (!k.startsWith('property_')) continue;
-    const v = Array.isArray(raw) ? raw[0] : raw;
-    if (typeof v === 'string' && v.includes('drive.google.com')) return v;
+    const u = extractUrl(raw);
+    if (u && u.includes('drive.google.com')) return u;
   }
   return null;
 }
