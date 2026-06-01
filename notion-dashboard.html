@@ -405,11 +405,12 @@
 
 <script>
 // ════════════════════════════════════════════════════════════
-//  CONFIG  — vul hier jouw n8n webhook URL in
+//  CONFIG
 // ════════════════════════════════════════════════════════════
 const CONFIG = {
-  PROXY_URL:                 'PROXY_URL',  // bijv. https://n8n.jouwdomein.nl/webhook/notion-proxy
-  CPS_DEFINITIEF_THRESHOLD:  500           // rood boven dit bedrag (€)
+  DAILY_URL:                'https://mabekra.app.n8n.cloud/webhook/notion-daily',
+  ALL_TIME_URL:             'https://mabekra.app.n8n.cloud/webhook/notion-alltime',
+  CPS_DEFINITIEF_THRESHOLD: 500
 };
 
 // ════════════════════════════════════════════════════════════
@@ -443,68 +444,40 @@ const state = {
 // ════════════════════════════════════════════════════════════
 //  Notion API
 // ════════════════════════════════════════════════════════════
-function getProp(page, name) {
-  const p = page.properties[name];
-  if (!p) return null;
-  switch (p.type) {
-    case 'title':      return p.title[0]?.plain_text?.trim()      || null;
-    case 'rich_text':  return p.rich_text[0]?.plain_text?.trim()  || null;
-    case 'number':     return p.number ?? null;
-    case 'date':       return p.date?.start                       || null;
-    case 'select':     return p.select?.name                      || null;
-    case 'url':        return p.url                               || null;
-    case 'formula':
-      if (p.formula.type === 'number') return p.formula.number ?? null;
-      if (p.formula.type === 'string') return p.formula.string  || null;
-      return null;
-    default: return null;
+async function fetchWebhook(url) {
+  const res = await fetch(url, { method: 'POST' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`Webhook fout ${res.status}: ${err.message || 'Onbekende fout'}`);
   }
-}
-
-async function fetchAllPages(dbKey) {
-  // dbKey: 'daily' | 'alltime' — n8n proxy vertaalt dit naar de juiste database-ID
-  const pages = [];
-  let cursor;
-  for (;;) {
-    const body = { db: dbKey };
-    if (cursor) body.cursor = cursor;
-    const res = await fetch(CONFIG.PROXY_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(`Notion API fout ${res.status}: ${err.message || 'Onbekende fout'}`);
-    }
-    const data = await res.json();
-    pages.push(...data.results);
-    if (!data.has_more) break;
-    cursor = data.next_cursor;
-  }
-  return pages;
+  return res.json();
 }
 
 function parseDailyLog(page) {
+  // n8n Notion node geeft properties terug als property_<naam> (lowercase, spaties → _)
+  const dateRaw = page.property_date?.start ?? null;
   return {
-    date:         getProp(page, 'Date'),
-    adId:         getProp(page, 'Ad ID'),
-    adName:       getProp(page, 'Ad Name'),
-    spend:        getProp(page, 'Spend')        ?? 0,
-    impressions:  getProp(page, 'Impressions')  ?? 0,
-    clicks:       getProp(page, 'Clicks')       ?? 0,
-    appointments: getProp(page, 'Appointments') ?? 0,
-    signed:       getProp(page, 'Signed')       ?? 0,
-    closed:       getProp(page, 'Closed')       ?? 0,
+    date:         dateRaw ? dateRaw.slice(0, 10) : null,
+    adId:         Array.isArray(page.property_ad) ? page.property_ad[0] : null,
+    adName:       page.name ? page.name.replace(/^\d{4}-\d{2}-\d{2}\s*\|\s*/, '') : null,
+    spend:        page.property_spend        ?? 0,
+    impressions:  page.property_impressions  ?? 0,
+    clicks:       page.property_clicks       ?? 0,
+    appointments: page.property_leads        ?? 0,
+    signed:       page.property_signed       ?? page.property_getekend    ?? 0,
+    closed:       page.property_sales        ?? page.property_definitief  ?? 0,
   };
 }
 
 function parseAllTime(page) {
   return {
-    adId:     getProp(page, 'Ad ID'),
-    adName:   getProp(page, 'Ad Name'),
-    status:   getProp(page, 'Status'),
-    imageUrl: getProp(page, 'Google Drive Image URL'),
+    adId:     page.id,
+    adName:   page.name ?? null,
+    status:   page.property_status   ?? null,
+    imageUrl: page.property_image_url
+           ?? page.property_google_drive_image_url
+           ?? page.property_afbeelding
+           ?? null,
   };
 }
 
@@ -917,17 +890,9 @@ async function init() {
   document.getElementById('dashboard').hidden      = true;
 
   try {
-    if (CONFIG.PROXY_URL === 'PROXY_URL') {
-      throw new Error(
-        'Het dashboard is nog niet geconfigureerd.\n\n' +
-        'Importeer notion-proxy-flow.json in n8n, stel de Notion token in, ' +
-        'activeer de flow, en vul de webhook-URL in bij PROXY_URL in het CONFIG-object.'
-      );
-    }
-
     const [dailyPages, allTimePages] = await Promise.all([
-      fetchAllPages('daily'),
-      fetchAllPages('alltime')
+      fetchWebhook(CONFIG.DAILY_URL),
+      fetchWebhook(CONFIG.ALL_TIME_URL)
     ]);
 
     state.dailyLog = dailyPages.map(parseDailyLog).filter(r => r.date);
