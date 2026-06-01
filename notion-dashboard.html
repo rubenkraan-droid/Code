@@ -362,9 +362,9 @@
             <th data-sort="leads"        class="right">Leads</th>
             <th data-sort="afsprRate"    class="right muted">Afspr%</th>
             <th data-sort="appointments" class="right">Afspraken</th>
+            <th data-sort="cpa"          class="right">CPA</th>
             <th data-sort="signRate"     class="right muted">Sales%</th>
             <th data-sort="signed"       class="right">Sales</th>
-            <th data-sort="cpa"          class="right">CPA</th>
             <th data-sort="cpsSigned"    class="right">CPS</th>
             <th data-sort="omzet"        class="right">Omzet</th>
             <th data-sort="roas"         class="right">ROAS</th>
@@ -389,9 +389,9 @@
             <th class="right">Leads</th>
             <th class="right muted">Afspr%</th>
             <th class="right">Afspraken</th>
+            <th class="right">CPA</th>
             <th class="right muted">Sales%</th>
             <th class="right">Sales</th>
-            <th class="right">CPA</th>
             <th class="right">CPS</th>
             <th class="right">Omzet</th>
             <th class="right">ROAS</th>
@@ -504,10 +504,11 @@ async function fetchWebhook(url) {
 }
 
 function parseDailyLog(page) {
-  const dateRaw = page.property_date?.start ?? null;
+  const dateRaw  = page.property_date?.start ?? null;
   const spendRaw = page.property_spend;
   const leadsRaw = page.property_leads;
-  const salesRaw = page.property_sales;
+  // "Sales" field in Notion → property_sales; fallback to older field names
+  const signedRaw = page.property_sales ?? page.property_signed ?? page.property_getekend;
   return {
     date:         dateRaw ? dateRaw.slice(0, 10) : null,
     adId:         Array.isArray(page.property_ad) ? page.property_ad[0] : null,
@@ -517,8 +518,8 @@ function parseDailyLog(page) {
     clicks:       typeof page.property_clicks === 'number' ? page.property_clicks : 0,
     leads:        typeof leadsRaw === 'number' ? leadsRaw : 0,
     appointments: typeof page.property_afspraken === 'number' ? page.property_afspraken : 0,
-    signed:       typeof page.property_signed === 'number' ? page.property_signed : (typeof page.property_getekend === 'number' ? page.property_getekend : 0),
-    closed:       typeof salesRaw === 'number' ? salesRaw : 0,
+    signed:       typeof signedRaw === 'number' ? signedRaw : 0,
+    closed:       0,
     omzet:        typeof page.property_omzet === 'number' ? page.property_omzet : 0,
   };
 }
@@ -723,9 +724,9 @@ function renderMainTable(ads) {
       <td class="mono right">${fNum(ad.leads)}</td>
       <td class="mono right muted">${fPct(ad.afsprRate)}</td>
       <td class="mono right">${fNum(ad.appointments)}</td>
+      <td class="mono right">${fEur(ad.cpa)}</td>
       <td class="mono right muted">${fPct(ad.signRate)}</td>
       <td class="mono right amber">${fNum(ad.signed)}</td>
-      <td class="mono right">${fEur(ad.cpa)}</td>
       <td class="mono right amber">${fEur(ad.cpsSigned)}</td>
       <td class="mono right">${fEur(ad.omzet || null)}</td>
       <td class="mono right blue">${fRoas(ad.roas)}</td>
@@ -762,9 +763,9 @@ function renderMonthlyTable() {
       <td class="mono right">${fNum(m.leads)}</td>
       <td class="mono right muted">${fPct(m.afsprRate)}</td>
       <td class="mono right">${fNum(m.appointments)}</td>
+      <td class="mono right">${fEur(m.cpa)}</td>
       <td class="mono right muted">${fPct(m.signRate)}</td>
       <td class="mono right amber">${fNum(m.signed)}</td>
-      <td class="mono right">${fEur(m.cpa)}</td>
       <td class="mono right amber">${fEur(m.cpsSigned)}</td>
       <td class="mono right">${fEur(m.omzet || null)}</td>
       <td class="mono right blue">${fRoas(m.roas)}</td>
@@ -785,9 +786,9 @@ function renderMonthlyTable() {
     <td class="mono right"><strong>${fNum(totals.leads)}</strong></td>
     <td class="mono right muted"><strong>${fPct(allAfspr)}</strong></td>
     <td class="mono right"><strong>${fNum(totals.appointments)}</strong></td>
+    <td class="mono right"><strong>${fEur(allCpa)}</strong></td>
     <td class="mono right muted"><strong>${fPct(allSign)}</strong></td>
     <td class="mono right amber"><strong>${fNum(totals.signed)}</strong></td>
-    <td class="mono right"><strong>${fEur(allCpa)}</strong></td>
     <td class="mono right amber"><strong>${fEur(allCpsS)}</strong></td>
     <td class="mono right"><strong>${fEur(totals.omzet || null)}</strong></td>
     <td class="mono right blue"><strong>${fRoas(allRoas)}</strong></td>
