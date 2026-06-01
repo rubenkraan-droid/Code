@@ -405,12 +405,14 @@
 
 <script>
 // ════════════════════════════════════════════════════════════
-//  CONFIG
+//  CONFIG  — replace the three placeholder values
 // ════════════════════════════════════════════════════════════
 const CONFIG = {
-  DAILY_URL:                'https://mabekra.app.n8n.cloud/webhook/notion-daily',
-  ALL_TIME_URL:             'https://mabekra.app.n8n.cloud/webhook/notion-alltime',
-  CPS_DEFINITIEF_THRESHOLD: 500
+NOTION_TOKEN:    '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',
+DAILY_LOG_DB_ID: '35c2a868d6bc81ef81c4fd4f4ac9e071',
+ALL_TIME_DB_ID:  '35c2a868d6bc81b4852cc71264ec5ad8',
+  CPS_DEFINITIEF_THRESHOLD: 500,        // red threshold in €
+  NOTION_VERSION: '2022-06-28'
 };
 
 // ════════════════════════════════════════════════════════════
@@ -444,40 +446,71 @@ const state = {
 // ════════════════════════════════════════════════════════════
 //  Notion API
 // ════════════════════════════════════════════════════════════
-async function fetchWebhook(url) {
-  const res = await fetch(url, { method: 'POST' });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(`Webhook fout ${res.status}: ${err.message || 'Onbekende fout'}`);
+function getProp(page, name) {
+  const p = page.properties[name];
+  if (!p) return null;
+  switch (p.type) {
+    case 'title':      return p.title[0]?.plain_text?.trim()      || null;
+    case 'rich_text':  return p.rich_text[0]?.plain_text?.trim()  || null;
+    case 'number':     return p.number ?? null;
+    case 'date':       return p.date?.start                       || null;
+    case 'select':     return p.select?.name                      || null;
+    case 'url':        return p.url                               || null;
+    case 'formula':
+      if (p.formula.type === 'number') return p.formula.number ?? null;
+      if (p.formula.type === 'string') return p.formula.string  || null;
+      return null;
+    default: return null;
   }
-  return res.json();
+}
+
+async function fetchAllPages(dbId) {
+  const pages = [];
+  let cursor;
+  for (;;) {
+    const body = { page_size: 100 };
+    if (cursor) body.start_cursor = cursor;
+    const res = await fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${CONFIG.NOTION_TOKEN}`,
+        'Notion-Version': CONFIG.NOTION_VERSION,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(`Notion API fout ${res.status}: ${err.message || 'Onbekende fout'}`);
+    }
+    const data = await res.json();
+    pages.push(...data.results);
+    if (!data.has_more) break;
+    cursor = data.next_cursor;
+  }
+  return pages;
 }
 
 function parseDailyLog(page) {
-  // n8n Notion node geeft properties terug als property_<naam> (lowercase, spaties → _)
-  const dateRaw = page.property_date?.start ?? null;
   return {
-    date:         dateRaw ? dateRaw.slice(0, 10) : null,
-    adId:         Array.isArray(page.property_ad) ? page.property_ad[0] : null,
-    adName:       page.name ? page.name.replace(/^\d{4}-\d{2}-\d{2}\s*\|\s*/, '') : null,
-    spend:        page.property_spend        ?? 0,
-    impressions:  page.property_impressions  ?? 0,
-    clicks:       page.property_clicks       ?? 0,
-    appointments: page.property_leads        ?? 0,
-    signed:       page.property_signed       ?? page.property_getekend    ?? 0,
-    closed:       page.property_sales        ?? page.property_definitief  ?? 0,
+    date:         getProp(page, 'Date'),
+    adId:         getProp(page, 'Ad ID'),
+    adName:       getProp(page, 'Ad Name'),
+    spend:        getProp(page, 'Spend')        ?? 0,
+    impressions:  getProp(page, 'Impressions')  ?? 0,
+    clicks:       getProp(page, 'Clicks')       ?? 0,
+    appointments: getProp(page, 'Appointments') ?? 0,
+    signed:       getProp(page, 'Signed')       ?? 0,
+    closed:       getProp(page, 'Closed')       ?? 0,
   };
 }
 
 function parseAllTime(page) {
   return {
-    adId:     page.id,
-    adName:   page.name ?? null,
-    status:   page.property_status   ?? null,
-    imageUrl: page.property_image_url
-           ?? page.property_google_drive_image_url
-           ?? page.property_afbeelding
-           ?? null,
+    adId:     getProp(page, 'Ad ID'),
+    adName:   getProp(page, 'Ad Name'),
+    status:   getProp(page, 'Status'),
+    imageUrl: getProp(page, 'Google Drive Image URL'),
   };
 }
 
@@ -890,9 +923,18 @@ async function init() {
   document.getElementById('dashboard').hidden      = true;
 
   try {
+    // Guard: detect unconfigured placeholders
+    if (CONFIG.NOTION_TOKEN === 'NOTION_TOKEN') {
+      throw new Error(
+        'Het dashboard is nog niet geconfigureerd.\n\n' +
+        'Open het HTML-bestand, zoek het CONFIG-object bovenaan het script (~regel 6) ' +
+        'en vervang NOTION_TOKEN, DAILY_LOG_DB_ID en ALL_TIME_DB_ID door de echte waarden.'
+      );
+    }
+
     const [dailyPages, allTimePages] = await Promise.all([
-      fetchWebhook(CONFIG.DAILY_URL),
-      fetchWebhook(CONFIG.ALL_TIME_URL)
+      fetchAllPages(CONFIG.DAILY_LOG_DB_ID),
+      fetchAllPages(CONFIG.ALL_TIME_DB_ID)
     ]);
 
     state.dailyLog = dailyPages.map(parseDailyLog).filter(r => r.date);
