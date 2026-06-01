@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Advertentie Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg:        #0F172A;
+      --card:      #1E293B;
+      --blue:      #3B82F6;
+      --green:     #10B981;
+      --amber:     #F59E0B;
+      --red:       #EF4444;
+      --grey:      #6B7280;
+      --row-hl:    #1D3461;
+      --text:      #F1F5F9;
+      --muted:     #94A3B8;
+      --border:    #334155;
+      --hover:     rgba(255,255,255,0.035);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    .mono { font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace; }
+    .amber { color: var(--amber); }
+    .green { color: var(--green); }
+    .red   { color: var(--red);   }
+    .blue  { color: var(--blue);  }
+    .muted { color: var(--muted); }
+    .right { text-align: right; }
+    [hidden] { display: none !important; }
+
+    /* ── Loading ── */
+    #loading-screen, #error-screen {
+      display: flex; align-items: center; justify-content: center; min-height: 100vh;
+    }
+    .loading-inner { text-align: center; color: var(--muted); }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-dots::after {
+      content: '';
+      animation: dots 1.5s steps(4, end) infinite;
+    }
+    @keyframes dots {
+      0%   { content: ''; }
+      25%  { content: '.'; }
+      50%  { content: '..'; }
+      75%  { content: '...'; }
+    }
+
+    /* ── Error ── */
+    .error-card {
+      background: var(--card);
+      border: 1px solid var(--red);
+      border-radius: 12px;
+      padding: 36px;
+      max-width: 520px;
+      text-align: center;
+    }
+    .error-card h2 { color: var(--red); margin-bottom: 10px; font-size: 18px; }
+    .error-card p  { color: var(--muted); margin-bottom: 20px; font-size: 13px; line-height: 1.7; }
+    .btn {
+      background: var(--blue); color: white;
+      border: none; padding: 8px 22px;
+      border-radius: 6px; cursor: pointer; font-size: 14px;
+      transition: opacity .15s;
+    }
+    .btn:hover { opacity: 0.85; }
+
+    /* ── Dashboard wrapper ── */
+    #dashboard {
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 24px 18px 56px;
+    }
+
+    /* ── Header ── */
+    .dash-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 22px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .dash-header h1 {
+      font-size: 20px; font-weight: 700; letter-spacing: -.4px;
+    }
+    #last-updated { font-size: 11px; color: var(--muted); margin-top: 3px; display: block; }
+
+    /* ── Card ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 22px;
+      margin-bottom: 18px;
+    }
+    .card-title {
+      font-size: 14px; font-weight: 600;
+      margin-bottom: 16px;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    /* ── Period Toggle ── */
+    .period-row {
+      display: flex; align-items: center; gap: 8px;
+      flex-wrap: wrap; margin-bottom: 18px;
+    }
+    .period-btn {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 7px 16px; border-radius: 999px;
+      cursor: pointer; font-size: 13px;
+      transition: all .15s; white-space: nowrap;
+    }
+    .period-btn:hover { border-color: var(--blue); color: var(--text); }
+    .period-btn.active {
+      background: var(--blue); border-color: var(--blue);
+      color: white; font-weight: 600;
+    }
+    .month-picker {
+      background: var(--card); border: 1px solid var(--border);
+      color: var(--muted); padding: 7px 14px; border-radius: 999px;
+      font-size: 13px; cursor: pointer; outline: none;
+      transition: border-color .15s;
+    }
+    .month-picker:focus, .month-picker.active-month { border-color: var(--blue); color: var(--text); }
+
+    /* ── Summary Bar ── */
+    .summary-bar {
+      display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 18px;
+    }
+    .stat-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 10px; padding: 14px 18px; flex: 1; min-width: 130px;
+    }
+    .stat-card.c-amber { border-color: rgba(245,158,11,.3); }
+    .stat-card.c-green { border-color: rgba(16,185,129,.3); }
+    .stat-label {
+      font-size: 10px; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .6px;
+      margin-bottom: 6px; display: flex; align-items: center; gap: 6px;
+    }
+    .stat-value { font-size: 21px; font-weight: 700; }
+    .ilabel {
+      font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: 600;
+    }
+    .ilabel-amber { background: rgba(245,158,11,.15); color: var(--amber); }
+    .ilabel-green { background: rgba(16,185,129,.15); color: var(--green); }
+
+    /* ── Tables (shared) ── */
+    .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead tr { border-bottom: 1px solid var(--border); }
+    th {
+      text-align: left; padding: 9px 12px;
+      font-size: 10px; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .5px;
+      white-space: nowrap;
+      position: sticky; top: 0;
+      background: var(--card); z-index: 1;
+    }
+    th.right { text-align: right; }
+    th[data-sort] { cursor: pointer; user-select: none; }
+    th[data-sort]:hover { color: var(--text); }
+    th.sort-desc::after { content: ' ↓'; color: var(--blue); }
+    th.sort-asc::after  { content: ' ↑'; color: var(--blue); }
+    td {
+      padding: 9px 12px;
+      border-bottom: 1px solid rgba(51,65,85,.45);
+      white-space: nowrap;
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: var(--hover); }
+    .ad-name-cell {
+      max-width: 200px; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis;
+    }
+
+    /* highlighted row (monthly) */
+    tr.hl-row td {
+      background: var(--row-hl) !important;
+    }
+    tr.hl-row:hover td {
+      background: #1e3d72 !important;
+    }
+
+    /* totals footer */
+    tfoot td {
+      padding: 10px 12px; font-weight: 600;
+      border-top: 2px solid var(--border);
+    }
+
+    /* ── Badges ── */
+    .badge {
+      display: inline-flex; align-items: center;
+      padding: 2px 8px; border-radius: 999px;
+      font-size: 11px; font-weight: 600;
+    }
+    .badge-green { background: rgba(16,185,129,.15); color: var(--green); }
+    .badge-grey  { background: rgba(107,114,128,.15); color: var(--grey); }
+    .badge-blue  { background: rgba(59,130,246,.15);  color: var(--blue); }
+    .badge-amber { background: rgba(245,158,11,.15);  color: var(--amber); }
+
+    .sm-badge {
+      font-size: 10px; padding: 1px 6px; border-radius: 4px; font-weight: 600;
+    }
+    .sm-blue  { background: rgba(59,130,246,.15);  color: var(--blue); }
+    .sm-amber { background: rgba(245,158,11,.15);  color: var(--amber); cursor: default; }
+
+    /* ── Chart ── */
+    .chart-wrap { position: relative; height: 290px; }
+
+    /* ── Creative Cards ── */
+    .creative-grid {
+      display: flex; gap: 14px; flex-wrap: wrap;
+    }
+    .creative-card {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 12px; overflow: hidden;
+      width: 210px; flex-shrink: 0;
+      transition: border-color .2s;
+    }
+    .creative-card:hover { border-color: var(--blue); }
+    .creative-img-wrap {
+      position: relative; height: 155px;
+      background: #182438; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .creative-img {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+    }
+    .creative-placeholder {
+      font-size: 12px; color: var(--muted);
+      text-align: center; padding: 14px;
+      line-height: 1.5;
+    }
+    .rank-badge {
+      position: absolute; top: 8px; left: 8px;
+      width: 26px; height: 26px;
+      background: var(--blue); color: white;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700;
+      box-shadow: 0 2px 8px rgba(0,0,0,.45);
+      z-index: 2;
+    }
+    .creative-body { padding: 12px; }
+    .creative-name {
+      font-size: 12px; font-weight: 600; margin-bottom: 10px;
+      line-height: 1.4;
+      overflow: hidden; display: -webkit-box;
+      -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    }
+    .creative-pills { display: flex; flex-direction: column; gap: 5px; }
+    .pill {
+      font-size: 11px;
+      font-family: 'SF Mono','Fira Code','Cascadia Code','Consolas',monospace;
+      padding: 3px 9px; border-radius: 4px; font-weight: 600; width: fit-content;
+    }
+    .pill-blue  { background: rgba(59,130,246,.15);  color: var(--blue); }
+    .pill-amber { background: rgba(245,158,11,.15);  color: var(--amber); }
+    .pill-green { background: rgba(16,185,129,.15);  color: var(--green); }
+
+    /* ── Divider ── */
+    .section-divider {
+      height: 1px; background: var(--border); margin: 6px 0 18px;
+    }
+
+    /* ── Mobile ── */
+    @media (max-width: 720px) {
+      .stat-value { font-size: 18px; }
+      .creative-card { width: 160px; }
+      .creative-img-wrap { height: 120px; }
+      .dash-header h1 { font-size: 17px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════ LOADING ═══════════════════════════════════ -->
+<div id="loading-screen">
+  <div class="loading-inner">
+    <div class="spinner"></div>
+    <p>Advertentiedata wordt geladen<span class="loading-dots"></span></p>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════ ERROR ════════════════════════════════════ -->
+<div id="error-screen" hidden>
+  <div class="error-card">
+    <h2>Fout bij laden</h2>
+    <p id="error-msg"></p>
+    <button class="btn" onclick="init()">Opnieuw proberen</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════ DASHBOARD ══════════════════════════════════ -->
+<div id="dashboard" hidden>
+
+  <!-- Header -->
+  <div class="dash-header">
+    <div>
+      <h1>Advertentie Dashboard</h1>
+      <span id="last-updated"></span>
+    </div>
+  </div>
+
+  <!-- Period Toggle -->
+  <div class="period-row">
+    <button class="period-btn active" data-period="7d">Laatste 7 dagen</button>
+    <button class="period-btn" data-period="30d">Laatste 30 dagen</button>
+    <button class="period-btn" data-period="month">Deze maand</button>
+    <select id="month-picker" class="month-picker">
+      <option value="">Kies maand&hellip;</option>
+    </select>
+  </div>
+
+  <!-- Summary Bar -->
+  <div class="summary-bar" id="summary-bar"></div>
+
+  <!-- Trend Chart -->
+  <div class="card">
+    <div class="card-title">Trend</div>
+    <div class="chart-wrap">
+      <canvas id="trend-chart"></canvas>
+    </div>
+  </div>
+
+  <!-- Main Ads Table -->
+  <div class="card">
+    <div class="card-title">Advertenties</div>
+    <div class="tbl-wrap">
+      <table id="main-table">
+        <thead>
+          <tr>
+            <th data-sort="adName">Advertentie</th>
+            <th data-sort="status">Status</th>
+            <th data-sort="spend"       class="right">Uitgaven</th>
+            <th data-sort="impressions" class="right">Impressies</th>
+            <th data-sort="clicks"      class="right">Clicks</th>
+            <th data-sort="appointments" class="right">Afspraken</th>
+            <th data-sort="signed"      class="right">Getekend</th>
+            <th data-sort="closed"      class="right">Definitief</th>
+            <th data-sort="cpa"         class="right">CPA</th>
+            <th data-sort="cpsSigned"   class="right">CPS Getekend</th>
+            <th data-sort="cpsClosed"   class="right">CPS Definitief</th>
+          </tr>
+        </thead>
+        <tbody id="main-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Maandoverzicht -->
+  <div class="card">
+    <div class="card-title">Maandoverzicht</div>
+    <div class="tbl-wrap">
+      <table id="monthly-table">
+        <thead>
+          <tr>
+            <th>Maand</th>
+            <th class="right">Uitgaven</th>
+            <th class="right">Afspraken</th>
+            <th class="right">Getekend</th>
+            <th class="right">Definitief</th>
+            <th class="right">CPA</th>
+            <th class="right">CPS Getekend</th>
+            <th class="right">CPS Definitief</th>
+          </tr>
+        </thead>
+        <tbody id="monthly-tbody"></tbody>
+        <tfoot id="monthly-tfoot"></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- Beste Advertenties -->
+  <div class="card">
+    <div class="card-title">Beste Advertenties</div>
+    <div class="creative-grid" id="creative-grid"></div>
+  </div>
+
+</div><!-- /#dashboard -->
+
+<script>
+// ════════════════════════════════════════════════════════════
+//  CONFIG  — replace the three placeholder values
+// ════════════════════════════════════════════════════════════
+const CONFIG = {
+  NOTION_TOKEN:    'NOTION_TOKEN',      // your Notion integration token
+  DAILY_LOG_DB_ID: 'DAILY_LOG_DB_ID',  // Ads — Daily Log database ID
+  ALL_TIME_DB_ID:  'ALL_TIME_DB_ID',   // Ads — All Time database ID
+  CPS_DEFINITIEF_THRESHOLD: 500,        // red threshold in €
+  NOTION_VERSION: '2022-06-28'
+};
+
+// ════════════════════════════════════════════════════════════
+//  Dutch locale helpers
+// ════════════════════════════════════════════════════════════
+const MONTHS_SHORT = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+
+const _eur = new Intl.NumberFormat('nl-NL', {
+  style: 'currency', currency: 'EUR',
+  minimumFractionDigits: 0, maximumFractionDigits: 0
+});
+const _num = new Intl.NumberFormat('nl-NL', { maximumFractionDigits: 0 });
+
+const fEur  = v => (v == null || isNaN(v)) ? '—' : _eur.format(v);
+const fNum  = v => (v == null || isNaN(v)) ? '—' : _num.format(Math.round(v));
+const fMon  = (y, m) => `${MONTHS_SHORT[m]} ${y}`;
+const esc   = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+// ════════════════════════════════════════════════════════════
+//  State
+// ════════════════════════════════════════════════════════════
+const state = {
+  dailyLog:   [],       // parsed daily log rows
+  allTimeMap: new Map(),// Ad ID → allTime record
+  period:     '7d',
+  sortCol:    'spend',
+  sortDir:    -1,       // -1 desc, 1 asc
+  chart:      null
+};
+
+// ════════════════════════════════════════════════════════════
+//  Notion API
+// ════════════════════════════════════════════════════════════
+function getProp(page, name) {
+  const p = page.properties[name];
+  if (!p) return null;
+  switch (p.type) {
+    case 'title':      return p.title[0]?.plain_text?.trim()      || null;
+    case 'rich_text':  return p.rich_text[0]?.plain_text?.trim()  || null;
+    case 'number':     return p.number ?? null;
+    case 'date':       return p.date?.start                       || null;
+    case 'select':     return p.select?.name                      || null;
+    case 'url':        return p.url                               || null;
+    case 'formula':
+      if (p.formula.type === 'number') return p.formula.number ?? null;
+      if (p.formula.type === 'string') return p.formula.string  || null;
+      return null;
+    default: return null;
+  }
+}
+
+async function fetchAllPages(dbId) {
+  const pages = [];
+  let cursor;
+  for (;;) {
+    const body = { page_size: 100 };
+    if (cursor) body.start_cursor = cursor;
+    const res = await fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${CONFIG.NOTION_TOKEN}`,
+        'Notion-Version': CONFIG.NOTION_VERSION,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(`Notion API fout ${res.status}: ${err.message || 'Onbekende fout'}`);
+    }
+    const data = await res.json();
+    pages.push(...data.results);
+    if (!data.has_more) break;
+    cursor = data.next_cursor;
+  }
+  return pages;
+}
+
+function parseDailyLog(page) {
+  return {
+    date:         getProp(page, 'Date'),
+    adId:         getProp(page, 'Ad ID'),
+    adName:       getProp(page, 'Ad Name'),
+    spend:        getProp(page, 'Spend')        ?? 0,
+    impressions:  getProp(page, 'Impressions')  ?? 0,
+    clicks:       getProp(page, 'Clicks')       ?? 0,
+    appointments: getProp(page, 'Appointments') ?? 0,
+    signed:       getProp(page, 'Signed')       ?? 0,
+    closed:       getProp(page, 'Closed')       ?? 0,
+  };
+}
+
+function parseAllTime(page) {
+  return {
+    adId:     getProp(page, 'Ad ID'),
+    adName:   getProp(page, 'Ad Name'),
+    status:   getProp(page, 'Status'),
+    imageUrl: getProp(page, 'Google Drive Image URL'),
+  };
+}
+
+// ════════════════════════════════════════════════════════════
+//  Google Drive → direct embed URL
+// ════════════════════════════════════════════════════════════
+function driveUrl(url) {
+  if (!url) return null;
+  const m1 = url.match(/\/d\/([^\/\?&#]+)/);
+  if (m1) return `https://drive.google.com/uc?export=view&id=${m1[1]}`;
+  const m2 = url.match(/[?&]id=([^&#]+)/);
+  if (m2) return `https://drive.google.com/uc?export=view&id=${m2[1]}`;
+  return url;
+}
+
+// ════════════════════════════════════════════════════════════
+//  Period / date helpers
+// ════════════════════════════════════════════════════════════
+function getRange(period) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (period === '7d') {
+    const s = new Date(today); s.setDate(today.getDate() - 6);
+    return { start: s, end: today };
+  }
+  if (period === '30d') {
+    const s = new Date(today); s.setDate(today.getDate() - 29);
+    return { start: s, end: today };
+  }
+  if (period === 'month') {
+    return { start: new Date(today.getFullYear(), today.getMonth(), 1), end: today };
+  }
+  if (/^\d{4}-\d{2}$/.test(period)) {
+    const [y, m] = period.split('-').map(Number);
+    return { start: new Date(y, m - 1, 1), end: new Date(y, m, 0) };
+  }
+  return null;
+}
+
+function inRange(dateStr, range) {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d >= range.start && d <= range.end;
+}
+
+function filterRows(rows, range) {
+  return rows.filter(r => r.date && inRange(r.date, range));
+}
+
+// ════════════════════════════════════════════════════════════
+//  Data aggregation
+// ════════════════════════════════════════════════════════════
+function aggAds(rows) {
+  const map = new Map();
+  for (const r of rows) {
+    const key = r.adId || r.adName;
+    if (!key) continue;
+    if (!map.has(key)) {
+      const at = state.allTimeMap.get(key) || {};
+      map.set(key, {
+        adId: r.adId, adName: r.adName || key,
+        status: at.status || null, imageUrl: at.imageUrl || null,
+        spend: 0, impressions: 0, clicks: 0, appointments: 0, signed: 0, closed: 0
+      });
+    }
+    const a = map.get(key);
+    a.spend        += r.spend;
+    a.impressions  += r.impressions;
+    a.clicks       += r.clicks;
+    a.appointments += r.appointments;
+    a.signed       += r.signed;
+    a.closed       += r.closed;
+  }
+  return Array.from(map.values()).map(a => ({
+    ...a,
+    cpa:       a.appointments > 0 ? a.spend / a.appointments : null,
+    cpsSigned: a.signed       > 0 ? a.spend / a.signed       : null,
+    cpsClosed: a.closed       > 0 ? a.spend / a.closed       : null,
+  }));
+}
+
+function aggMonthly(rows) {
+  const map = new Map();
+  for (const r of rows) {
+    if (!r.date) continue;
+    const d = new Date(r.date + 'T00:00:00');
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    if (!map.has(key)) map.set(key, { year: d.getFullYear(), month: d.getMonth(), spend:0, appointments:0, signed:0, closed:0 });
+    const m = map.get(key);
+    m.spend += r.spend; m.appointments += r.appointments;
+    m.signed += r.signed; m.closed += r.closed;
+  }
+  return Array.from(map.entries()).sort(([a],[b]) => a.localeCompare(b)).map(([key, d]) => ({
+    key, ...d,
+    cpa:       d.appointments > 0 ? d.spend / d.appointments : null,
+    cpsSigned: d.signed       > 0 ? d.spend / d.signed       : null,
+    cpsClosed: d.closed       > 0 ? d.spend / d.closed       : null,
+  }));
+}
+
+// ════════════════════════════════════════════════════════════
+//  Render: Summary Bar
+// ════════════════════════════════════════════════════════════
+function renderSummary(ads) {
+  const t = ads.reduce((a, ad) => {
+    a.spend += ad.spend; a.appointments += ad.appointments;
+    a.signed += ad.signed; a.closed += ad.closed; return a;
+  }, {spend:0,appointments:0,signed:0,closed:0});
+  const cpa  = t.appointments > 0 ? t.spend / t.appointments : null;
+  const cpsS = t.signed       > 0 ? t.spend / t.signed       : null;
+  const cpsC = t.closed       > 0 ? t.spend / t.closed       : null;
+  document.getElementById('summary-bar').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">Totaal Uitgaven</div>
+      <div class="stat-value mono">${fEur(t.spend)}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Afspraken</div>
+      <div class="stat-value mono">${fNum(t.appointments)}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Getekend</div>
+      <div class="stat-value mono amber">${fNum(t.signed)}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Definitief</div>
+      <div class="stat-value mono green">${fNum(t.closed)}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Blended CPA</div>
+      <div class="stat-value mono">${fEur(cpa)}</div>
+    </div>
+    <div class="stat-card c-amber">
+      <div class="stat-label">CPS Getekend <span class="ilabel ilabel-amber">voorlopig</span></div>
+      <div class="stat-value mono amber">${fEur(cpsS)}</div>
+    </div>
+    <div class="stat-card c-green">
+      <div class="stat-label">CPS Definitief <span class="ilabel ilabel-green">definitief</span></div>
+      <div class="stat-value mono green">${fEur(cpsC)}</div>
+    </div>`;
+}
+
+// ════════════════════════════════════════════════════════════
+//  Render: Main Table
+// ════════════════════════════════════════════════════════════
+function renderMainTable(ads) {
+  const { sortCol, sortDir } = state;
+  const sorted = [...ads].sort((a, b) => {
+    let va = a[sortCol] ?? (sortDir === -1 ? -Infinity : Infinity);
+    let vb = b[sortCol] ?? (sortDir === -1 ? -Infinity : Infinity);
+    return (typeof va === 'string' ? va.localeCompare(vb) : va - vb) * sortDir;
+  });
+
+  document.querySelectorAll('#main-table th[data-sort]').forEach(th => {
+    th.classList.remove('sort-asc', 'sort-desc');
+    if (th.dataset.sort === sortCol) th.classList.add(sortDir === 1 ? 'sort-asc' : 'sort-desc');
+  });
+
+  document.getElementById('main-tbody').innerHTML = sorted.map(ad => {
+    const isActive   = ad.status === 'Active' || ad.status === 'Actief';
+    const statusBadge = ad.status
+      ? (isActive ? '<span class="badge badge-green">Actief</span>' : '<span class="badge badge-grey">Gepauzeerd</span>')
+      : '<span class="muted">—</span>';
+    const cpsColor = (ad.cpsClosed != null && ad.cpsClosed > CONFIG.CPS_DEFINITIEF_THRESHOLD) ? 'red' : 'green';
+    return `<tr>
+      <td class="ad-name-cell" title="${esc(ad.adName)}">${esc(ad.adName)}</td>
+      <td>${statusBadge}</td>
+      <td class="mono right">${fEur(ad.spend)}</td>
+      <td class="mono right">${fNum(ad.impressions)}</td>
+      <td class="mono right">${fNum(ad.clicks)}</td>
+      <td class="mono right">${fNum(ad.appointments)}</td>
+      <td class="mono right amber">${fNum(ad.signed)}</td>
+      <td class="mono right green">${fNum(ad.closed)}</td>
+      <td class="mono right">${fEur(ad.cpa)}</td>
+      <td class="mono right amber">${fEur(ad.cpsSigned)}</td>
+      <td class="mono right ${cpsColor}">${fEur(ad.cpsClosed)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════════════
+//  Render: Monthly Overview
+// ════════════════════════════════════════════════════════════
+function renderMonthlyTable() {
+  const monthly = aggMonthly(state.dailyLog);
+  const now = new Date();
+  const curKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+
+  // Highlight key: only for month/YYYY-MM selections
+  let hlKey = null;
+  if (state.period === 'month') hlKey = curKey;
+  else if (/^\d{4}-\d{2}$/.test(state.period)) hlKey = state.period;
+
+  const totals = monthly.reduce((a,m) => {
+    a.spend += m.spend; a.appointments += m.appointments; a.signed += m.signed; a.closed += m.closed; return a;
+  }, {spend:0,appointments:0,signed:0,closed:0});
+
+  document.getElementById('monthly-tbody').innerHTML = monthly.map(m => {
+    const badges = [];
+    if (m.key === curKey) badges.push('<span class="sm-badge sm-blue">actief</span>');
+    const pending = m.signed - m.closed;
+    if (pending > 0) badges.push(
+      `<span class="sm-badge sm-amber" title="${pending} getekende deals nog niet definitief gesloten — kosten per definitieve verkoop kunnen nog dalen">⚠ in afwachting</span>`
+    );
+    return `<tr class="${m.key === hlKey ? 'hl-row' : ''}">
+      <td>${fMon(m.year, m.month)} ${badges.join(' ')}</td>
+      <td class="mono right">${fEur(m.spend)}</td>
+      <td class="mono right">${fNum(m.appointments)}</td>
+      <td class="mono right amber">${fNum(m.signed)}</td>
+      <td class="mono right green">${fNum(m.closed)}</td>
+      <td class="mono right">${fEur(m.cpa)}</td>
+      <td class="mono right amber">${fEur(m.cpsSigned)}</td>
+      <td class="mono right green">${fEur(m.cpsClosed)}</td>
+    </tr>`;
+  }).join('');
+
+  const allCpa  = totals.appointments > 0 ? totals.spend / totals.appointments : null;
+  const allCpsS = totals.signed       > 0 ? totals.spend / totals.signed       : null;
+  const allCpsC = totals.closed       > 0 ? totals.spend / totals.closed       : null;
+  document.getElementById('monthly-tfoot').innerHTML = `<tr>
+    <td><strong>Totaal alle tijd</strong></td>
+    <td class="mono right"><strong>${fEur(totals.spend)}</strong></td>
+    <td class="mono right"><strong>${fNum(totals.appointments)}</strong></td>
+    <td class="mono right amber"><strong>${fNum(totals.signed)}</strong></td>
+    <td class="mono right green"><strong>${fNum(totals.closed)}</strong></td>
+    <td class="mono right"><strong>${fEur(allCpa)}</strong></td>
+    <td class="mono right amber"><strong>${fEur(allCpsS)}</strong></td>
+    <td class="mono right green"><strong>${fEur(allCpsC)}</strong></td>
+  </tr>`;
+}
+
+// ════════════════════════════════════════════════════════════
+//  Render: Trend Chart
+// ════════════════════════════════════════════════════════════
+function renderChart(rows, range) {
+  // Group daily totals
+  const dm = new Map();
+  for (const r of rows) {
+    if (!r.date) continue;
+    if (!dm.has(r.date)) dm.set(r.date, {spend:0, signed:0, closed:0});
+    const d = dm.get(r.date);
+    d.spend += r.spend; d.signed += r.signed; d.closed += r.closed;
+  }
+
+  // Full date axis (including zero-spend days)
+  const dates = [];
+  const cur = new Date(range.start);
+  while (cur <= range.end) {
+    dates.push(cur.toISOString().split('T')[0]);
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  const labels    = dates.map(d => { const dt = new Date(d+'T00:00:00'); return `${dt.getDate()} ${MONTHS_SHORT[dt.getMonth()]}`; });
+  const spendData = dates.map(d => dm.get(d)?.spend || 0);
+  const cpsSD     = dates.map(d => { const v = dm.get(d); return v && v.signed  > 0 ? v.spend / v.signed  : null; });
+  const cpsCd     = dates.map(d => { const v = dm.get(d); return v && v.closed  > 0 ? v.spend / v.closed  : null; });
+
+  if (state.chart) { state.chart.destroy(); state.chart = null; }
+
+  state.chart = new Chart(document.getElementById('trend-chart').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Uitgaven',
+          data: spendData,
+          borderColor: '#3B82F6', backgroundColor: 'rgba(59,130,246,.07)',
+          fill: true, tension: 0.3, yAxisID: 'y',
+          pointRadius: 3, pointHoverRadius: 5
+        },
+        {
+          label: 'CPS Getekend',
+          data: cpsSD,
+          borderColor: '#F59E0B', borderDash: [6,3],
+          tension: 0.3, spanGaps: true, yAxisID: 'y1',
+          pointRadius: 3, pointHoverRadius: 5
+        },
+        {
+          label: 'CPS Definitief',
+          data: cpsCd,
+          borderColor: '#10B981',
+          tension: 0.3, spanGaps: true, yAxisID: 'y1',
+          pointRadius: 3, pointHoverRadius: 5
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          labels: { color: '#94A3B8', font: { size: 12 }, usePointStyle: true }
+        },
+        tooltip: {
+          backgroundColor: '#1E293B', borderColor: '#334155', borderWidth: 1,
+          titleColor: '#F1F5F9', bodyColor: '#94A3B8',
+          callbacks: {
+            label: ctx => ctx.parsed.y == null ? null : `${ctx.dataset.label}: ${fEur(ctx.parsed.y)}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#94A3B8', maxRotation: 45, autoSkip: true, maxTicksLimit: 20 },
+          grid: { color: 'rgba(51,65,85,.4)' }
+        },
+        y: {
+          position: 'left',
+          ticks: { color: '#3B82F6', callback: v => fEur(v) },
+          grid: { color: 'rgba(51,65,85,.4)' }
+        },
+        y1: {
+          position: 'right',
+          ticks: { color: '#10B981', callback: v => fEur(v) },
+          grid: { drawOnChartArea: false }
+        }
+      }
+    }
+  });
+}
+
+// ════════════════════════════════════════════════════════════
+//  Render: Beste Advertenties (top 5 by lowest CPA)
+// ════════════════════════════════════════════════════════════
+function renderBeste(ads) {
+  const top5 = ads
+    .filter(a => a.appointments >= 1 && a.cpa != null)
+    .sort((a, b) => a.cpa - b.cpa)
+    .slice(0, 5);
+
+  const grid = document.getElementById('creative-grid');
+  if (!top5.length) {
+    grid.innerHTML = '<p class="muted" style="padding:4px 0">Geen advertenties met afspraken in deze periode.</p>';
+    return;
+  }
+
+  grid.innerHTML = top5.map((ad, i) => {
+    const imgSrc = driveUrl(ad.imageUrl);
+    const imgHtml = imgSrc
+      ? `<img src="${esc(imgSrc)}" alt="${esc(ad.adName)}" class="creative-img"
+            onerror="this.closest('.creative-img-wrap').innerHTML='<span class=\\'creative-placeholder\\'>${esc(ad.adName)}</span><div class=\\'rank-badge\\'>${i+1}</div>'">`
+      : `<span class="creative-placeholder">${esc(ad.adName)}</span>`;
+
+    return `<div class="creative-card">
+      <div class="creative-img-wrap">
+        ${imgHtml}
+        <div class="rank-badge">${i+1}</div>
+      </div>
+      <div class="creative-body">
+        <div class="creative-name" title="${esc(ad.adName)}">${esc(ad.adName)}</div>
+        <div class="creative-pills">
+          <span class="pill pill-blue">CPA ${fEur(ad.cpa)}</span>
+          <span class="pill pill-amber">CPS Get. ${fEur(ad.cpsSigned)}</span>
+          <span class="pill pill-green">CPS Def. ${fEur(ad.cpsClosed)}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════════════
+//  Month Picker population
+// ════════════════════════════════════════════════════════════
+function populateMonthPicker() {
+  const keys = new Set();
+  for (const r of state.dailyLog) {
+    if (!r.date) continue;
+    const d = new Date(r.date + 'T00:00:00');
+    keys.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+  }
+  const sel = document.getElementById('month-picker');
+  for (const key of Array.from(keys).sort()) {
+    const [y,m] = key.split('-').map(Number);
+    const opt = document.createElement('option');
+    opt.value = key; opt.textContent = fMon(y, m-1);
+    sel.appendChild(opt);
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+//  Main update cycle
+// ════════════════════════════════════════════════════════════
+function update() {
+  const range = getRange(state.period);
+  if (!range) return;
+  const rows = filterRows(state.dailyLog, range);
+  const ads  = aggAds(rows);
+
+  renderSummary(ads);
+  renderMainTable(ads);
+  renderChart(rows, range);
+  renderMonthlyTable();   // always full history
+  renderBeste(ads);
+
+  // Sync period toggle UI
+  document.querySelectorAll('.period-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.period === state.period);
+  });
+  const picker = document.getElementById('month-picker');
+  picker.value = /^\d{4}-\d{2}$/.test(state.period) ? state.period : '';
+  picker.classList.toggle('active-month', picker.value !== '');
+}
+
+// ════════════════════════════════════════════════════════════
+//  Init
+// ════════════════════════════════════════════════════════════
+async function init() {
+  document.getElementById('loading-screen').hidden = false;
+  document.getElementById('error-screen').hidden   = true;
+  document.getElementById('dashboard').hidden      = true;
+
+  try {
+    // Guard: detect unconfigured placeholders
+    if (CONFIG.NOTION_TOKEN === 'NOTION_TOKEN') {
+      throw new Error(
+        'Het dashboard is nog niet geconfigureerd.\n\n' +
+        'Open het HTML-bestand, zoek het CONFIG-object bovenaan het script (~regel 6) ' +
+        'en vervang NOTION_TOKEN, DAILY_LOG_DB_ID en ALL_TIME_DB_ID door de echte waarden.'
+      );
+    }
+
+    const [dailyPages, allTimePages] = await Promise.all([
+      fetchAllPages(CONFIG.DAILY_LOG_DB_ID),
+      fetchAllPages(CONFIG.ALL_TIME_DB_ID)
+    ]);
+
+    state.dailyLog = dailyPages.map(parseDailyLog).filter(r => r.date);
+
+    // Build allTime lookup by Ad ID and Ad Name
+    state.allTimeMap = new Map();
+    for (const p of allTimePages) {
+      const at = parseAllTime(p);
+      if (at.adId)   state.allTimeMap.set(at.adId,   at);
+      if (at.adName) state.allTimeMap.set(at.adName, at);
+    }
+
+    populateMonthPicker();
+
+    const now = new Date();
+    document.getElementById('last-updated').textContent =
+      `Laatst bijgewerkt: ${now.toLocaleDateString('nl-NL')} om ${now.toLocaleTimeString('nl-NL', {hour:'2-digit',minute:'2-digit'})}`;
+
+    document.getElementById('loading-screen').hidden = true;
+    document.getElementById('dashboard').hidden      = false;
+    update();
+
+  } catch (err) {
+    document.getElementById('loading-screen').hidden = true;
+    document.getElementById('error-screen').hidden   = false;
+    document.getElementById('error-msg').textContent = err.message;
+    console.error('[Dashboard]', err);
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+//  Events
+// ════════════════════════════════════════════════════════════
+
+// Period toggle buttons
+document.querySelectorAll('.period-btn').forEach(btn => {
+  btn.addEventListener('click', () => { state.period = btn.dataset.period; update(); });
+});
+
+// Month picker
+document.getElementById('month-picker').addEventListener('change', e => {
+  if (e.target.value) { state.period = e.target.value; update(); }
+});
+
+// Sortable headers on main table
+document.querySelectorAll('#main-table th[data-sort]').forEach(th => {
+  th.addEventListener('click', () => {
+    if (state.sortCol === th.dataset.sort) {
+      state.sortDir *= -1;
+    } else {
+      state.sortCol = th.dataset.sort;
+      state.sortDir = -1;
+    }
+    const range = getRange(state.period);
+    if (!range) return;
+    renderMainTable(aggAds(filterRows(state.dailyLog, range)));
+  });
+});
+
+// ════════════════════════════════════════════════════════════
+//  Boot
+// ════════════════════════════════════════════════════════════
+init();
+</script>
+</body>
+</html>
