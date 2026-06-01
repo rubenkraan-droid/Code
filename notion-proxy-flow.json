@@ -1,0 +1,105 @@
+{
+  "name": "Notion Dashboard Proxy",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "notion-proxy",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-200, 0],
+      "webhookId": "notion-proxy"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\n\nconst DB = {\n  daily:   '35c2a868d6bc81ef81c4fd4f4ac9e071',\n  alltime: '35c2a868d6bc81b4852cc71264ec5ad8'\n};\n\nconst dbId = DB[body.db];\nif (!dbId) throw new Error('Onbekende db: ' + body.db);\n\nconst payload = { page_size: 100 };\nif (body.cursor) payload.start_cursor = body.cursor;\n\nreturn [{\n  json: {\n    url: `https://api.notion.com/v1/databases/${dbId}/query`,\n    body: JSON.stringify(payload)\n  }\n}];"
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000002",
+      "name": "Bouw Notion Verzoek",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [20, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer JOUW_NOTION_TOKEN_HIER"
+            },
+            {
+              "name": "Notion-Version",
+              "value": "2022-06-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "rawBody",
+        "rawContentType": "application/json",
+        "body": "={{ $json.body }}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000003",
+      "name": "Notion API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [240, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000004",
+      "name": "Stuur Terug",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [460, 0]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [{ "node": "Bouw Notion Verzoek", "type": "main", "index": 0 }]
+      ]
+    },
+    "Bouw Notion Verzoek": {
+      "main": [
+        [{ "node": "Notion API", "type": "main", "index": 0 }]
+      ]
+    },
+    "Notion API": {
+      "main": [
+        [{ "node": "Stuur Terug", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "instanceId": ""
+  }
+}

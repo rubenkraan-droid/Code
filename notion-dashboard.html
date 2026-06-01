@@ -405,14 +405,11 @@
 
 <script>
 // ════════════════════════════════════════════════════════════
-//  CONFIG  — replace the three placeholder values
+//  CONFIG  — vul hier jouw n8n webhook URL in
 // ════════════════════════════════════════════════════════════
 const CONFIG = {
-  NOTION_TOKEN:    'NOTION_TOKEN',      // your Notion integration token
-  DAILY_LOG_DB_ID: 'DAILY_LOG_DB_ID',  // Ads — Daily Log database ID
-  ALL_TIME_DB_ID:  'ALL_TIME_DB_ID',   // Ads — All Time database ID
-  CPS_DEFINITIEF_THRESHOLD: 500,        // red threshold in €
-  NOTION_VERSION: '2022-06-28'
+  PROXY_URL:                 'PROXY_URL',  // bijv. https://n8n.jouwdomein.nl/webhook/notion-proxy
+  CPS_DEFINITIEF_THRESHOLD:  500           // rood boven dit bedrag (€)
 };
 
 // ════════════════════════════════════════════════════════════
@@ -464,19 +461,16 @@ function getProp(page, name) {
   }
 }
 
-async function fetchAllPages(dbId) {
+async function fetchAllPages(dbKey) {
+  // dbKey: 'daily' | 'alltime' — n8n proxy vertaalt dit naar de juiste database-ID
   const pages = [];
   let cursor;
   for (;;) {
-    const body = { page_size: 100 };
-    if (cursor) body.start_cursor = cursor;
-    const res = await fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
+    const body = { db: dbKey };
+    if (cursor) body.cursor = cursor;
+    const res = await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${CONFIG.NOTION_TOKEN}`,
-        'Notion-Version': CONFIG.NOTION_VERSION,
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     });
     if (!res.ok) {
@@ -923,18 +917,17 @@ async function init() {
   document.getElementById('dashboard').hidden      = true;
 
   try {
-    // Guard: detect unconfigured placeholders
-    if (CONFIG.NOTION_TOKEN === 'NOTION_TOKEN') {
+    if (CONFIG.PROXY_URL === 'PROXY_URL') {
       throw new Error(
         'Het dashboard is nog niet geconfigureerd.\n\n' +
-        'Open het HTML-bestand, zoek het CONFIG-object bovenaan het script (~regel 6) ' +
-        'en vervang NOTION_TOKEN, DAILY_LOG_DB_ID en ALL_TIME_DB_ID door de echte waarden.'
+        'Importeer notion-proxy-flow.json in n8n, stel de Notion token in, ' +
+        'activeer de flow, en vul de webhook-URL in bij PROXY_URL in het CONFIG-object.'
       );
     }
 
     const [dailyPages, allTimePages] = await Promise.all([
-      fetchAllPages(CONFIG.DAILY_LOG_DB_ID),
-      fetchAllPages(CONFIG.ALL_TIME_DB_ID)
+      fetchAllPages('daily'),
+      fetchAllPages('alltime')
     ]);
 
     state.dailyLog = dailyPages.map(parseDailyLog).filter(r => r.date);
