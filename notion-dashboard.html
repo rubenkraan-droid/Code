@@ -356,15 +356,18 @@
           <tr>
             <th data-sort="adName">Advertentie</th>
             <th data-sort="status">Status</th>
-            <th data-sort="spend"       class="right">Uitgaven</th>
-            <th data-sort="impressions" class="right">Impressies</th>
-            <th data-sort="clicks"      class="right">Clicks</th>
+            <th data-sort="spend"        class="right">Uitgaven</th>
+            <th data-sort="clicks"       class="right">Clicks</th>
+            <th data-sort="optInRate"    class="right muted">Opt-In%</th>
+            <th data-sort="leads"        class="right">Leads</th>
+            <th data-sort="afsprRate"    class="right muted">Afspr%</th>
             <th data-sort="appointments" class="right">Afspraken</th>
-            <th data-sort="signed"      class="right">Getekend</th>
-            <th data-sort="closed"      class="right">Definitief</th>
-            <th data-sort="cpa"         class="right">CPA</th>
-            <th data-sort="cpsSigned"   class="right">CPS Getekend</th>
-            <th data-sort="cpsClosed"   class="right">CPS Definitief</th>
+            <th data-sort="signRate"     class="right muted">Sales%</th>
+            <th data-sort="signed"       class="right">Sales</th>
+            <th data-sort="cpa"          class="right">CPA</th>
+            <th data-sort="cpsSigned"    class="right">CPS</th>
+            <th data-sort="omzet"        class="right">Omzet</th>
+            <th data-sort="roas"         class="right">ROAS</th>
           </tr>
         </thead>
         <tbody id="main-tbody"></tbody>
@@ -381,12 +384,17 @@
           <tr>
             <th>Maand</th>
             <th class="right">Uitgaven</th>
+            <th class="right">Clicks</th>
+            <th class="right muted">Opt-In%</th>
+            <th class="right">Leads</th>
+            <th class="right muted">Afspr%</th>
             <th class="right">Afspraken</th>
-            <th class="right">Getekend</th>
-            <th class="right">Definitief</th>
+            <th class="right muted">Sales%</th>
+            <th class="right">Sales</th>
             <th class="right">CPA</th>
-            <th class="right">CPS Getekend</th>
-            <th class="right">CPS Definitief</th>
+            <th class="right">CPS</th>
+            <th class="right">Omzet</th>
+            <th class="right">ROAS</th>
           </tr>
         </thead>
         <tbody id="monthly-tbody"></tbody>
@@ -408,9 +416,8 @@
 //  CONFIG
 // ════════════════════════════════════════════════════════════
 const CONFIG = {
-  DAILY_URL:                'https://mabekra.app.n8n.cloud/webhook/notion-daily',
-  ALL_TIME_URL:             'https://mabekra.app.n8n.cloud/webhook/notion-alltime',
-  CPS_DEFINITIEF_THRESHOLD: 500
+  DAILY_URL:    'https://mabekra.app.n8n.cloud/webhook/notion-daily',
+  ALL_TIME_URL: 'https://mabekra.app.n8n.cloud/webhook/notion-alltime',
 };
 
 // ════════════════════════════════════════════════════════════
@@ -426,6 +433,8 @@ const _num = new Intl.NumberFormat('nl-NL', { maximumFractionDigits: 0 });
 
 const fEur  = v => (v == null || isNaN(v)) ? '—' : _eur.format(v);
 const fNum  = v => (v == null || isNaN(v)) ? '—' : _num.format(Math.round(v));
+const fRoas = v => (v == null || isNaN(v)) ? '—' : `${v.toFixed(2)}×`;
+const fPct  = v => (v == null || isNaN(v)) ? '—' : `${Math.round(v * 100)}%`;
 const fMon  = (y, m) => `${MONTHS_SHORT[m]} ${y}`;
 const esc   = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
@@ -444,6 +453,28 @@ const state = {
 // ════════════════════════════════════════════════════════════
 //  Notion API
 // ════════════════════════════════════════════════════════════
+
+function pickImageUrl(page) {
+  const knownKeys = [
+    'property_image_url', 'property_google_drive_image_url',
+    'property_google_drive_url', 'property_afbeelding', 'property_foto',
+    'property_foto_url', 'property_drive_url', 'property_url',
+    'property_afbeelding_url', 'property_image',
+  ];
+  for (const k of knownKeys) {
+    if (page[k] == null) continue;
+    const v = Array.isArray(page[k]) ? page[k][0] : page[k];
+    if (v) return v;
+  }
+  // Scan all properties for any Google Drive URL
+  for (const [k, raw] of Object.entries(page)) {
+    if (!k.startsWith('property_')) continue;
+    const v = Array.isArray(raw) ? raw[0] : raw;
+    if (typeof v === 'string' && v.includes('drive.google.com')) return v;
+  }
+  return null;
+}
+
 async function fetchWebhook(url) {
   const res = await fetch(url, { method: 'POST' });
   const text = await res.text();
@@ -466,11 +497,13 @@ function parseDailyLog(page) {
     adId:         Array.isArray(page.property_ad) ? page.property_ad[0] : null,
     adName:       page.name ? page.name.replace(/^\d{4}-\d{2}-\d{2}\s*\|\s*/, '') : null,
     spend:        typeof spendRaw === 'number' ? spendRaw : 0,
-    impressions:  typeof page.property_impressions === 'number' ? page.property_impressions : 0,
+    imageUrl:     pickImageUrl(page),
     clicks:       typeof page.property_clicks === 'number' ? page.property_clicks : 0,
-    appointments: typeof leadsRaw === 'number' ? leadsRaw : 0,
+    leads:        typeof leadsRaw === 'number' ? leadsRaw : 0,
+    appointments: typeof page.property_afspraken === 'number' ? page.property_afspraken : 0,
     signed:       typeof page.property_signed === 'number' ? page.property_signed : (typeof page.property_getekend === 'number' ? page.property_getekend : 0),
     closed:       typeof salesRaw === 'number' ? salesRaw : 0,
+    omzet:        typeof page.property_omzet === 'number' ? page.property_omzet : 0,
   };
 }
 
@@ -479,10 +512,7 @@ function parseAllTime(page) {
     adId:     page.id,
     adName:   page.property_ad_name ?? page.name ?? null,
     status:   page.property_status  ?? null,
-    imageUrl: page.property_image_url
-           ?? page.property_google_drive_image_url
-           ?? page.property_afbeelding
-           ?? null,
+    imageUrl: pickImageUrl(page),
   };
 }
 
@@ -492,9 +522,9 @@ function parseAllTime(page) {
 function driveUrl(url) {
   if (!url) return null;
   const m1 = url.match(/\/d\/([^\/\?&#]+)/);
-  if (m1) return `https://drive.google.com/uc?export=view&id=${m1[1]}`;
+  if (m1) return `https://drive.google.com/thumbnail?id=${m1[1]}&sz=w400`;
   const m2 = url.match(/[?&]id=([^&#]+)/);
-  if (m2) return `https://drive.google.com/uc?export=view&id=${m2[1]}`;
+  if (m2) return `https://drive.google.com/thumbnail?id=${m2[1]}&sz=w400`;
   return url;
 }
 
@@ -543,23 +573,30 @@ function aggAds(rows) {
       const at = state.allTimeMap.get(key) || {};
       map.set(key, {
         adId: r.adId, adName: r.adName || key,
-        status: at.status || null, imageUrl: at.imageUrl || null,
-        spend: 0, impressions: 0, clicks: 0, appointments: 0, signed: 0, closed: 0
+        status: at.status || null, imageUrl: at.imageUrl || r.imageUrl || null,
+        spend: 0, clicks: 0, leads: 0, appointments: 0, signed: 0, closed: 0, omzet: 0
       });
     }
     const a = map.get(key);
     a.spend        += r.spend;
-    a.impressions  += r.impressions;
     a.clicks       += r.clicks;
+    a.leads        += r.leads;
     a.appointments += r.appointments;
     a.signed       += r.signed;
     a.closed       += r.closed;
+    a.omzet        += r.omzet;
+    if (!a.imageUrl && r.imageUrl) a.imageUrl = r.imageUrl;
   }
   return Array.from(map.values()).map(a => ({
     ...a,
     cpa:       a.appointments > 0 ? a.spend / a.appointments : null,
     cpsSigned: a.signed       > 0 ? a.spend / a.signed       : null,
     cpsClosed: a.closed       > 0 ? a.spend / a.closed       : null,
+    roas:      a.spend        > 0 ? a.omzet  / a.spend       : null,
+    optInRate: a.clicks       > 0 ? a.leads        / a.clicks       : null,
+    afsprRate: a.leads        > 0 ? a.appointments / a.leads        : null,
+    signRate:  a.appointments > 0 ? a.signed       / a.appointments : null,
+    closeRate: a.signed       > 0 ? a.closed       / a.signed       : null,
   }));
 }
 
@@ -569,16 +606,21 @@ function aggMonthly(rows) {
     if (!r.date) continue;
     const d = new Date(r.date + 'T00:00:00');
     const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-    if (!map.has(key)) map.set(key, { year: d.getFullYear(), month: d.getMonth(), spend:0, appointments:0, signed:0, closed:0 });
+    if (!map.has(key)) map.set(key, { year: d.getFullYear(), month: d.getMonth(), spend:0, clicks:0, leads:0, appointments:0, signed:0, closed:0, omzet:0 });
     const m = map.get(key);
-    m.spend += r.spend; m.appointments += r.appointments;
-    m.signed += r.signed; m.closed += r.closed;
+    m.spend += r.spend; m.clicks += r.clicks; m.leads += r.leads;
+    m.appointments += r.appointments; m.signed += r.signed; m.closed += r.closed; m.omzet += r.omzet;
   }
   return Array.from(map.entries()).sort(([a],[b]) => a.localeCompare(b)).map(([key, d]) => ({
     key, ...d,
     cpa:       d.appointments > 0 ? d.spend / d.appointments : null,
     cpsSigned: d.signed       > 0 ? d.spend / d.signed       : null,
     cpsClosed: d.closed       > 0 ? d.spend / d.closed       : null,
+    roas:      d.spend        > 0 ? d.omzet  / d.spend       : null,
+    optInRate: d.clicks       > 0 ? d.leads        / d.clicks       : null,
+    afsprRate: d.leads        > 0 ? d.appointments / d.leads        : null,
+    signRate:  d.appointments > 0 ? d.signed       / d.appointments : null,
+    closeRate: d.signed       > 0 ? d.closed       / d.signed       : null,
   }));
 }
 
@@ -587,40 +629,51 @@ function aggMonthly(rows) {
 // ════════════════════════════════════════════════════════════
 function renderSummary(ads) {
   const t = ads.reduce((a, ad) => {
-    a.spend += ad.spend; a.appointments += ad.appointments;
-    a.signed += ad.signed; a.closed += ad.closed; return a;
-  }, {spend:0,appointments:0,signed:0,closed:0});
-  const cpa  = t.appointments > 0 ? t.spend / t.appointments : null;
-  const cpsS = t.signed       > 0 ? t.spend / t.signed       : null;
-  const cpsC = t.closed       > 0 ? t.spend / t.closed       : null;
+    a.spend += ad.spend; a.clicks += ad.clicks; a.leads += ad.leads;
+    a.appointments += ad.appointments; a.signed += ad.signed; a.closed += ad.closed; a.omzet += ad.omzet; return a;
+  }, {spend:0,clicks:0,leads:0,appointments:0,signed:0,closed:0,omzet:0});
+  const cpa    = t.appointments > 0 ? t.spend / t.appointments : null;
+  const cpsS   = t.signed       > 0 ? t.spend / t.signed       : null;
+  const roas   = t.spend        > 0 ? t.omzet  / t.spend       : null;
+  const optInR = t.clicks       > 0 ? t.leads        / t.clicks       : null;
+  const afsprR = t.leads        > 0 ? t.appointments / t.leads        : null;
+  const signR  = t.appointments > 0 ? t.signed       / t.appointments : null;
   document.getElementById('summary-bar').innerHTML = `
     <div class="stat-card">
       <div class="stat-label">Totaal Uitgaven</div>
       <div class="stat-value mono">${fEur(t.spend)}</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">Afspraken</div>
+      <div class="stat-label">Clicks</div>
+      <div class="stat-value mono">${fNum(t.clicks)}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Leads <span class="ilabel ilabel-amber">${fPct(optInR)} opt-in</span></div>
+      <div class="stat-value mono">${fNum(t.leads)}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Afspraken <span class="ilabel ilabel-amber">${fPct(afsprR)}</span></div>
       <div class="stat-value mono">${fNum(t.appointments)}</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">Getekend</div>
+      <div class="stat-label">Sales <span class="ilabel ilabel-amber">${fPct(signR)}</span></div>
       <div class="stat-value mono amber">${fNum(t.signed)}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Definitief</div>
-      <div class="stat-value mono green">${fNum(t.closed)}</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Blended CPA</div>
       <div class="stat-value mono">${fEur(cpa)}</div>
     </div>
     <div class="stat-card c-amber">
-      <div class="stat-label">CPS Getekend <span class="ilabel ilabel-amber">voorlopig</span></div>
+      <div class="stat-label">CPS</div>
       <div class="stat-value mono amber">${fEur(cpsS)}</div>
     </div>
-    <div class="stat-card c-green">
-      <div class="stat-label">CPS Definitief <span class="ilabel ilabel-green">definitief</span></div>
-      <div class="stat-value mono green">${fEur(cpsC)}</div>
+    <div class="stat-card">
+      <div class="stat-label">Omzet</div>
+      <div class="stat-value mono">${fEur(t.omzet)}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">ROAS</div>
+      <div class="stat-value mono blue">${fRoas(roas)}</div>
     </div>`;
 }
 
@@ -645,19 +698,21 @@ function renderMainTable(ads) {
     const statusBadge = ad.status
       ? (isActive ? '<span class="badge badge-green">Actief</span>' : '<span class="badge badge-grey">Gepauzeerd</span>')
       : '<span class="muted">—</span>';
-    const cpsColor = (ad.cpsClosed != null && ad.cpsClosed > CONFIG.CPS_DEFINITIEF_THRESHOLD) ? 'red' : 'green';
     return `<tr>
       <td class="ad-name-cell" title="${esc(ad.adName)}">${esc(ad.adName)}</td>
       <td>${statusBadge}</td>
       <td class="mono right">${fEur(ad.spend)}</td>
-      <td class="mono right">${fNum(ad.impressions)}</td>
       <td class="mono right">${fNum(ad.clicks)}</td>
+      <td class="mono right muted">${fPct(ad.optInRate)}</td>
+      <td class="mono right">${fNum(ad.leads)}</td>
+      <td class="mono right muted">${fPct(ad.afsprRate)}</td>
       <td class="mono right">${fNum(ad.appointments)}</td>
+      <td class="mono right muted">${fPct(ad.signRate)}</td>
       <td class="mono right amber">${fNum(ad.signed)}</td>
-      <td class="mono right green">${fNum(ad.closed)}</td>
       <td class="mono right">${fEur(ad.cpa)}</td>
       <td class="mono right amber">${fEur(ad.cpsSigned)}</td>
-      <td class="mono right ${cpsColor}">${fEur(ad.cpsClosed)}</td>
+      <td class="mono right">${fEur(ad.omzet || null)}</td>
+      <td class="mono right blue">${fRoas(ad.roas)}</td>
     </tr>`;
   }).join('');
 }
@@ -676,40 +731,50 @@ function renderMonthlyTable() {
   else if (/^\d{4}-\d{2}$/.test(state.period)) hlKey = state.period;
 
   const totals = monthly.reduce((a,m) => {
-    a.spend += m.spend; a.appointments += m.appointments; a.signed += m.signed; a.closed += m.closed; return a;
-  }, {spend:0,appointments:0,signed:0,closed:0});
+    a.spend += m.spend; a.clicks += m.clicks; a.leads += m.leads;
+    a.appointments += m.appointments; a.signed += m.signed; a.closed += m.closed; a.omzet += m.omzet; return a;
+  }, {spend:0,clicks:0,leads:0,appointments:0,signed:0,closed:0,omzet:0});
 
   document.getElementById('monthly-tbody').innerHTML = monthly.map(m => {
     const badges = [];
     if (m.key === curKey) badges.push('<span class="sm-badge sm-blue">actief</span>');
-    const pending = m.signed - m.closed;
-    if (pending > 0) badges.push(
-      `<span class="sm-badge sm-amber" title="${pending} getekende deals nog niet definitief gesloten — kosten per definitieve verkoop kunnen nog dalen">⚠ in afwachting</span>`
-    );
     return `<tr class="${m.key === hlKey ? 'hl-row' : ''}">
       <td>${fMon(m.year, m.month)} ${badges.join(' ')}</td>
       <td class="mono right">${fEur(m.spend)}</td>
+      <td class="mono right">${fNum(m.clicks)}</td>
+      <td class="mono right muted">${fPct(m.optInRate)}</td>
+      <td class="mono right">${fNum(m.leads)}</td>
+      <td class="mono right muted">${fPct(m.afsprRate)}</td>
       <td class="mono right">${fNum(m.appointments)}</td>
+      <td class="mono right muted">${fPct(m.signRate)}</td>
       <td class="mono right amber">${fNum(m.signed)}</td>
-      <td class="mono right green">${fNum(m.closed)}</td>
       <td class="mono right">${fEur(m.cpa)}</td>
       <td class="mono right amber">${fEur(m.cpsSigned)}</td>
-      <td class="mono right green">${fEur(m.cpsClosed)}</td>
+      <td class="mono right">${fEur(m.omzet || null)}</td>
+      <td class="mono right blue">${fRoas(m.roas)}</td>
     </tr>`;
   }).join('');
 
-  const allCpa  = totals.appointments > 0 ? totals.spend / totals.appointments : null;
-  const allCpsS = totals.signed       > 0 ? totals.spend / totals.signed       : null;
-  const allCpsC = totals.closed       > 0 ? totals.spend / totals.closed       : null;
+  const allCpa   = totals.appointments > 0 ? totals.spend / totals.appointments : null;
+  const allCpsS  = totals.signed       > 0 ? totals.spend / totals.signed       : null;
+  const allRoas  = totals.spend        > 0 ? totals.omzet  / totals.spend       : null;
+  const allOptIn = totals.clicks       > 0 ? totals.leads        / totals.clicks       : null;
+  const allAfspr = totals.leads        > 0 ? totals.appointments / totals.leads        : null;
+  const allSign  = totals.appointments > 0 ? totals.signed       / totals.appointments : null;
   document.getElementById('monthly-tfoot').innerHTML = `<tr>
     <td><strong>Totaal alle tijd</strong></td>
     <td class="mono right"><strong>${fEur(totals.spend)}</strong></td>
+    <td class="mono right"><strong>${fNum(totals.clicks)}</strong></td>
+    <td class="mono right muted"><strong>${fPct(allOptIn)}</strong></td>
+    <td class="mono right"><strong>${fNum(totals.leads)}</strong></td>
+    <td class="mono right muted"><strong>${fPct(allAfspr)}</strong></td>
     <td class="mono right"><strong>${fNum(totals.appointments)}</strong></td>
+    <td class="mono right muted"><strong>${fPct(allSign)}</strong></td>
     <td class="mono right amber"><strong>${fNum(totals.signed)}</strong></td>
-    <td class="mono right green"><strong>${fNum(totals.closed)}</strong></td>
     <td class="mono right"><strong>${fEur(allCpa)}</strong></td>
     <td class="mono right amber"><strong>${fEur(allCpsS)}</strong></td>
-    <td class="mono right green"><strong>${fEur(allCpsC)}</strong></td>
+    <td class="mono right"><strong>${fEur(totals.omzet || null)}</strong></td>
+    <td class="mono right blue"><strong>${fRoas(allRoas)}</strong></td>
   </tr>`;
 }
 
@@ -736,8 +801,7 @@ function renderChart(rows, range) {
 
   const labels    = dates.map(d => { const dt = new Date(d+'T00:00:00'); return `${dt.getDate()} ${MONTHS_SHORT[dt.getMonth()]}`; });
   const spendData = dates.map(d => dm.get(d)?.spend || 0);
-  const cpsSD     = dates.map(d => { const v = dm.get(d); return v && v.signed  > 0 ? v.spend / v.signed  : null; });
-  const cpsCd     = dates.map(d => { const v = dm.get(d); return v && v.closed  > 0 ? v.spend / v.closed  : null; });
+  const cpsSD     = dates.map(d => { const v = dm.get(d); return v && v.signed > 0 ? v.spend / v.signed : null; });
 
   if (state.chart) { state.chart.destroy(); state.chart = null; }
 
@@ -754,16 +818,9 @@ function renderChart(rows, range) {
           pointRadius: 3, pointHoverRadius: 5
         },
         {
-          label: 'CPS Getekend',
+          label: 'CPS Sales',
           data: cpsSD,
           borderColor: '#F59E0B', borderDash: [6,3],
-          tension: 0.3, spanGaps: true, yAxisID: 'y1',
-          pointRadius: 3, pointHoverRadius: 5
-        },
-        {
-          label: 'CPS Definitief',
-          data: cpsCd,
-          borderColor: '#10B981',
           tension: 0.3, spanGaps: true, yAxisID: 'y1',
           pointRadius: 3, pointHoverRadius: 5
         }
@@ -900,6 +957,8 @@ async function init() {
       fetchWebhook(CONFIG.ALL_TIME_URL)
     ]);
 
+    if (dailyPages[0]) console.log('[Dashboard] Daily props:', Object.keys(dailyPages[0]).filter(k => k.startsWith('property_')));
+    if (dailyPages[0]) console.log('[Dashboard] Daily image candidates:', Object.fromEntries(Object.entries(dailyPages[0]).filter(([k]) => k.startsWith('property_') && (k.includes('image') || k.includes('url') || k.includes('foto') || k.includes('afb') || k.includes('drive')))));
     state.dailyLog = dailyPages.map(parseDailyLog).filter(r => r.date);
 
     // Build allTime lookup by Ad ID and Ad Name
