@@ -287,6 +287,66 @@
       height: 1px; background: var(--border); margin: 6px 0 18px;
     }
 
+    /* ── Print button ── */
+    .print-btn {
+      background: var(--card); border: 1px solid var(--border);
+      color: var(--muted); padding: 7px 14px; border-radius: 6px;
+      font-size: 13px; cursor: pointer; transition: all .15s;
+    }
+    .print-btn:hover { border-color: var(--blue); color: var(--text); }
+
+    /* ── Print view (hidden normally, shown on print) ── */
+    #print-view { display: none; }
+
+    @media print {
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      body { background: #fff !important; color: #111 !important; margin: 0; }
+      #loading-screen, #error-screen, #dashboard { display: none !important; }
+      #print-view {
+        display: block !important;
+        padding: 24px 28px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+        font-size: 10px; color: #111;
+      }
+      .pv-header {
+        display: flex; justify-content: space-between; align-items: flex-end;
+        border-bottom: 2px solid #111; padding-bottom: 10px; margin-bottom: 22px;
+      }
+      .pv-title  { font-size: 20px; font-weight: 700; }
+      .pv-date   { font-size: 10px; color: #666; }
+      .pv-section { margin-bottom: 28px; }
+      .pv-page-break { page-break-before: always; padding-top: 8px; }
+      .pv-section-title {
+        font-size: 11px; font-weight: 700; text-transform: uppercase;
+        letter-spacing: .6px; color: #333;
+        border-bottom: 1px solid #bbb; padding-bottom: 5px; margin-bottom: 12px;
+      }
+      .pv-stats { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+      .pv-stat {
+        flex: 1; min-width: 70px;
+        border: 1px solid #ddd; border-radius: 6px; padding: 7px 10px;
+      }
+      .pv-stat-label { font-size: 7.5px; text-transform: uppercase; letter-spacing: .5px; color: #888; margin-bottom: 3px; }
+      .pv-stat-value { font-size: 13px; font-weight: 700; color: #111; }
+      .pv-stat-value.pv-amber { color: #b45309; }
+      .pv-stat-value.pv-blue  { color: #1d4ed8; }
+      .pv-table { width: 100%; border-collapse: collapse; font-size: 9px; }
+      .pv-table thead tr { background: #f3f4f6; }
+      .pv-table th {
+        text-align: left; padding: 5px 7px;
+        font-size: 7.5px; font-weight: 700; text-transform: uppercase;
+        letter-spacing: .4px; color: #555;
+        border-bottom: 1.5px solid #aaa;
+      }
+      .pv-table th.r, .pv-table td.r { text-align: right; }
+      .pv-table td { padding: 4px 7px; border-bottom: 1px solid #eee; }
+      .pv-table tbody tr:nth-child(even) td { background: #fafafa; }
+      .pv-table tfoot td {
+        font-weight: 700; border-top: 1.5px solid #aaa;
+        border-bottom: none; background: #f3f4f6;
+      }
+    }
+
     /* ── Mobile ── */
     @media (max-width: 720px) {
       .stat-value { font-size: 18px; }
@@ -324,6 +384,7 @@
       <h1>Advertentie Dashboard</h1>
       <span id="last-updated"></span>
     </div>
+    <button class="print-btn" onclick="printDashboard()">&#128438; Print rapport</button>
   </div>
 
   <!-- Period Toggle -->
@@ -412,6 +473,18 @@
   </div>
 
 </div><!-- /#dashboard -->
+
+<!-- ══════════════════════════════════ PRINT VIEW ══════════════════════════════════ -->
+<div id="print-view">
+  <div class="pv-header">
+    <div class="pv-title">Advertentie Dashboard</div>
+    <div class="pv-date" id="pv-date"></div>
+  </div>
+  <div id="pv-7d"      class="pv-section"></div>
+  <div id="pv-30d"     class="pv-section"></div>
+  <div id="pv-monthly" class="pv-section pv-page-break"></div>
+  <div id="pv-beste"   class="pv-section"></div>
+</div>
 
 <script>
 // ════════════════════════════════════════════════════════════
@@ -806,16 +879,14 @@ function renderMonthlyTable() {
 //  Render: Trend Chart
 // ════════════════════════════════════════════════════════════
 function renderChart(rows, range) {
-  // Group daily totals
   const dm = new Map();
   for (const r of rows) {
     if (!r.date) continue;
-    if (!dm.has(r.date)) dm.set(r.date, {spend:0, signed:0, closed:0});
+    if (!dm.has(r.date)) dm.set(r.date, {spend:0, leads:0, signed:0});
     const d = dm.get(r.date);
-    d.spend += r.spend; d.signed += r.signed; d.closed += r.closed;
+    d.spend += r.spend; d.leads += r.leads; d.signed += r.signed;
   }
 
-  // Full date axis (including zero-spend days)
   const dates = [];
   const cur = new Date(range.start);
   while (cur <= range.end) {
@@ -825,7 +896,7 @@ function renderChart(rows, range) {
 
   const labels    = dates.map(d => { const dt = new Date(d+'T00:00:00'); return `${dt.getDate()} ${MONTHS_SHORT[dt.getMonth()]}`; });
   const spendData = dates.map(d => dm.get(d)?.spend || 0);
-  const cpsSD     = dates.map(d => { const v = dm.get(d); return v && v.signed > 0 ? v.spend / v.signed : null; });
+  const cplData   = dates.map(d => { const v = dm.get(d); return v && v.leads > 0 ? v.spend / v.leads : null; });
 
   if (state.chart) { state.chart.destroy(); state.chart = null; }
 
@@ -842,9 +913,9 @@ function renderChart(rows, range) {
           pointRadius: 3, pointHoverRadius: 5
         },
         {
-          label: 'CPS Sales',
-          data: cpsSD,
-          borderColor: '#F59E0B', borderDash: [6,3],
+          label: 'CPL',
+          data: cplData,
+          borderColor: '#10B981', borderDash: [6,3],
           tension: 0.3, spanGaps: true, yAxisID: 'y1',
           pointRadius: 3, pointHoverRadius: 5
         }
@@ -968,6 +1039,130 @@ function update() {
   const picker = document.getElementById('month-picker');
   picker.value = /^\d{4}-\d{2}$/.test(state.period) ? state.period : '';
   picker.classList.toggle('active-month', picker.value !== '');
+}
+
+// ════════════════════════════════════════════════════════════
+//  Print
+// ════════════════════════════════════════════════════════════
+function buildPrintPeriod(period, label) {
+  const range = getRange(period);
+  const rows  = filterRows(state.dailyLog, range);
+  const ads   = aggAds(rows).filter(a => a.spend > 0).sort((a,b) => (a.cpl ?? 999) - (b.cpl ?? 999));
+  const t = ads.reduce((a, ad) => {
+    a.spend += ad.spend; a.clicks += ad.clicks; a.leads += ad.leads;
+    a.appointments += ad.appointments; a.signed += ad.signed; a.omzet += ad.omzet; return a;
+  }, {spend:0,clicks:0,leads:0,appointments:0,signed:0,omzet:0});
+  const cpl  = t.leads        > 0 ? t.spend / t.leads        : null;
+  const cpa  = t.appointments > 0 ? t.spend / t.appointments : null;
+  const cps  = t.signed       > 0 ? t.spend / t.signed       : null;
+  const roas = t.spend        > 0 ? t.omzet  / t.spend       : null;
+  return `
+    <div class="pv-section-title">${label}</div>
+    <div class="pv-stats">
+      <div class="pv-stat"><div class="pv-stat-label">Spend</div><div class="pv-stat-value">${fEur(t.spend)}</div></div>
+      <div class="pv-stat"><div class="pv-stat-label">Clicks</div><div class="pv-stat-value">${fNum(t.clicks)}</div></div>
+      <div class="pv-stat"><div class="pv-stat-label">Leads</div><div class="pv-stat-value">${fNum(t.leads)}</div></div>
+      <div class="pv-stat"><div class="pv-stat-label">CPL</div><div class="pv-stat-value">${fEur(cpl)}</div></div>
+      <div class="pv-stat"><div class="pv-stat-label">Afspraken</div><div class="pv-stat-value">${fNum(t.appointments)}</div></div>
+      <div class="pv-stat"><div class="pv-stat-label">CPA</div><div class="pv-stat-value">${fEur(cpa)}</div></div>
+      <div class="pv-stat"><div class="pv-stat-label">Sales</div><div class="pv-stat-value pv-amber">${fNum(t.signed)}</div></div>
+      <div class="pv-stat"><div class="pv-stat-label">CPS</div><div class="pv-stat-value pv-amber">${fEur(cps)}</div></div>
+      <div class="pv-stat"><div class="pv-stat-label">Omzet</div><div class="pv-stat-value">${fEur(t.omzet || null)}</div></div>
+      <div class="pv-stat"><div class="pv-stat-label">ROAS</div><div class="pv-stat-value pv-blue">${fRoas(roas)}</div></div>
+    </div>
+    <table class="pv-table">
+      <thead><tr>
+        <th>Advertentie</th><th class="r">Spend</th><th class="r">Clicks</th>
+        <th class="r">Leads</th><th class="r">CPL</th>
+        <th class="r">Afspraken</th><th class="r">CPA</th>
+        <th class="r">Sales</th><th class="r">CPS</th>
+      </tr></thead>
+      <tbody>${ads.map(ad => `<tr>
+        <td>${esc(ad.adName)}</td>
+        <td class="r">${fEur(ad.spend)}</td><td class="r">${fNum(ad.clicks)}</td>
+        <td class="r">${fNum(ad.leads)}</td><td class="r">${fEur(ad.cpl)}</td>
+        <td class="r">${fNum(ad.appointments)}</td><td class="r">${fEur(ad.cpa)}</td>
+        <td class="r">${fNum(ad.signed)}</td><td class="r">${fEur(ad.cpsSigned)}</td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+}
+
+function buildPrintMonthly() {
+  const monthly = aggMonthly(state.dailyLog);
+  const tot = monthly.reduce((a,m) => {
+    a.spend += m.spend; a.clicks += m.clicks; a.leads += m.leads;
+    a.appointments += m.appointments; a.signed += m.signed; a.omzet += m.omzet; return a;
+  }, {spend:0,clicks:0,leads:0,appointments:0,signed:0,omzet:0});
+  const tCpl  = tot.leads        > 0 ? tot.spend / tot.leads        : null;
+  const tCpa  = tot.appointments > 0 ? tot.spend / tot.appointments : null;
+  const tCps  = tot.signed       > 0 ? tot.spend / tot.signed       : null;
+  const tRoas = tot.spend        > 0 ? tot.omzet  / tot.spend       : null;
+  return `
+    <div class="pv-section-title">Maandoverzicht</div>
+    <table class="pv-table">
+      <thead><tr>
+        <th>Maand</th><th class="r">Spend</th><th class="r">Clicks</th>
+        <th class="r">Leads</th><th class="r">CPL</th>
+        <th class="r">Afspr%</th><th class="r">Afspraken</th><th class="r">CPA</th>
+        <th class="r">Sales%</th><th class="r">Sales</th><th class="r">CPS</th>
+        <th class="r">Omzet</th><th class="r">ROAS</th>
+      </tr></thead>
+      <tbody>${monthly.map(m => `<tr>
+        <td>${fMon(m.year, m.month)}</td>
+        <td class="r">${fEur(m.spend)}</td><td class="r">${fNum(m.clicks)}</td>
+        <td class="r">${fNum(m.leads)}</td><td class="r">${fEur(m.cpl)}</td>
+        <td class="r">${fPct(m.afsprRate)}</td><td class="r">${fNum(m.appointments)}</td><td class="r">${fEur(m.cpa)}</td>
+        <td class="r">${fPct(m.signRate)}</td><td class="r">${fNum(m.signed)}</td><td class="r">${fEur(m.cpsSigned)}</td>
+        <td class="r">${fEur(m.omzet||null)}</td><td class="r">${fRoas(m.roas)}</td>
+      </tr>`).join('')}</tbody>
+      <tfoot><tr>
+        <td>Totaal</td>
+        <td class="r">${fEur(tot.spend)}</td><td class="r">${fNum(tot.clicks)}</td>
+        <td class="r">${fNum(tot.leads)}</td><td class="r">${fEur(tCpl)}</td>
+        <td class="r">${fPct(tot.leads>0?tot.appointments/tot.leads:null)}</td>
+        <td class="r">${fNum(tot.appointments)}</td><td class="r">${fEur(tCpa)}</td>
+        <td class="r">${fPct(tot.appointments>0?tot.signed/tot.appointments:null)}</td>
+        <td class="r">${fNum(tot.signed)}</td><td class="r">${fEur(tCps)}</td>
+        <td class="r">${fEur(tot.omzet||null)}</td><td class="r">${fRoas(tRoas)}</td>
+      </tr></tfoot>
+    </table>`;
+}
+
+function buildPrintBeste() {
+  const range = getRange('30d');
+  const rows  = filterRows(state.dailyLog, range);
+  const ads   = aggAds(rows);
+  const withCpa = ads.filter(a => a.appointments>=1 && a.cpa!=null).sort((a,b)=>a.cpa-b.cpa);
+  const withCpl = ads.filter(a => a.appointments===0 && a.cpl!=null && a.cpl<25).sort((a,b)=>a.cpl-b.cpl);
+  const beste = [...withCpa, ...withCpl].slice(0,8);
+  if (!beste.length) return `<div class="pv-section-title">Beste Advertenties (30 dagen)</div><p style="color:#888;font-size:10px">Geen data</p>`;
+  return `
+    <div class="pv-section-title">Beste Advertenties (30 dagen)</div>
+    <table class="pv-table">
+      <thead><tr>
+        <th>Advertentie</th><th class="r">Spend</th><th class="r">Leads</th>
+        <th class="r">CPL</th><th class="r">Afspraken</th><th class="r">CPA</th>
+        <th class="r">Sales</th><th class="r">CPS</th><th class="r">ROAS</th>
+      </tr></thead>
+      <tbody>${beste.map(ad=>`<tr>
+        <td>${esc(ad.adName)}</td>
+        <td class="r">${fEur(ad.spend)}</td><td class="r">${fNum(ad.leads)}</td>
+        <td class="r">${fEur(ad.cpl)}</td><td class="r">${fNum(ad.appointments)}</td>
+        <td class="r">${fEur(ad.cpa)}</td><td class="r">${fNum(ad.signed)}</td>
+        <td class="r">${fEur(ad.cpsSigned)}</td><td class="r">${fRoas(ad.roas)}</td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+}
+
+function printDashboard() {
+  const now = new Date();
+  document.getElementById('pv-date').textContent =
+    `Gegenereerd op ${now.toLocaleDateString('nl-NL')} om ${now.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}`;
+  document.getElementById('pv-7d').innerHTML      = buildPrintPeriod('7d',  'Laatste 7 dagen');
+  document.getElementById('pv-30d').innerHTML     = buildPrintPeriod('30d', 'Laatste 30 dagen');
+  document.getElementById('pv-monthly').innerHTML = buildPrintMonthly();
+  document.getElementById('pv-beste').innerHTML   = buildPrintBeste();
+  window.print();
 }
 
 // ════════════════════════════════════════════════════════════
