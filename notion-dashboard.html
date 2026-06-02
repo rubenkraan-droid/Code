@@ -889,14 +889,17 @@ function renderChart(rows, range) {
 //  Render: Beste Advertenties (top 5 by lowest CPA)
 // ════════════════════════════════════════════════════════════
 function renderBeste(ads) {
-  const top5 = ads
+  const withCpa = ads
     .filter(a => a.appointments >= 1 && a.cpa != null)
-    .sort((a, b) => a.cpa - b.cpa)
-    .slice(0, 5);
+    .sort((a, b) => a.cpa - b.cpa);
+  const withCpl = ads
+    .filter(a => a.appointments === 0 && a.cpl != null && a.cpl < 25)
+    .sort((a, b) => a.cpl - b.cpl);
+  const top5 = [...withCpa, ...withCpl].slice(0, 5);
 
   const grid = document.getElementById('creative-grid');
   if (!top5.length) {
-    grid.innerHTML = '<p class="muted" style="padding:4px 0">Geen advertenties met afspraken in deze periode.</p>';
+    grid.innerHTML = '<p class="muted" style="padding:4px 0">Geen advertenties met afspraken of CPL onder €25 in deze periode.</p>';
     return;
   }
 
