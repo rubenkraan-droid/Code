@@ -360,6 +360,7 @@
             <th data-sort="clicks"       class="right">Clicks</th>
             <th data-sort="optInRate"    class="right muted">Opt-In%</th>
             <th data-sort="leads"        class="right">Leads</th>
+            <th data-sort="cpl"          class="right">CPL</th>
             <th data-sort="afsprRate"    class="right muted">Afspr%</th>
             <th data-sort="appointments" class="right">Afspraken</th>
             <th data-sort="cpa"          class="right">CPA</th>
@@ -387,6 +388,7 @@
             <th class="right">Clicks</th>
             <th class="right muted">Opt-In%</th>
             <th class="right">Leads</th>
+            <th class="right">CPL</th>
             <th class="right muted">Afspr%</th>
             <th class="right">Afspraken</th>
             <th class="right">CPA</th>
@@ -606,6 +608,7 @@ function aggAds(rows) {
   }
   return Array.from(map.values()).map(a => ({
     ...a,
+    cpl:       a.leads        > 0 ? a.spend / a.leads        : null,
     cpa:       a.appointments > 0 ? a.spend / a.appointments : null,
     cpsSigned: a.signed       > 0 ? a.spend / a.signed       : null,
     cpsClosed: a.closed       > 0 ? a.spend / a.closed       : null,
@@ -630,6 +633,7 @@ function aggMonthly(rows) {
   }
   return Array.from(map.entries()).sort(([a],[b]) => a.localeCompare(b)).map(([key, d]) => ({
     key, ...d,
+    cpl:       d.leads        > 0 ? d.spend / d.leads        : null,
     cpa:       d.appointments > 0 ? d.spend / d.appointments : null,
     cpsSigned: d.signed       > 0 ? d.spend / d.signed       : null,
     cpsClosed: d.closed       > 0 ? d.spend / d.closed       : null,
@@ -722,6 +726,7 @@ function renderMainTable(ads) {
       <td class="mono right">${fNum(ad.clicks)}</td>
       <td class="mono right muted">${fPct(ad.optInRate)}</td>
       <td class="mono right">${fNum(ad.leads)}</td>
+      <td class="mono right">${fEur(ad.cpl)}</td>
       <td class="mono right muted">${fPct(ad.afsprRate)}</td>
       <td class="mono right">${fNum(ad.appointments)}</td>
       <td class="mono right">${fEur(ad.cpa)}</td>
@@ -761,6 +766,7 @@ function renderMonthlyTable() {
       <td class="mono right">${fNum(m.clicks)}</td>
       <td class="mono right muted">${fPct(m.optInRate)}</td>
       <td class="mono right">${fNum(m.leads)}</td>
+      <td class="mono right">${fEur(m.cpl)}</td>
       <td class="mono right muted">${fPct(m.afsprRate)}</td>
       <td class="mono right">${fNum(m.appointments)}</td>
       <td class="mono right">${fEur(m.cpa)}</td>
@@ -784,6 +790,7 @@ function renderMonthlyTable() {
     <td class="mono right"><strong>${fNum(totals.clicks)}</strong></td>
     <td class="mono right muted"><strong>${fPct(allOptIn)}</strong></td>
     <td class="mono right"><strong>${fNum(totals.leads)}</strong></td>
+    <td class="mono right"><strong>${fEur(totals.leads > 0 ? totals.spend / totals.leads : null)}</strong></td>
     <td class="mono right muted"><strong>${fPct(allAfspr)}</strong></td>
     <td class="mono right"><strong>${fNum(totals.appointments)}</strong></td>
     <td class="mono right"><strong>${fEur(allCpa)}</strong></td>
@@ -909,6 +916,7 @@ function renderBeste(ads) {
         <div class="creative-name" title="${esc(ad.adName)}">${esc(ad.adName)}</div>
         <div class="creative-pills">
           <span class="pill pill-blue">CPA ${fEur(ad.cpa)}</span>
+          <span class="pill pill-green">CPL ${fEur(ad.cpl)}</span>
           <span class="pill pill-amber">CPS ${fEur(ad.cpsSigned)}</span>
         </div>
       </div>
