@@ -746,6 +746,10 @@ function renderSummary(ads) {
       <div class="stat-value mono">${fNum(t.leads)}</div>
     </div>
     <div class="stat-card">
+      <div class="stat-label">CPL</div>
+      <div class="stat-value mono">${fEur(t.leads > 0 ? t.spend / t.leads : null)}</div>
+    </div>
+    <div class="stat-card">
       <div class="stat-label">Afspraken <span class="ilabel ilabel-amber">${fPct(afsprR)}</span></div>
       <div class="stat-value mono">${fNum(t.appointments)}</div>
     </div>
