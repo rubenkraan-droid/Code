@@ -1,0 +1,170 @@
+{
+  "name": "Wielsche Dreef Dashboard Proxy",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wielsche-dreef-daily",
+        "responseMode": "responseNode",
+        "options": { "allowedOrigins": "*" }
+      },
+      "id": "wd-0001-0001-0001-000000000001",
+      "name": "Webhook Daily",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-200, -120],
+      "webhookId": "wielsche-dreef-daily"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wielsche-dreef-alltime",
+        "responseMode": "responseNode",
+        "options": { "allowedOrigins": "*" }
+      },
+      "id": "wd-0001-0001-0001-000000000002",
+      "name": "Webhook Alltime",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-200, 120],
+      "webhookId": "wielsche-dreef-alltime"
+    },
+    {
+      "parameters": {
+        "jsCode": "const payload = { page_size: 100 };\nconst body = $input.first().json.body || $input.first().json;\nif (body.cursor) payload.start_cursor = body.cursor;\n\nreturn [{\n  json: {\n    url: 'https://api.notion.com/v1/databases/3732a868d6bc81c0ac8bf2e4ae702e84/query',\n    body: JSON.stringify(payload)\n  }\n}];"
+      },
+      "id": "wd-0001-0001-0001-000000000003",
+      "name": "Bouw Daily Verzoek",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [20, -120]
+    },
+    {
+      "parameters": {
+        "jsCode": "const payload = { page_size: 100 };\nconst body = $input.first().json.body || $input.first().json;\nif (body.cursor) payload.start_cursor = body.cursor;\n\nreturn [{\n  json: {\n    url: 'https://api.notion.com/v1/databases/3732a868d6bc81579695dfdcd7deb7bc/query',\n    body: JSON.stringify(payload)\n  }\n}];"
+      },
+      "id": "wd-0001-0001-0001-000000000004",
+      "name": "Bouw Alltime Verzoek",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [20, 120]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer JOUW_NOTION_TOKEN_HIER"
+            },
+            {
+              "name": "Notion-Version",
+              "value": "2022-06-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "rawBody",
+        "rawContentType": "application/json",
+        "body": "={{ $json.body }}",
+        "options": {}
+      },
+      "id": "wd-0001-0001-0001-000000000005",
+      "name": "Notion API Daily",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [240, -120]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer JOUW_NOTION_TOKEN_HIER"
+            },
+            {
+              "name": "Notion-Version",
+              "value": "2022-06-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "rawBody",
+        "rawContentType": "application/json",
+        "body": "={{ $json.body }}",
+        "options": {}
+      },
+      "id": "wd-0001-0001-0001-000000000006",
+      "name": "Notion API Alltime",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [240, 120]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              { "name": "Access-Control-Allow-Origin", "value": "*" }
+            ]
+          }
+        }
+      },
+      "id": "wd-0001-0001-0001-000000000007",
+      "name": "Stuur Daily Terug",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [460, -120]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              { "name": "Access-Control-Allow-Origin", "value": "*" }
+            ]
+          }
+        }
+      },
+      "id": "wd-0001-0001-0001-000000000008",
+      "name": "Stuur Alltime Terug",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [460, 120]
+    }
+  ],
+  "connections": {
+    "Webhook Daily": {
+      "main": [[{ "node": "Bouw Daily Verzoek", "type": "main", "index": 0 }]]
+    },
+    "Webhook Alltime": {
+      "main": [[{ "node": "Bouw Alltime Verzoek", "type": "main", "index": 0 }]]
+    },
+    "Bouw Daily Verzoek": {
+      "main": [[{ "node": "Notion API Daily", "type": "main", "index": 0 }]]
+    },
+    "Bouw Alltime Verzoek": {
+      "main": [[{ "node": "Notion API Alltime", "type": "main", "index": 0 }]]
+    },
+    "Notion API Daily": {
+      "main": [[{ "node": "Stuur Daily Terug", "type": "main", "index": 0 }]]
+    },
+    "Notion API Alltime": {
+      "main": [[{ "node": "Stuur Alltime Terug", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "meta": { "instanceId": "" }
+}
