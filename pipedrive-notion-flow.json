@@ -1,0 +1,287 @@
+{
+  "name": "PipeDrive → Notion Ad Stats (France)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "pipedrive-deal-stage",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "node-webhook",
+      "name": "PipeDrive Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [240, 300],
+      "webhookId": "pipedrive-deal-stage"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// CONFIGURATIE — PAS DEZE 3 WAARDEN AAN\n// ============================================================\n\n// 1. Custom field key in PipeDrive voor utm_content\n//    Vind dit via: PipeDrive > ... > Company Settings > Data fields > Deals\n//    Het is een hash zoals 'bd2f4a1e9c8d3b7a' of 'ce05f28...'\nconst UTM_CONTENT_FIELD = 'JOUW_UTM_CONTENT_FIELD_KEY';\n\n// 2. Stage IDs — ga in PipeDrive naar je pipeline, hover over de stage\n//    en kijk in de URL of gebruik de PipeDrive API /stages endpoint\nconst AFSPRAAK_STAGE_ID = 99;  // vervang\nconst VERKOOP_STAGE_ID  = 100; // vervang\n\n// ============================================================\n\nconst body  = $input.item.json.body  || {};\nconst cur   = body.current           || {};\nconst prev  = body.previous          || {};\n\n// Alleen verwerken als de stage echt is veranderd\nif (!cur.stage_id || cur.stage_id === prev.stage_id) {\n  return [{ json: { _skip: true, reason: 'Stage niet veranderd' } }];\n}\n\nconst stageId = Number(cur.stage_id);\nconst adId    = String(cur[UTM_CONTENT_FIELD] || '').trim();\n// Datum waarop de deal/lead is aangemaakt (YYYY-MM-DD)\nconst dealDate = (cur.add_time || '').slice(0, 10);\n\nif (!adId || adId === 'undefined' || !dealDate) {\n  return [{ json: { _skip: true, reason: 'Geen AD ID of datum' } }];\n}\n\nlet fieldToUpdate = null;\nif (stageId === AFSPRAAK_STAGE_ID) fieldToUpdate = 'Afspraken';\nif (stageId === VERKOOP_STAGE_ID)  fieldToUpdate = 'Sales';\n\nif (!fieldToUpdate) {\n  return [{ json: { _skip: true, reason: 'Stage niet Afspraak of Verkoop' } }];\n}\n\nreturn [{ json: { _skip: false, adId, dealDate, fieldToUpdate } }];"
+      },
+      "id": "node-parse",
+      "name": "Parse PD payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond-skip",
+              "leftValue": "={{ $json._skip }}",
+              "rightValue": false,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-skip-check",
+      "name": "Doorgaan?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.notion.com/v1/databases/35c2a868d6bc81d6b405000b57ae5daf/query",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "notionApi",
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "filter": {
+            "property": "AD ID",
+            "rich_text": {
+              "equals": "={{ $json.adId }}"
+            }
+          },
+          "page_size": 1
+        },
+        "options": {
+          "headers": {
+            "entries": [
+              { "name": "Notion-Version", "value": "2022-06-28" }
+            ]
+          },
+          "lowercaseHeaders": false
+        }
+      },
+      "id": "node-find-ad",
+      "name": "Zoek Ad op AD ID",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond-ad-found",
+              "leftValue": "={{ $json.results.length }}",
+              "rightValue": 0,
+              "operator": { "type": "number", "operation": "gt" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-ad-found",
+      "name": "Ad gevonden?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const adPageId      = $('Zoek Ad op AD ID').item.json.results[0].id;\nconst adId          = $('Parse PD payload').item.json.adId;\nconst dealDate      = $('Parse PD payload').item.json.dealDate;\nconst fieldToUpdate = $('Parse PD payload').item.json.fieldToUpdate;\n\nreturn [{ json: { adPageId, adId, dealDate, fieldToUpdate } }];"
+      },
+      "id": "node-extract-ad",
+      "name": "Extraheer Ad page ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.notion.com/v1/databases/35c2a868-d6bc-8160-ae92-000b304e4fd9/query",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "notionApi",
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "filter": {
+            "and": [
+              {
+                "property": "Date",
+                "date": { "equals": "={{ $json.dealDate }}" }
+              },
+              {
+                "property": "Ad",
+                "relation": { "contains": "={{ $json.adPageId }}" }
+              }
+            ]
+          },
+          "page_size": 1
+        },
+        "options": {
+          "headers": {
+            "entries": [
+              { "name": "Notion-Version", "value": "2022-06-28" }
+            ]
+          },
+          "lowercaseHeaders": false
+        }
+      },
+      "id": "node-find-stats",
+      "name": "Zoek Ad Stats entry",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const statsResults  = $('Zoek Ad Stats entry').item.json.results || [];\nconst adPageId      = $('Extraheer Ad page ID').item.json.adPageId;\nconst dealDate      = $('Extraheer Ad page ID').item.json.dealDate;\nconst adId          = $('Extraheer Ad page ID').item.json.adId;\nconst fieldToUpdate = $('Extraheer Ad page ID').item.json.fieldToUpdate;\n\nconst entryExists = statsResults.length > 0;\n\nlet updatePayload = null;\nlet createPayload = null;\n\nif (entryExists) {\n  const page         = statsResults[0];\n  const statsPageId  = page.id;\n  const currentValue = page.properties[fieldToUpdate]?.number ?? 0;\n  const newValue     = currentValue + 1;\n  updatePayload = { statsPageId, fieldToUpdate, newValue };\n} else {\n  const props = {\n    \"Name\":    { title: [{ text: { content: `${dealDate} – ${adId}` } }] },\n    \"Date\":    { date: { start: dealDate } },\n    \"Ad\":      { relation: [{ id: adPageId }] },\n    \"Platform\": { select: { name: 'Meta' } }\n  };\n  props[fieldToUpdate] = { number: 1 };\n  createPayload = { databaseId: '35c2a868-d6bc-8160-ae92-000b304e4fd9', properties: props };\n}\n\nreturn [{ json: { entryExists, updatePayload, createPayload } }];"
+      },
+      "id": "node-decide",
+      "name": "Update of aanmaken?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 100]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond-exists",
+              "leftValue": "={{ $json.entryExists }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-exists-check",
+      "name": "Entry bestaat?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2000, 100]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.notion.com/v1/pages/{{ $json.updatePayload.statsPageId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "notionApi",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ {\n  properties: {\n    [$json.updatePayload.fieldToUpdate]: { number: $json.updatePayload.newValue }\n  }\n} }}",
+        "options": {
+          "headers": {
+            "entries": [
+              { "name": "Notion-Version", "value": "2022-06-28" }
+            ]
+          },
+          "lowercaseHeaders": false
+        }
+      },
+      "id": "node-update-stats",
+      "name": "Update Ad Stats (+1)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2220, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.notion.com/v1/pages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "notionApi",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ {\n  parent: { database_id: $json.createPayload.databaseId },\n  properties: $json.createPayload.properties\n} }}",
+        "options": {
+          "headers": {
+            "entries": [
+              { "name": "Notion-Version", "value": "2022-06-28" }
+            ]
+          },
+          "lowercaseHeaders": false
+        }
+      },
+      "id": "node-create-stats",
+      "name": "Maak nieuwe Ad Stats entry",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2220, 200]
+    }
+  ],
+  "connections": {
+    "PipeDrive Webhook": {
+      "main": [
+        [{ "node": "Parse PD payload", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse PD payload": {
+      "main": [
+        [{ "node": "Doorgaan?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Doorgaan?": {
+      "main": [
+        [{ "node": "Zoek Ad op AD ID", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Zoek Ad op AD ID": {
+      "main": [
+        [{ "node": "Ad gevonden?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Ad gevonden?": {
+      "main": [
+        [{ "node": "Extraheer Ad page ID", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Extraheer Ad page ID": {
+      "main": [
+        [{ "node": "Zoek Ad Stats entry", "type": "main", "index": 0 }]
+      ]
+    },
+    "Zoek Ad Stats entry": {
+      "main": [
+        [{ "node": "Update of aanmaken?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Update of aanmaken?": {
+      "main": [
+        [{ "node": "Entry bestaat?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Entry bestaat?": {
+      "main": [
+        [{ "node": "Update Ad Stats (+1)", "type": "main", "index": 0 }],
+        [{ "node": "Maak nieuwe Ad Stats entry", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": []
+}
