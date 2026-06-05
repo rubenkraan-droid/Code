@@ -575,7 +575,15 @@ async function fetchWebhook(url) {
     throw new Error(`Webhook fout ${res.status}: ${msg}`);
   }
   if (!text || text.trim() === '') return [];
-  return JSON.parse(text);
+  const raw = JSON.parse(text);
+  // Normalise response across n8n node styles:
+  // 1. n8n "All Incoming Items" wraps each item: [{json:{...}, pairedItem:{...}}, ...]
+  // 2. Raw Notion API response: {results:[...], has_more:...}
+  // 3. Already-flat array: [{...}, ...]
+  if (Array.isArray(raw)) {
+    return raw.map(x => (x && x.json && typeof x.json === 'object' ? x.json : x));
+  }
+  return raw.results ?? [];
 }
 
 function parseDailyLog(page) {
