@@ -579,14 +579,19 @@ async function fetchWebhook(url) {
 }
 
 function parseDailyLog(page) {
-  const dateRaw  = page.property_date?.start ?? null;
+  // n8n native Notion node returns dates as string; HTTP-proxy returns {start:"..."}
+  const dp = page.property_date;
+  const dateRaw = dp?.start ?? (typeof dp === 'string' ? dp : null);
   const spendRaw = page.property_spend;
   const leadsRaw = page.property_leads;
   // "Sales" field in Notion → property_sales; fallback to older field names
   const signedRaw = page.property_sales ?? page.property_signed ?? page.property_getekend;
+  // Relation: native node may return [{id:"..."}, ...] or ["id", ...]
+  const adRel = page.property_ad;
+  const adId0 = Array.isArray(adRel) ? adRel[0] : null;
   return {
     date:         dateRaw ? dateRaw.slice(0, 10) : null,
-    adId:         Array.isArray(page.property_ad) ? page.property_ad[0] : null,
+    adId:         adId0 ? (typeof adId0 === 'string' ? adId0 : adId0.id ?? null) : null,
     adName:       page.name ? page.name.replace(/^\d{4}-\d{2}-\d{2}\s*\|\s*/, '') : null,
     spend:        typeof spendRaw === 'number' ? spendRaw : 0,
     imageUrl:     pickImageUrl(page),
