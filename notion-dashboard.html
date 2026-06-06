@@ -520,7 +520,7 @@ const state = {
   dailyLog:   [],       // parsed daily log rows
   allTimeMap: new Map(),// Ad ID → allTime record
   period:     '7d',
-  sortCol:    'spend',
+  sortCol:    'cpa',
   sortDir:    -1,       // -1 desc, 1 asc
   chart:      null
 };
@@ -754,12 +754,12 @@ function renderSummary(ads) {
       <div class="stat-value mono">${fNum(t.appointments)}</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">Sales <span class="ilabel ilabel-amber">${fPct(signR)}</span></div>
-      <div class="stat-value mono amber">${fNum(t.signed)}</div>
+      <div class="stat-label">CPA Afspraak</div>
+      <div class="stat-value mono">${fEur(cpa)}</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">Blended CPA</div>
-      <div class="stat-value mono">${fEur(cpa)}</div>
+      <div class="stat-label">Sales <span class="ilabel ilabel-amber">${fPct(signR)}</span></div>
+      <div class="stat-value mono amber">${fNum(t.signed)}</div>
     </div>
     <div class="stat-card c-amber">
       <div class="stat-label">CPS</div>
@@ -767,7 +767,7 @@ function renderSummary(ads) {
     </div>
     <div class="stat-card">
       <div class="stat-label">Omzet</div>
-      <div class="stat-value mono">${fEur(t.omzet)}</div>
+      <div class="stat-value mono" style="font-size:${t.omzet >= 1e6 ? '13px' : t.omzet >= 1e5 ? '16px' : '21px'}">${fEur(t.omzet)}</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">ROAS</div>
