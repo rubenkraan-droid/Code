@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 120" width="340" height="120">
+
+  <!-- ── Tekst: Select ── -->
+  <text
+    x="0" y="70"
+    font-family="'Arial Black', 'Arial Bold', Arial, sans-serif"
+    font-weight="900"
+    font-size="62"
+    fill="#1a1a1a"
+    letter-spacing="-1"
+  >Select</text>
+
+  <!-- ── Tekst: makelaars ── -->
+  <text
+    x="4" y="103"
+    font-family="Arial, Helvetica, sans-serif"
+    font-weight="400"
+    font-size="33"
+    fill="#29ABE2"
+    letter-spacing="1.5"
+  >makelaars</text>
+
+  <!-- ── Huis icoon ── -->
+  <!-- Dak (driehoek) -->
+  <polygon points="228,12 320,62 136,62" fill="#3AB54A"/>
+  <!-- Muur (rechthoek) -->
+  <rect x="142" y="60" width="172" height="55" rx="3" fill="#3AB54A"/>
+
+  <!-- ── Palmboom (wit silhouet) ── -->
+  <!-- Stam: lichte bocht naar rechts -->
+  <path d="M229,113 C231,100 227,88 230,74 C232,65 228,58 228,58"
+        stroke="white" stroke-width="5" stroke-linecap="round" fill="none"/>
+
+  <!-- Blad links-omlaag -->
+  <path d="M228,60 C218,56 206,60 200,68"
+        stroke="white" stroke-width="4" stroke-linecap="round" fill="none"/>
+  <!-- Blad rechts-omlaag -->
+  <path d="M228,60 C238,54 250,56 256,64"
+        stroke="white" stroke-width="4" stroke-linecap="round" fill="none"/>
+  <!-- Blad links-omhoog -->
+  <path d="M228,60 C220,50 210,46 206,38"
+        stroke="white" stroke-width="4" stroke-linecap="round" fill="none"/>
+  <!-- Blad rechts-omhoog -->
+  <path d="M228,60 C236,48 248,46 252,38"
+        stroke="white" stroke-width="4" stroke-linecap="round" fill="none"/>
+  <!-- Blad recht omhoog -->
+  <path d="M228,60 C226,48 228,36 228,30"
+        stroke="white" stroke-width="4" stroke-linecap="round" fill="none"/>
+
+  <!-- Kokosnoten (twee stippen) -->
+  <circle cx="224" cy="69" r="3.5" fill="white"/>
+  <circle cx="233" cy="70" r="3.5" fill="white"/>
+
+</svg>
