@@ -354,6 +354,123 @@
       .creative-img-wrap { height: 200px; }
       .dash-header h1 { font-size: 17px; }
     }
+
+    /* ── Tabs ── */
+    .tab-nav {
+      display: flex; gap: 0; flex-wrap: wrap;
+      margin-bottom: 22px;
+      border-bottom: 1px solid var(--border);
+    }
+    .tab-btn {
+      background: none; border: none; border-bottom: 2px solid transparent;
+      color: var(--muted); padding: 10px 20px; font-size: 14px; font-weight: 500;
+      cursor: pointer; transition: all .15s; margin-bottom: -1px; white-space: nowrap;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); font-weight: 600; }
+    .tab-pane[hidden] { display: none !important; }
+
+    /* ── Unit Grid (Tab 2) ── */
+    .unit-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
+    .unit-sq {
+      width: 34px; height: 34px; border-radius: 5px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; cursor: default; transition: transform .1s;
+    }
+    .unit-sq:hover { transform: scale(1.12); }
+    .unit-sq.verkocht     { background: rgba(16,185,129,.2);  color: var(--green); border: 1px solid rgba(16,185,129,.4); }
+    .unit-sq.gereserveerd { background: rgba(245,158,11,.2);  color: var(--amber); border: 1px solid rgba(245,158,11,.4); }
+    .unit-sq.beschikbaar  { background: rgba(107,114,128,.12); color: var(--muted); border: 1px solid rgba(107,114,128,.3); }
+    .legend-row { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 14px; }
+    .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+    .legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+
+    /* ── Projector (Tab 3) ── */
+    .proj-result-grid { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+    .proj-card {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: 14px 18px; flex: 1; min-width: 120px;
+    }
+    .proj-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 5px; }
+    .proj-value { font-size: 20px; font-weight: 700; }
+    .range-wrap { display: flex; align-items: center; gap: 12px; margin: 14px 0; }
+    input[type=range] {
+      flex: 1; -webkit-appearance: none; appearance: none;
+      height: 4px; background: var(--border); border-radius: 2px; outline: none; cursor: pointer;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 18px; height: 18px;
+      background: var(--blue); border-radius: 50%; cursor: pointer;
+    }
+    input[type=range]::-moz-range-thumb {
+      width: 18px; height: 18px; background: var(--blue); border-radius: 50%; cursor: pointer; border: none;
+    }
+    .range-label { font-size: 13px; color: var(--muted); width: 48px; text-align: right; white-space: nowrap; }
+
+    /* ── Funnel (Tab 4) ── */
+    .funnel-stage {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 10px;
+    }
+    .funnel-lbl { width: 110px; font-size: 12px; color: var(--muted); text-align: right; flex-shrink: 0; }
+    .funnel-bar-wrap { flex: 1; position: relative; height: 38px; }
+    .funnel-bar {
+      height: 38px; border-radius: 5px; background: var(--blue);
+      display: flex; align-items: center; padding: 0 12px;
+      font-size: 13px; font-weight: 600; color: white; min-width: 80px;
+      transition: width .5s ease;
+    }
+    .funnel-num  { width: 70px; font-size: 13px; font-weight: 600; text-align: right; flex-shrink: 0; }
+    .funnel-conv { width: 60px; font-size: 12px; color: var(--green); text-align: right; flex-shrink: 0; }
+    .funnel-cost { width: 70px; font-size: 12px; color: var(--amber); text-align: right; flex-shrink: 0; }
+    .funnel-legend { display: flex; gap: 24px; margin-top: 18px; flex-wrap: wrap; }
+    .funnel-legend-item { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 5px; }
+    .funnel-conv-arrow { text-align: center; font-size: 11px; color: var(--muted); padding: 2px 0 2px 122px; }
+
+    /* ── AI Briefing (Tab 5) ── */
+    .brief-form-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+    .brief-form-group { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 140px; }
+    .brief-form-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+    .brief-select, .brief-input, .brief-textarea {
+      background: var(--bg); border: 1px solid var(--border);
+      color: var(--text); padding: 8px 12px; border-radius: 6px;
+      font-size: 13px; outline: none; transition: border-color .15s; font-family: inherit;
+    }
+    .brief-select:focus, .brief-input:focus, .brief-textarea:focus { border-color: var(--blue); }
+    .brief-textarea { resize: vertical; min-height: 72px; line-height: 1.5; }
+    .brief-output {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: 16px; margin-top: 14px;
+      font-size: 13px; line-height: 1.8; white-space: pre-wrap;
+      min-height: 100px; color: var(--text);
+    }
+    .brief-output.loading { color: var(--muted); font-style: italic; }
+    .brief-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+    .btn-secondary {
+      background: var(--card); border: 1px solid var(--border);
+      color: var(--muted); padding: 7px 16px; border-radius: 6px;
+      font-size: 13px; cursor: pointer; transition: all .15s;
+    }
+    .btn-secondary:hover { border-color: var(--blue); color: var(--text); }
+    .history-list { display: flex; flex-direction: column; gap: 0; }
+    .history-item {
+      display: flex; gap: 14px; padding: 12px 0;
+      border-bottom: 1px solid rgba(51,65,85,.45); cursor: pointer;
+    }
+    .history-item:last-child { border-bottom: none; }
+    .history-item:hover .history-preview { color: var(--blue); }
+    .history-meta { font-size: 11px; color: var(--muted); flex-shrink: 0; width: 130px; line-height: 1.6; }
+    .history-preview { font-size: 12px; color: var(--text); line-height: 1.5; flex: 1; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .settings-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 200;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .modal {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 24px 26px; width: 420px; max-width: 92vw;
+    }
+    .modal-title { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
+    .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
   </style>
 </head>
 <body>
@@ -387,89 +504,227 @@
     <button class="print-btn" onclick="printDashboard()">&#128438; Print rapport</button>
   </div>
 
-  <!-- Period Toggle -->
-  <div class="period-row">
-    <button class="period-btn active" data-period="7d">Laatste 7 dagen</button>
-    <button class="period-btn" data-period="30d">Laatste 30 dagen</button>
-    <button class="period-btn" data-period="month">Deze maand</button>
-    <select id="month-picker" class="month-picker">
-      <option value="">Kies maand&hellip;</option>
-    </select>
+  <!-- Tab Navigation -->
+  <div class="tab-nav">
+    <button class="tab-btn active" data-tab="advertenties">Advertenties</button>
+    <button class="tab-btn" data-tab="inventaris">Verkoop &amp; Inventaris</button>
+    <button class="tab-btn" data-tab="projector">Sell-out Projector</button>
+    <button class="tab-btn" data-tab="funnel">Marketingfunnel</button>
+    <button class="tab-btn" data-tab="briefing">AI Briefing</button>
   </div>
 
-  <!-- Summary Bar -->
-  <div class="summary-bar" id="summary-bar"></div>
+  <!-- Tab 1: Advertenties (existing content) -->
+  <div id="tab-advertenties" class="tab-pane">
 
-  <!-- Trend Chart -->
-  <div class="card">
-    <div class="card-title">Trend</div>
-    <div class="chart-wrap">
-      <canvas id="trend-chart"></canvas>
+    <!-- Period Toggle -->
+    <div class="period-row">
+      <button class="period-btn active" data-period="7d">Laatste 7 dagen</button>
+      <button class="period-btn" data-period="30d">Laatste 30 dagen</button>
+      <button class="period-btn" data-period="month">Deze maand</button>
+      <select id="month-picker" class="month-picker">
+        <option value="">Kies maand&hellip;</option>
+      </select>
+    </div>
+
+    <!-- Summary Bar -->
+    <div class="summary-bar" id="summary-bar"></div>
+
+    <!-- Trend Chart -->
+    <div class="card">
+      <div class="card-title">Trend</div>
+      <div class="chart-wrap">
+        <canvas id="trend-chart"></canvas>
+      </div>
+    </div>
+
+    <!-- Main Ads Table -->
+    <div class="card">
+      <div class="card-title">Advertenties</div>
+      <div class="tbl-wrap">
+        <table id="main-table">
+          <thead>
+            <tr>
+              <th data-sort="adName">Advertentie</th>
+              <th data-sort="status">Status</th>
+              <th data-sort="spend"        class="right">Uitgaven</th>
+              <th data-sort="clicks"       class="right">Clicks</th>
+              <th data-sort="optInRate"    class="right muted">Opt-In%</th>
+              <th data-sort="leads"        class="right">Leads</th>
+              <th data-sort="cpl"          class="right">CPL</th>
+              <th data-sort="afsprRate"    class="right muted">Afspr%</th>
+              <th data-sort="appointments" class="right">Afspraken</th>
+              <th data-sort="cpa"          class="right">CPA</th>
+              <th data-sort="signRate"     class="right muted">Sales%</th>
+              <th data-sort="signed"       class="right">Sales</th>
+              <th data-sort="cpsSigned"    class="right">CPS</th>
+              <th data-sort="omzet"        class="right">Omzet</th>
+              <th data-sort="roas"         class="right">ROAS</th>
+            </tr>
+          </thead>
+          <tbody id="main-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Maandoverzicht -->
+    <div class="card">
+      <div class="card-title">Maandoverzicht</div>
+      <div class="tbl-wrap">
+        <table id="monthly-table">
+          <thead>
+            <tr>
+              <th>Maand</th>
+              <th class="right">Uitgaven</th>
+              <th class="right">Clicks</th>
+              <th class="right muted">Opt-In%</th>
+              <th class="right">Leads</th>
+              <th class="right">CPL</th>
+              <th class="right muted">Afspr%</th>
+              <th class="right">Afspraken</th>
+              <th class="right">CPA</th>
+              <th class="right muted">Sales%</th>
+              <th class="right">Sales</th>
+              <th class="right">CPS</th>
+              <th class="right">Omzet</th>
+              <th class="right">ROAS</th>
+            </tr>
+          </thead>
+          <tbody id="monthly-tbody"></tbody>
+          <tfoot id="monthly-tfoot"></tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- Beste Advertenties -->
+    <div class="card">
+      <div class="card-title">Beste Advertenties</div>
+      <div class="creative-grid" id="creative-grid"></div>
+    </div>
+
+  </div><!-- /#tab-advertenties -->
+
+  <!-- Tab 2: Verkoop & Inventaris -->
+  <div id="tab-inventaris" class="tab-pane" hidden>
+    <div class="card">
+      <div class="card-title">Inventarisstatus</div>
+      <div id="inv-stat-bar" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;"></div>
+      <div class="unit-grid" id="unit-grid"></div>
+      <div class="legend-row">
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(16,185,129,.4)"></div>Verkocht</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(245,158,11,.4)"></div>Gereserveerd</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(107,114,128,.3)"></div>Beschikbaar</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Verkoopvoortgang per maand</div>
+      <div class="chart-wrap"><canvas id="inv-chart"></canvas></div>
     </div>
   </div>
 
-  <!-- Main Ads Table -->
-  <div class="card">
-    <div class="card-title">Advertenties</div>
-    <div class="tbl-wrap">
-      <table id="main-table">
-        <thead>
-          <tr>
-            <th data-sort="adName">Advertentie</th>
-            <th data-sort="status">Status</th>
-            <th data-sort="spend"        class="right">Uitgaven</th>
-            <th data-sort="clicks"       class="right">Clicks</th>
-            <th data-sort="optInRate"    class="right muted">Opt-In%</th>
-            <th data-sort="leads"        class="right">Leads</th>
-            <th data-sort="cpl"          class="right">CPL</th>
-            <th data-sort="afsprRate"    class="right muted">Afspr%</th>
-            <th data-sort="appointments" class="right">Afspraken</th>
-            <th data-sort="cpa"          class="right">CPA</th>
-            <th data-sort="signRate"     class="right muted">Sales%</th>
-            <th data-sort="signed"       class="right">Sales</th>
-            <th data-sort="cpsSigned"    class="right">CPS</th>
-            <th data-sort="omzet"        class="right">Omzet</th>
-            <th data-sort="roas"         class="right">ROAS</th>
-          </tr>
-        </thead>
-        <tbody id="main-tbody"></tbody>
-      </table>
+  <!-- Tab 3: Sell-out Projector -->
+  <div id="tab-projector" class="tab-pane" hidden>
+    <div class="card">
+      <div class="card-title">Huidige verkoopsnelheid</div>
+      <div id="proj-velocity-bar" style="display:flex;gap:12px;flex-wrap:wrap;"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Scenario simulator</div>
+      <div style="margin-bottom:8px">
+        <div style="font-size:13px;color:var(--muted);margin-bottom:10px">Wat als het leadvolume verandert?</div>
+        <div class="range-wrap">
+          <span style="font-size:13px;color:var(--muted);width:130px">Leadvolume aanpassing</span>
+          <input type="range" id="proj-slider" min="-50" max="150" value="0" step="5">
+          <span class="range-label" id="proj-slider-val">+0%</span>
+        </div>
+      </div>
+      <div class="proj-result-grid" id="proj-results"></div>
     </div>
   </div>
 
-  <!-- Maandoverzicht -->
-  <div class="card">
-    <div class="card-title">Maandoverzicht</div>
-    <div class="tbl-wrap">
-      <table id="monthly-table">
-        <thead>
-          <tr>
-            <th>Maand</th>
-            <th class="right">Uitgaven</th>
-            <th class="right">Clicks</th>
-            <th class="right muted">Opt-In%</th>
-            <th class="right">Leads</th>
-            <th class="right">CPL</th>
-            <th class="right muted">Afspr%</th>
-            <th class="right">Afspraken</th>
-            <th class="right">CPA</th>
-            <th class="right muted">Sales%</th>
-            <th class="right">Sales</th>
-            <th class="right">CPS</th>
-            <th class="right">Omzet</th>
-            <th class="right">ROAS</th>
-          </tr>
-        </thead>
-        <tbody id="monthly-tbody"></tbody>
-        <tfoot id="monthly-tfoot"></tfoot>
-      </table>
+  <!-- Tab 4: Marketingfunnel -->
+  <div id="tab-funnel" class="tab-pane" hidden>
+    <div class="period-row" id="funnel-period-row">
+      <button class="period-btn" data-funnel-period="7d">Laatste 7 dagen</button>
+      <button class="period-btn active" data-funnel-period="30d">Laatste 30 dagen</button>
+      <button class="period-btn" data-funnel-period="month">Deze maand</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Marketingfunnel</div>
+      <div id="funnel-viz" style="margin-top:8px;"></div>
+      <div class="funnel-legend">
+        <div class="funnel-legend-item"><span style="color:var(--green)">%</span>&nbsp;Conversie naar volgende stap</div>
+        <div class="funnel-legend-item"><span style="color:var(--amber)">€</span>&nbsp;Kosten per conversie</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Kosten per fase</div>
+      <div id="funnel-costs" style="display:flex;gap:12px;flex-wrap:wrap;"></div>
     </div>
   </div>
 
-  <!-- Beste Advertenties -->
-  <div class="card">
-    <div class="card-title">Beste Advertenties</div>
-    <div class="creative-grid" id="creative-grid"></div>
+  <!-- Tab 5: AI Briefing -->
+  <div id="tab-briefing" class="tab-pane" hidden>
+    <div class="card">
+      <div class="settings-row">
+        <div class="card-title" style="margin-bottom:0">Nieuwe brief genereren</div>
+        <button class="btn-secondary" onclick="openBriefSettings()" title="Instellingen">&#9881; Instellingen</button>
+      </div>
+      <div class="brief-form-row">
+        <div class="brief-form-group">
+          <label class="brief-form-label">Brief type</label>
+          <select id="brief-type" class="brief-select">
+            <option value="weekrapport">Weekrapport</option>
+            <option value="maandrapport">Maandrapport</option>
+            <option value="campagneanalyse">Campagneanalyse</option>
+            <option value="budgetadvies">Budgetadvies</option>
+          </select>
+        </div>
+        <div class="brief-form-group">
+          <label class="brief-form-label">Periode</label>
+          <select id="brief-period" class="brief-select">
+            <option value="7d">Laatste 7 dagen</option>
+            <option value="30d">Laatste 30 dagen</option>
+            <option value="month">Deze maand</option>
+          </select>
+        </div>
+      </div>
+      <div class="brief-form-row">
+        <div class="brief-form-group" style="flex:2">
+          <label class="brief-form-label">Extra context / focus (optioneel)</label>
+          <textarea id="brief-context" class="brief-textarea" placeholder="bijv. focus op CPL verbetering, of vergelijk met vorige maand..."></textarea>
+        </div>
+      </div>
+      <button class="btn" id="brief-gen-btn" onclick="generateBrief()">Brief genereren</button>
+      <div id="brief-output" class="brief-output" hidden></div>
+      <div class="brief-actions" id="brief-actions" hidden>
+        <button class="btn-secondary" onclick="copyBrief()">Kopieer</button>
+        <button class="btn-secondary" onclick="saveBriefToNotion()">Opslaan in Notion</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Briefinghistorie</div>
+      <div id="brief-history-list" class="history-list"></div>
+    </div>
+  </div>
+
+  <!-- Settings modal -->
+  <div id="brief-settings-modal" class="modal-overlay" hidden onclick="closeBriefSettings(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-title">AI Briefing instellingen</div>
+      <div class="brief-form-group" style="margin-bottom:12px">
+        <label class="brief-form-label">n8n Webhook URL (AI Briefing)</label>
+        <input type="url" id="brief-webhook-url" class="brief-input" placeholder="https://mabekra.app.n8n.cloud/webhook/ai-brief">
+        <div style="font-size:11px;color:var(--muted);margin-top:5px">Bouw een n8n flow die de briefing via Claude genereert. De URL wordt lokaal opgeslagen.</div>
+      </div>
+      <div class="brief-form-group" style="margin-bottom:0">
+        <label class="brief-form-label">Notion webhook URL (opslaan brieven, optioneel)</label>
+        <input type="url" id="brief-notion-url" class="brief-input" placeholder="https://mabekra.app.n8n.cloud/webhook/save-brief">
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeBriefSettings()">Annuleren</button>
+        <button class="btn" onclick="saveBriefSettings()">Opslaan</button>
+      </div>
+    </div>
   </div>
 
 </div><!-- /#dashboard -->
@@ -1241,6 +1496,437 @@ document.querySelectorAll('#main-table th[data-sort]').forEach(th => {
     renderMainTable(aggAds(filterRows(state.dailyLog, range)));
   });
 });
+
+// ════════════════════════════════════════════════════════════
+//  MOCK DATA — vervang met echte API-koppelingen
+// ════════════════════════════════════════════════════════════
+const MOCK = {
+  inventaris: {
+    totaalEenheden: 48,
+    eenheden: [
+      ...Array.from({length: 28}, (_, i) => ({ nr: i + 1, status: 'verkocht',     type: i < 12 ? 'Stacaravan' : i < 22 ? 'Chalet' : 'Lodge' })),
+      ...Array.from({length: 8},  (_, i) => ({ nr: i + 29, status: 'gereserveerd', type: i < 3  ? 'Stacaravan' : i < 6  ? 'Chalet' : 'Lodge' })),
+      ...Array.from({length: 12}, (_, i) => ({ nr: i + 37, status: 'beschikbaar',  type: i < 4  ? 'Stacaravan' : i < 8  ? 'Chalet' : 'Lodge' })),
+    ],
+    verkopenPerMaand: [
+      { key: '2025-01', verkopen: 3 },
+      { key: '2025-02', verkopen: 4 },
+      { key: '2025-03', verkopen: 6 },
+      { key: '2025-04', verkopen: 5 },
+      { key: '2025-05', verkopen: 7 },
+      { key: '2025-06', verkopen: 3 },
+    ]
+  },
+  impressies: 125000  // komt straks uit Meta API
+};
+
+// extra chart instance for Tab 2
+state.invChart = null;
+state.funnelPeriod = '30d';
+
+// ── Tab switching ──
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.hidden = true);
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
+  const pane = document.getElementById('tab-' + tabId);
+  if (pane) pane.hidden = false;
+  if (tabId === 'inventaris') renderInventaris();
+  if (tabId === 'projector')  renderProjector();
+  if (tabId === 'funnel')     renderFunnel();
+  if (tabId === 'briefing')   renderBriefHistory();
+}
+document.querySelectorAll('.tab-btn').forEach(btn =>
+  btn.addEventListener('click', () => switchTab(btn.dataset.tab))
+);
+
+// ── Tab 2: Verkoop & Inventaris ──
+function renderInventaris() {
+  const eenheden = MOCK.inventaris.eenheden;
+  const verkocht     = eenheden.filter(e => e.status === 'verkocht').length;
+  const gereserveerd = eenheden.filter(e => e.status === 'gereserveerd').length;
+  const beschikbaar  = eenheden.filter(e => e.status === 'beschikbaar').length;
+  const totaal       = eenheden.length;
+  const pctVerkocht  = totaal > 0 ? (verkocht / totaal * 100).toFixed(0) : 0;
+
+  document.getElementById('inv-stat-bar').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">Totaal eenheden</div>
+      <div class="stat-value mono">${totaal}</div>
+    </div>
+    <div class="stat-card c-green">
+      <div class="stat-label">Verkocht</div>
+      <div class="stat-value mono green">${verkocht} <span style="font-size:13px;font-weight:400">(${pctVerkocht}%)</span></div>
+    </div>
+    <div class="stat-card c-amber">
+      <div class="stat-label">Gereserveerd</div>
+      <div class="stat-value mono amber">${gereserveerd}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Beschikbaar</div>
+      <div class="stat-value mono muted">${beschikbaar}</div>
+    </div>`;
+
+  document.getElementById('unit-grid').innerHTML = eenheden.map(e =>
+    `<div class="unit-sq ${e.status}" title="#${e.nr} — ${e.type} — ${e.status}">${e.nr}</div>`
+  ).join('');
+
+  // Chart: resterende voorraad + cumulatieve verkopen
+  const maanden = MOCK.inventaris.verkopenPerMaand;
+  let cumVerkocht = 0;
+  let resterend = totaal;
+  const labels = [], cumData = [], restData = [];
+  for (const m of maanden) {
+    cumVerkocht += m.verkopen;
+    resterend = totaal - cumVerkocht;
+    const [y, mo] = m.key.split('-').map(Number);
+    labels.push(fMon(y, mo - 1));
+    cumData.push(cumVerkocht);
+    restData.push(resterend < 0 ? 0 : resterend);
+  }
+
+  if (state.invChart) { state.invChart.destroy(); state.invChart = null; }
+  state.invChart = new Chart(document.getElementById('inv-chart').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Cumulatief verkocht',
+          data: cumData,
+          borderColor: '#10B981', backgroundColor: 'rgba(16,185,129,.08)',
+          fill: true, tension: 0.3, pointRadius: 4, yAxisID: 'y'
+        },
+        {
+          label: 'Resterende voorraad',
+          data: restData,
+          borderColor: '#3B82F6', borderDash: [6, 3],
+          tension: 0.3, pointRadius: 4, yAxisID: 'y'
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#94A3B8', font: { size: 12 }, usePointStyle: true } },
+        tooltip: { backgroundColor: '#1E293B', borderColor: '#334155', borderWidth: 1, titleColor: '#F1F5F9', bodyColor: '#94A3B8' }
+      },
+      scales: {
+        x: { ticks: { color: '#94A3B8' }, grid: { color: 'rgba(51,65,85,.4)' } },
+        y: { ticks: { color: '#94A3B8', stepSize: 1 }, grid: { color: 'rgba(51,65,85,.4)' }, min: 0 }
+      }
+    }
+  });
+}
+
+// ── Tab 3: Sell-out Projector ──
+function renderProjector() {
+  const eenheden    = MOCK.inventaris.eenheden;
+  const totaal      = eenheden.length;
+  const verkocht    = eenheden.filter(e => e.status === 'verkocht').length;
+  const gereserveerd = eenheden.filter(e => e.status === 'gereserveerd').length;
+  const resterend   = totaal - verkocht - gereserveerd;
+
+  // Velocity from real data or mock
+  const allSales  = state.dailyLog.reduce((s, r) => s + (r.signed || 0), 0);
+  let maandSnelheid;
+  if (allSales > 0 && state.dailyLog.length > 0) {
+    const dates = state.dailyLog.map(r => new Date(r.date)).filter(Boolean).sort((a, b) => a - b);
+    if (dates.length >= 2) {
+      const weken = Math.max(1, (dates[dates.length-1] - dates[0]) / (1000*60*60*24*7));
+      maandSnelheid = (allSales / weken) * 4.33;
+    } else {
+      maandSnelheid = allSales;
+    }
+  } else {
+    // Fallback: sum MOCK verkopen per maand / aantal maanden
+    const mv = MOCK.inventaris.verkopenPerMaand;
+    maandSnelheid = mv.reduce((s, m) => s + m.verkopen, 0) / (mv.length || 1);
+  }
+
+  // Avg monthly spend from real data
+  const totalSpend = state.dailyLog.reduce((s, r) => s + (r.spend || 0), 0);
+  const maandBudget = state.dailyLog.length > 0
+    ? totalSpend / Math.max(1, [...new Set(state.dailyLog.map(r => r.date?.slice(0,7)).filter(Boolean))].length)
+    : 2000;
+
+  function calcScenario(factor) {
+    const snel = maandSnelheid * factor;
+    if (snel <= 0) return { snel: 0, maanden: Infinity, datum: '—', budget: 0 };
+    const maanden = resterend / snel;
+    const datum = new Date();
+    datum.setMonth(datum.getMonth() + Math.ceil(maanden));
+    return {
+      snel: snel.toFixed(1),
+      maanden: Math.ceil(maanden),
+      datum: datum.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' }),
+      budget: Math.ceil(maanden * maandBudget)
+    };
+  }
+
+  document.getElementById('proj-velocity-bar').innerHTML = `
+    <div class="proj-card">
+      <div class="proj-label">Verkoopsnelheid</div>
+      <div class="proj-value mono">${maandSnelheid.toFixed(1)}<span style="font-size:14px;font-weight:400;color:var(--muted)"> /mnd</span></div>
+    </div>
+    <div class="proj-card">
+      <div class="proj-label">Resterend te verkopen</div>
+      <div class="proj-value mono">${resterend}</div>
+    </div>
+    <div class="proj-card">
+      <div class="proj-label">Huidig maandbudget</div>
+      <div class="proj-value mono">${fEur(maandBudget)}</div>
+    </div>`;
+
+  function updateResults(pct) {
+    const factor = 1 + pct / 100;
+    const sc = calcScenario(factor);
+    const isBase = pct === 0;
+    document.getElementById('proj-results').innerHTML = `
+      <div class="proj-card">
+        <div class="proj-label">Scenario snelheid</div>
+        <div class="proj-value mono ${pct > 0 ? 'green' : pct < 0 ? 'red' : ''}">${sc.snel}<span style="font-size:14px;font-weight:400;color:var(--muted)"> /mnd</span></div>
+      </div>
+      <div class="proj-card">
+        <div class="proj-label">Maanden tot uitverkoop</div>
+        <div class="proj-value mono">${sc.maanden === Infinity ? '∞' : sc.maanden}</div>
+      </div>
+      <div class="proj-card">
+        <div class="proj-label">Verwachte uitverkoop</div>
+        <div class="proj-value" style="font-size:16px">${sc.datum}</div>
+      </div>
+      <div class="proj-card">
+        <div class="proj-label">Budget tot uitverkoop</div>
+        <div class="proj-value mono amber">${sc.maanden === Infinity ? '—' : fEur(sc.budget)}</div>
+      </div>`;
+  }
+
+  const slider = document.getElementById('proj-slider');
+  const sliderVal = document.getElementById('proj-slider-val');
+  slider.value = 0;
+  sliderVal.textContent = '+0%';
+  updateResults(0);
+
+  // Remove old listener by cloning
+  const newSlider = slider.cloneNode(true);
+  slider.parentNode.replaceChild(newSlider, slider);
+  document.getElementById('proj-slider-val').textContent = '+0%';
+  newSlider.addEventListener('input', () => {
+    const v = parseInt(newSlider.value);
+    document.getElementById('proj-slider-val').textContent = (v >= 0 ? '+' : '') + v + '%';
+    updateResults(v);
+  });
+}
+
+// ── Tab 4: Marketingfunnel ──
+function renderFunnel() {
+  const range = getRange(state.funnelPeriod);
+  if (!range) return;
+  const rows = filterRows(state.dailyLog, range);
+  const t = rows.reduce((a, r) => {
+    a.spend += r.spend; a.clicks += r.clicks; a.leads += r.leads;
+    a.appointments += r.appointments; a.signed += r.signed; return a;
+  }, { spend: 0, clicks: 0, leads: 0, appointments: 0, signed: 0 });
+
+  const impressies = MOCK.impressies;
+  const stages = [
+    { naam: 'Impressies',  vol: impressies,       kleur: '#6366F1' },
+    { naam: 'Clicks',      vol: t.clicks,         kleur: '#3B82F6' },
+    { naam: 'Leads',       vol: t.leads,           kleur: '#06B6D4' },
+    { naam: 'Afspraken',   vol: t.appointments,   kleur: '#10B981' },
+    { naam: 'Verkopen',    vol: t.signed,         kleur: '#F59E0B' },
+  ];
+
+  const maxVol = Math.max(...stages.map(s => s.vol), 1);
+
+  function convRate(from, to) {
+    return from > 0 ? fPct(to / from) : '—';
+  }
+  function costPer(vol) {
+    return vol > 0 ? fEur(t.spend / vol) : '—';
+  }
+
+  let html = '';
+  stages.forEach((s, i) => {
+    const barPct = Math.max(4, (s.vol / maxVol) * 100);
+    const conv = i > 0 ? convRate(stages[i-1].vol, s.vol) : '';
+    const cost = s.naam !== 'Impressies' ? costPer(s.vol) : '';
+    if (i > 0) {
+      html += `<div class="funnel-conv-arrow">↓ ${conv} conversie</div>`;
+    }
+    html += `<div class="funnel-stage">
+      <div class="funnel-lbl">${s.naam}</div>
+      <div class="funnel-bar-wrap">
+        <div class="funnel-bar" style="width:${barPct}%;background:${s.kleur}">${fNum(s.vol)}</div>
+      </div>
+      <div class="funnel-cost">${cost}</div>
+    </div>`;
+  });
+  document.getElementById('funnel-viz').innerHTML = html;
+
+  // Cost cards
+  const cpl  = t.leads        > 0 ? t.spend / t.leads        : null;
+  const cpa  = t.appointments > 0 ? t.spend / t.appointments : null;
+  const cps  = t.signed       > 0 ? t.spend / t.signed       : null;
+  const roas_val = t.signed > 0 ? null : null; // omzet not available at funnel level
+  document.getElementById('funnel-costs').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">Totaal uitgaven</div>
+      <div class="stat-value mono">${fEur(t.spend)}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Kosten per lead (CPL)</div>
+      <div class="stat-value mono">${fEur(cpl)}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Kosten per afspraak (CPA)</div>
+      <div class="stat-value mono">${fEur(cpa)}</div>
+    </div>
+    <div class="stat-card c-amber">
+      <div class="stat-label">Kosten per sale (CPS)</div>
+      <div class="stat-value mono amber">${fEur(cps)}</div>
+    </div>`;
+
+  // Funnel period buttons
+  document.querySelectorAll('[data-funnel-period]').forEach(b => {
+    b.classList.toggle('active', b.dataset.funnelPeriod === state.funnelPeriod);
+  });
+}
+
+// Funnel period toggle events
+document.querySelectorAll('[data-funnel-period]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    state.funnelPeriod = btn.dataset.funnelPeriod;
+    renderFunnel();
+  });
+});
+
+// ── Tab 5: AI Briefing ──
+function openBriefSettings() {
+  document.getElementById('brief-webhook-url').value = localStorage.getItem('briefWebhookUrl') || '';
+  document.getElementById('brief-notion-url').value  = localStorage.getItem('briefNotionUrl')  || '';
+  document.getElementById('brief-settings-modal').hidden = false;
+}
+function closeBriefSettings(e) {
+  if (!e || e.target === document.getElementById('brief-settings-modal')) {
+    document.getElementById('brief-settings-modal').hidden = true;
+  }
+}
+function saveBriefSettings() {
+  localStorage.setItem('briefWebhookUrl', document.getElementById('brief-webhook-url').value.trim());
+  localStorage.setItem('briefNotionUrl',  document.getElementById('brief-notion-url').value.trim());
+  document.getElementById('brief-settings-modal').hidden = true;
+}
+
+async function generateBrief() {
+  const webhookUrl = localStorage.getItem('briefWebhookUrl');
+  if (!webhookUrl) {
+    openBriefSettings();
+    return;
+  }
+  const type    = document.getElementById('brief-type').value;
+  const period  = document.getElementById('brief-period').value;
+  const context = document.getElementById('brief-context').value.trim();
+
+  const range = getRange(period);
+  const rows  = range ? filterRows(state.dailyLog, range) : [];
+  const t = rows.reduce((a, r) => {
+    a.spend += r.spend; a.clicks += r.clicks; a.leads += r.leads;
+    a.appointments += r.appointments; a.signed += r.signed; a.omzet += r.omzet; return a;
+  }, { spend: 0, clicks: 0, leads: 0, appointments: 0, signed: 0, omzet: 0 });
+
+  const payload = {
+    type, period, context,
+    data: {
+      spend: t.spend, clicks: t.clicks, leads: t.leads,
+      afspraken: t.appointments, sales: t.signed, omzet: t.omzet,
+      cpl:  t.leads        > 0 ? +(t.spend / t.leads).toFixed(2)        : null,
+      cpa:  t.appointments > 0 ? +(t.spend / t.appointments).toFixed(2) : null,
+      cps:  t.signed       > 0 ? +(t.spend / t.signed).toFixed(2)       : null,
+      roas: t.spend        > 0 ? +(t.omzet  / t.spend).toFixed(2)       : null,
+    }
+  };
+
+  const btn = document.getElementById('brief-gen-btn');
+  const out = document.getElementById('brief-output');
+  btn.disabled = true; btn.textContent = 'Bezig...';
+  out.hidden = false; out.className = 'brief-output loading';
+  out.textContent = 'Brief wordt gegenereerd...';
+  document.getElementById('brief-actions').hidden = true;
+
+  try {
+    const res = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error(`Webhook fout ${res.status}`);
+    const json = await res.json();
+    const text = json.brief || json.text || json.content || JSON.stringify(json);
+    out.className = 'brief-output';
+    out.textContent = text;
+    document.getElementById('brief-actions').hidden = false;
+    // Save to history
+    const history = JSON.parse(localStorage.getItem('briefHistory') || '[]');
+    history.unshift({ date: new Date().toISOString(), type, period, brief: text });
+    localStorage.setItem('briefHistory', JSON.stringify(history.slice(0, 20)));
+    renderBriefHistory();
+  } catch (err) {
+    out.className = 'brief-output';
+    out.textContent = 'Fout: ' + err.message;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Brief genereren';
+  }
+}
+
+function copyBrief() {
+  const text = document.getElementById('brief-output').textContent;
+  navigator.clipboard.writeText(text).catch(() => {});
+}
+
+async function saveBriefToNotion() {
+  const notionUrl = localStorage.getItem('briefNotionUrl');
+  if (!notionUrl) { openBriefSettings(); return; }
+  const text = document.getElementById('brief-output').textContent;
+  const type = document.getElementById('brief-type').value;
+  await fetch(notionUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ brief: text, type, date: new Date().toISOString() })
+  });
+}
+
+function renderBriefHistory() {
+  const history = JSON.parse(localStorage.getItem('briefHistory') || '[]');
+  const list = document.getElementById('brief-history-list');
+  if (!list) return;
+  if (!history.length) {
+    list.innerHTML = '<p class="muted" style="padding:6px 0;font-size:13px">Nog geen brieven gegenereerd.</p>';
+    return;
+  }
+  const typeLabels = { weekrapport: 'Weekrapport', maandrapport: 'Maandrapport', campagneanalyse: 'Campagneanalyse', budgetadvies: 'Budgetadvies' };
+  list.innerHTML = history.map((h, i) => {
+    const d = new Date(h.date);
+    const dateStr = d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' });
+    const preview = h.brief.slice(0, 120).replace(/\n/g, ' ') + (h.brief.length > 120 ? '…' : '');
+    return `<div class="history-item" onclick="loadHistoryItem(${i})">
+      <div class="history-meta">${dateStr}<br><span style="color:var(--blue)">${typeLabels[h.type] || h.type}</span></div>
+      <div class="history-preview">${esc(preview)}</div>
+    </div>`;
+  }).join('');
+}
+
+function loadHistoryItem(i) {
+  const history = JSON.parse(localStorage.getItem('briefHistory') || '[]');
+  const h = history[i];
+  if (!h) return;
+  document.getElementById('brief-type').value   = h.type;
+  document.getElementById('brief-period').value = h.period || '30d';
+  const out = document.getElementById('brief-output');
+  out.hidden = false; out.className = 'brief-output';
+  out.textContent = h.brief;
+  document.getElementById('brief-actions').hidden = false;
+  switchTab('briefing');
+}
 
 // ════════════════════════════════════════════════════════════
 //  Boot
