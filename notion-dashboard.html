@@ -1548,7 +1548,8 @@ const MOCK = {
       { key: '2025-06', verkopen: 3 },
     ]
   },
-  impressies: 125000  // komt straks uit Meta API
+  // Funnel fallback — wordt gebruikt wanneer er (nog) geen echte data is
+  funnel: { clicks: 100, leads: 70, afspraken: 50, verkopen: 25 }
 };
 
 // extra chart instance for Tab 2
@@ -1758,11 +1759,15 @@ function renderFunnel() {
     a.appointments += r.appointments; a.signed += r.signed; return a;
   }, { spend: 0, clicks: 0, leads: 0, appointments: 0, signed: 0 });
 
+  // Fall back to mock when no real data for the selected period
+  const useMock = t.clicks === 0;
+  const f = useMock ? MOCK.funnel : { clicks: t.clicks, leads: t.leads, afspraken: t.appointments, verkopen: t.signed };
+
   const stages = [
-    { naam: 'Clicks',    vol: t.clicks,       kleur: '#3B82F6' },
-    { naam: 'Leads',     vol: t.leads,         kleur: '#06B6D4' },
-    { naam: 'Afspraken', vol: t.appointments, kleur: '#10B981' },
-    { naam: 'Verkopen',  vol: t.signed,       kleur: '#F59E0B' },
+    { naam: 'Clicks',    vol: f.clicks,    kleur: '#3B82F6' },
+    { naam: 'Leads',     vol: f.leads,     kleur: '#06B6D4' },
+    { naam: 'Afspraken', vol: f.afspraken, kleur: '#10B981' },
+    { naam: 'Verkopen',  vol: f.verkopen,     kleur: '#F59E0B' },
   ];
 
   function convRate(from, to) {
@@ -1790,11 +1795,10 @@ function renderFunnel() {
   });
   document.getElementById('funnel-viz').innerHTML = html;
 
-  // Cost cards
-  const cpl  = t.leads        > 0 ? t.spend / t.leads        : null;
-  const cpa  = t.appointments > 0 ? t.spend / t.appointments : null;
-  const cps  = t.signed       > 0 ? t.spend / t.signed       : null;
-  const roas_val = t.signed > 0 ? null : null; // omzet not available at funnel level
+  // Cost cards (use real spend, real volumes only — hide when mock)
+  const cpl = !useMock && t.leads        > 0 ? t.spend / t.leads        : null;
+  const cpa = !useMock && t.appointments > 0 ? t.spend / t.appointments : null;
+  const cps = !useMock && t.signed       > 0 ? t.spend / t.signed       : null;
   document.getElementById('funnel-costs').innerHTML = `
     <div class="stat-card">
       <div class="stat-label">Totaal uitgaven</div>
