@@ -498,7 +498,7 @@
   <!-- Header -->
   <div class="dash-header">
     <div>
-      <h1>Advertentie Dashboard</h1>
+      <h1 id="dash-title">Advertentie Dashboard</h1>
       <span id="last-updated"></span>
     </div>
     <button class="print-btn" onclick="printDashboard()">&#128438; Print rapport</button>
@@ -1425,6 +1425,31 @@ function printDashboard() {
 }
 
 // ════════════════════════════════════════════════════════════
+//  Park config (injected via n8n daily webhook)
+// ════════════════════════════════════════════════════════════
+function applyParkConfig(cfg) {
+  if (cfg.parkNaam) {
+    document.title = cfg.parkNaam + ' — Advertentie Dashboard';
+    document.getElementById('dash-title').textContent = cfg.parkNaam + ' — Advertenties';
+  }
+  if (cfg.kleur) {
+    document.documentElement.style.setProperty('--blue', cfg.kleur);
+  }
+  if (cfg.totaalEenheden != null) {
+    const v = cfg.verkocht     ?? 0;
+    const g = cfg.gereserveerd ?? 0;
+    const b = cfg.beschikbaar  ?? Math.max(0, cfg.totaalEenheden - v - g);
+    MOCK.inventaris.totaalEenheden = cfg.totaalEenheden;
+    MOCK.inventaris.eenheden = [
+      ...Array.from({length: v}, (_, i) => ({ nr: i + 1,         status: 'verkocht',     type: 'Eenheid' })),
+      ...Array.from({length: g}, (_, i) => ({ nr: i + v + 1,     status: 'gereserveerd', type: 'Eenheid' })),
+      ...Array.from({length: b}, (_, i) => ({ nr: i + v + g + 1, status: 'beschikbaar',  type: 'Eenheid' })),
+    ];
+  }
+  if (cfg.impressies != null) MOCK.impressies = cfg.impressies;
+}
+
+// ════════════════════════════════════════════════════════════
 //  Init
 // ════════════════════════════════════════════════════════════
 async function init() {
@@ -1437,6 +1462,10 @@ async function init() {
       fetchWebhook(CONFIG.DAILY_URL),
       fetchWebhook(CONFIG.ALL_TIME_URL)
     ]);
+
+    // Extract park config item if n8n injected one
+    const cfgIdx = dailyPages.findIndex(p => p._type === 'config');
+    if (cfgIdx >= 0) applyParkConfig(dailyPages.splice(cfgIdx, 1)[0]);
 
     if (dailyPages[0]) console.log('[Dashboard] Daily props:', Object.keys(dailyPages[0]).filter(k => k.startsWith('property_')));
     if (dailyPages[0]) console.log('[Dashboard] Daily image candidates:', Object.fromEntries(Object.entries(dailyPages[0]).filter(([k]) => k.startsWith('property_') && (k.includes('image') || k.includes('url') || k.includes('foto') || k.includes('afb') || k.includes('drive')))));
@@ -1498,7 +1527,9 @@ document.querySelectorAll('#main-table th[data-sort]').forEach(th => {
 });
 
 // ════════════════════════════════════════════════════════════
-//  MOCK DATA — vervang met echte API-koppelingen
+//  MOCK DATA — waarden hieronder worden overschreven door
+//  park config die uit de n8n notion-daily webhook komt
+//  (item met _type:'config' als eerste in de array)
 // ════════════════════════════════════════════════════════════
 const MOCK = {
   inventaris: {
