@@ -1,0 +1,172 @@
+{
+  "name": "Life OS — Weekbriefing (Claude)",
+  "nodes": [
+    {
+      "id": "node-schedule",
+      "name": "Elke zondag 09:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [160, 300],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "weeksInterval": 1,
+              "triggerAtDay": [0],
+              "triggerAtHour": 9,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "node-config",
+      "name": "⚙ Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [380, 300],
+      "parameters": {
+        "jsCode": "// ====================================================\n// LIFE OS — CONFIGURATIE\n// Vul hieronder jouw eigen waarden in\n// ====================================================\n\n// 1. Notion Integration Token\n//    Maak aan via: notion.so/my-integrations\n//    Voeg de integratie toe aan je Life Management pagina\nconst NOTION_TOKEN = 'secret_JOUW_NOTION_TOKEN';\n\n// 2. Anthropic API Key\n//    Maak aan via: console.anthropic.com\nconst ANTHROPIC_KEY = 'sk-ant-JOUW_ANTHROPIC_KEY';\n\n// 3. Notion Database IDs\n//    Kopieer de ID uit de URL van elke database:\n//    notion.so/workspace/PAGINA-TITLE-{DIT_IS_HET_ID}\nconst DB_DAILY_CHECKINS  = 'DAILY_CHECKINS_DB_ID';  // 📋 Daily Check-ins database\nconst DB_FINANCE_MONTHLY = 'FINANCE_MONTHLY_DB_ID'; // Finance maandoverzicht database\n\n// 4. Notion Pagina ID voor de briefing\n//    Dit is de 'Life Management' pagina\nconst BRIEFING_PARENT_PAGE_ID = '11f2a868d6bc8065a00ffcc1317ec147';\n\n// ── Datum berekeningen ──────────────────────────────\nconst now = new Date();\nconst today = now.toISOString().slice(0, 10);\nconst sevenDaysAgo = new Date(now - 7 * 86400000).toISOString().slice(0, 10);\nconst firstOfMonth = today.slice(0, 8) + '01';\n\nconst d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));\nd.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));\nconst yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));\nconst weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);\nconst weekLabel = `Week ${weekNo} — ${now.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}`;\nconst briefingTitle = `Weekbriefing ${weekLabel}`;\n\nreturn [{ json: {\n  notion_token:     NOTION_TOKEN,\n  anthropic_key:    ANTHROPIC_KEY,\n  db_checkins:      DB_DAILY_CHECKINS,\n  db_finance:       DB_FINANCE_MONTHLY,\n  briefing_parent:  BRIEFING_PARENT_PAGE_ID,\n  today,\n  seven_days_ago:   sevenDaysAgo,\n  first_of_month:   firstOfMonth,\n  week_no:          weekNo,\n  week_label:       weekLabel,\n  briefing_title:   briefingTitle\n}}];"
+      }
+    },
+    {
+      "id": "node-get-checkins",
+      "name": "Haal check-ins op",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [600, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://api.notion.com/v1/databases/' + $('⚙ Config').item.json.db_checkins + '/query' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization",  "value": "={{ 'Bearer ' + $('⚙ Config').item.json.notion_token }}" },
+            { "name": "Notion-Version", "value": "2022-06-28" },
+            { "name": "Content-Type",   "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify({ filter: { property: 'Date', date: { on_or_after: $('⚙ Config').item.json.seven_days_ago } }, sorts: [{ property: 'Date', direction: 'descending' }], page_size: 7 }) }}"
+      }
+    },
+    {
+      "id": "node-get-finance",
+      "name": "Haal finance op",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [820, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://api.notion.com/v1/databases/' + $('⚙ Config').item.json.db_finance + '/query' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization",  "value": "={{ 'Bearer ' + $('⚙ Config').item.json.notion_token }}" },
+            { "name": "Notion-Version", "value": "2022-06-28" },
+            { "name": "Content-Type",   "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify({ filter: { property: 'Month', date: { on_or_after: $('⚙ Config').item.json.first_of_month } }, page_size: 1 }) }}"
+      }
+    },
+    {
+      "id": "node-build-prompt",
+      "name": "Bouw Claude prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1040, 300],
+      "parameters": {
+        "jsCode": "// Haal ruwe data op uit vorige nodes\nconst cfg       = $('⚙ Config').item.json;\nconst checkins  = $('Haal check-ins op').item.json?.results  || [];\nconst finance   = $('Haal finance op').item.json?.results    || [];\n\n// ── Life check-ins aggregeren ──────────────────────\nlet energySum = 0, focusSum = 0, moodSum = 0, count = 0;\nconst wins = [], blockers = [];\n\ncheckins.forEach(p => {\n  const props = p.properties || {};\n  const e = props.Energie?.number;\n  const f = props.Focus?.number;\n  const m = props.Stemming?.number;\n  if (e) { energySum += e; count++; }\n  if (f) focusSum += f;\n  if (m) moodSum += m;\n  (props.Wins?.rich_text || []).forEach(t => { if (t.plain_text) wins.push(t.plain_text); });\n  (props.Blokkades?.rich_text || []).forEach(t => { if (t.plain_text) blockers.push(t.plain_text); });\n});\n\nconst lifeData = count > 0 ? {\n  check_ins: count,\n  energie_gem: (energySum / count).toFixed(1),\n  focus_gem:   (focusSum  / count).toFixed(1),\n  stemming_gem:(moodSum   / count).toFixed(1),\n  wins:      [...new Set(wins)].slice(0, 5),\n  blokkades: [...new Set(blockers)].slice(0, 3)\n} : { check_ins: 0, opmerking: 'Geen check-ins gevonden voor deze periode.' };\n\n// ── Finance data extraheren ────────────────────────\nlet financeData = { opmerking: 'Geen finance data gevonden.' };\nif (finance.length > 0) {\n  const props = finance[0].properties || {};\n  financeData = {\n    maand: props.Month?.date?.start || cfg.first_of_month,\n    omzet: props.Revenue?.number || props.Omzet?.number || null,\n    uitgaven: props.Expenses?.number || props.Uitgaven?.number || null,\n    winst: props.Profit?.formula?.number || props.Winst?.number || null,\n    nettovermogen: props['Net Worth']?.number || props.Nettovermogen?.number || null\n  };\n}\n\n// ── Claude prompt bouwen ──────────────────────────\nconst prompt = `Je bent de persoonlijke business & life coach van Ruben.\nHier zijn de data van afgelopen week (${cfg.week_label}).\nSchrijf een beknopte, directe weekbriefing in het Nederlands. Max 350 woorden.\n\nStructuur (gebruik ** voor vetgedrukte koppen):\n1. **Top 3 prioriteiten komende week** — actiegericht, met concrete getallen\n2. **Wat goed gaat** — max 3 bullets met →\n3. **Let op** — max 2 punten, alleen echte risico's\n4. **Finance signaal** — 1 zin met de meest relevante getal\n5. **Eén heldere actie** — specifiek en meetbaar\n\nWees direct. Geen introductie, geen afsluiting. Alleen de vijf secties.\n\n## Leven & Persoonlijk\n${JSON.stringify(lifeData, null, 2)}\n\n## Finance (${financeData.maand || 'huidige maand'})\n${JSON.stringify(financeData, null, 2)}\n\n## Context\n- Bedrijven: Reck-It (vakantie parken, primaire business), Bolshippers (logistics), KR Makler (vakantie vastgoed), Trading, Virtual Assistance\n- Reck-It draait geautomatiseerde Meta advertenties via PipeDrive. CPL en salesfunnel zijn de sleutelmetrics.\n- Bolshippers heeft cashflow als risicopunt.\n- Trading is niet de primaire focus — alleen signaleren bij grote afwijkingen.`;\n\nreturn [{ json: {\n  prompt,\n  anthropic_key: cfg.anthropic_key,\n  notion_token:  cfg.notion_token,\n  briefing_parent: cfg.briefing_parent,\n  briefing_title:  cfg.briefing_title,\n  week_label:    cfg.week_label,\n  life_data:     lifeData,\n  finance_data:  financeData\n}}];"
+      }
+    },
+    {
+      "id": "node-claude",
+      "name": "Claude API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1260, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key",          "value": "={{ $json.anthropic_key }}" },
+            { "name": "anthropic-version",   "value": "2023-06-01" },
+            { "name": "Content-Type",        "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify({ model: 'claude-opus-4-8', max_tokens: 1500, messages: [{ role: 'user', content: $json.prompt }] }) }}"
+      }
+    },
+    {
+      "id": "node-parse",
+      "name": "Verwerk briefing",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1480, 300],
+      "parameters": {
+        "jsCode": "const response = $input.item.json;\nconst buildCtx = $('Bouw Claude prompt').item.json;\n\n// Haal tekst op uit Claude response\nconst briefingText = response?.content?.[0]?.text || 'Briefing kon niet worden gegenereerd.';\n\n// Bouw Notion page blocks van de briefing tekst\n// Splits op lege regels voor aparte paragraphen\nconst paragraphs = briefingText.split(/\\n\\n+/).filter(p => p.trim());\n\nconst notionBlocks = paragraphs.map(para => ({\n  object: 'block',\n  type: 'paragraph',\n  paragraph: {\n    rich_text: [{\n      type: 'text',\n      text: { content: para.trim().slice(0, 2000) },\n      annotations: { bold: false, italic: false, code: false, color: 'default' }\n    }]\n  }\n}));\n\n// Voeg datum header toe bovenaan\nnotionBlocks.unshift({\n  object: 'block',\n  type: 'callout',\n  callout: {\n    rich_text: [{ type: 'text', text: { content: `Automatisch gegenereerd op ${new Date().toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} om ${new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })} via n8n + Claude` } }],\n    icon: { emoji: '🧠' },\n    color: 'blue_background'\n  }\n});\n\nreturn [{ json: {\n  briefing_text:   briefingText,\n  notion_blocks:   notionBlocks,\n  notion_token:    buildCtx.notion_token,\n  briefing_parent: buildCtx.briefing_parent,\n  briefing_title:  buildCtx.briefing_title\n}}];"
+      }
+    },
+    {
+      "id": "node-create-page",
+      "name": "Maak Notion pagina",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1700, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.notion.com/v1/pages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization",  "value": "={{ 'Bearer ' + $json.notion_token }}" },
+            { "name": "Notion-Version", "value": "2022-06-28" },
+            { "name": "Content-Type",   "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify({ parent: { page_id: $json.briefing_parent }, icon: { emoji: '🧠' }, properties: { title: { title: [{ text: { content: $json.briefing_title } }] } }, children: $json.notion_blocks }) }}"
+      }
+    }
+  ],
+  "connections": {
+    "Elke zondag 09:00": {
+      "main": [[{ "node": "⚙ Config",           "type": "main", "index": 0 }]]
+    },
+    "⚙ Config": {
+      "main": [[{ "node": "Haal check-ins op",  "type": "main", "index": 0 }]]
+    },
+    "Haal check-ins op": {
+      "main": [[{ "node": "Haal finance op",    "type": "main", "index": 0 }]]
+    },
+    "Haal finance op": {
+      "main": [[{ "node": "Bouw Claude prompt", "type": "main", "index": 0 }]]
+    },
+    "Bouw Claude prompt": {
+      "main": [[{ "node": "Claude API",         "type": "main", "index": 0 }]]
+    },
+    "Claude API": {
+      "main": [[{ "node": "Verwerk briefing",   "type": "main", "index": 0 }]]
+    },
+    "Verwerk briefing": {
+      "main": [[{ "node": "Maak Notion pagina", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}

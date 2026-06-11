@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Life OS</title>
+  <style>
+    :root {
+      --bg:      #090E1A;
+      --canvas:  #0D1424;
+      --surface: #141E30;
+      --surf2:   #1A2540;
+      --blue:    #3B82F6;
+      --green:   #10B981;
+      --amber:   #F59E0B;
+      --red:     #EF4444;
+      --purple:  #8B5CF6;
+      --cyan:    #06B6D4;
+      --text:    #F0F4FC;
+      --muted:   #8898B4;
+      --border:  #1E2D45;
+      --border2: #253451;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      background-image: radial-gradient(rgba(255,255,255,0.028) 1px, transparent 1px);
+      background-size: 26px 26px;
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', system-ui, sans-serif;
+      font-size: 13px;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    /* ── Loading ─────────────────────────────── */
+    #loading {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      min-height: 100vh; gap: 14px;
+      color: var(--muted); font-size: 13px;
+    }
+    .spinner {
+      width: 32px; height: 32px;
+      border: 2.5px solid var(--border2);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Canvas wrap ────────────────────────── */
+    #app {
+      max-width: 1520px;
+      margin: 0 auto;
+      padding: 22px 18px 72px;
+    }
+
+    /* ── Header ─────────────────────────────── */
+    .hdr {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 22px; flex-wrap: wrap; gap: 10px;
+    }
+    .hdr-left { display: flex; align-items: baseline; gap: 14px; }
+    .logo { font-size: 19px; font-weight: 700; letter-spacing: -.4px; }
+    .logo em { font-style: normal; color: var(--blue); }
+    .week-lbl { font-size: 12px; color: var(--muted); }
+    .hdr-right { display: flex; gap: 7px; align-items: center; }
+
+    /* ── Buttons ─────────────────────────────── */
+    .btn {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      color: var(--muted);
+      padding: 6px 13px; border-radius: 7px;
+      cursor: pointer; font-size: 12px;
+      transition: color .12s, background .12s;
+      display: inline-flex; align-items: center; gap: 5px;
+      font-family: inherit;
+    }
+    .btn:hover { color: var(--text); background: var(--surf2); }
+    .btn-solid { background: var(--blue); border-color: var(--blue); color: #fff; }
+    .btn-solid:hover { background: #2563eb; color: #fff; }
+
+    /* ── Zone frame (Miro-style) ─────────────── */
+    .zone {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .zone-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 11px 18px 0;
+    }
+    .zone-label {
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .12em;
+      color: var(--muted);
+    }
+    .zone-body { padding: 14px 18px 16px; }
+
+    /* ── Briefing zone ──────────────────────── */
+    .briefing-zone {
+      margin-bottom: 16px;
+      border-left: 3px solid var(--blue);
+    }
+    .briefing-zone .zone-header { padding-bottom: 10px; }
+    .briefing-meta { font-size: 11px; color: var(--muted); }
+    .briefing-body {
+      font-size: 13px; line-height: 1.85;
+      color: var(--text); white-space: pre-wrap;
+    }
+    .briefing-empty {
+      font-size: 12px; color: var(--muted); font-style: italic;
+    }
+
+    /* ── Overview row ─────────────────────────── */
+    .overview-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 860px) { .overview-row { grid-template-columns: 1fr; } }
+
+    /* ── Score display ────────────────────────── */
+    .score-row { display: flex; align-items: baseline; gap: 6px; margin-bottom: 8px; }
+    .score-num { font-size: 38px; font-weight: 700; line-height: 1; }
+    .score-denom { font-size: 12px; color: var(--muted); }
+    .score-bar {
+      height: 5px; background: var(--border2);
+      border-radius: 3px; margin-bottom: 14px; overflow: hidden;
+    }
+    .score-fill { height: 100%; border-radius: 3px; transition: width .8s ease; }
+
+    /* ── Stat rows ────────────────────────────── */
+    .stat-list { display: flex; flex-direction: column; gap: 8px; }
+    .stat-row { display: flex; align-items: center; justify-content: space-between; }
+    .stat-lbl { font-size: 12px; color: var(--muted); }
+    .stat-val { font-size: 13px; font-weight: 600; }
+    .c-green  { color: var(--green); }
+    .c-amber  { color: var(--amber); }
+    .c-red    { color: var(--red); }
+    .c-blue   { color: var(--blue); }
+    .c-muted  { color: var(--muted); }
+
+    .mini-sep { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
+
+    /* ── Finance big ──────────────────────────── */
+    .fin-big { display: flex; gap: 16px; margin-bottom: 12px; }
+    .fin-big-item {}
+    .fin-big-val { font-size: 20px; font-weight: 700; line-height: 1.1; }
+    .fin-big-lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* ── Mini tag lists ────────────────────────── */
+    .tag-list { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+    .tag-row { display: flex; align-items: flex-start; gap: 6px; font-size: 12px; }
+    .tag-bullet { flex-shrink: 0; margin-top: 1px; }
+
+    /* ── Businesses zone ──────────────────────── */
+    .biz-zone { margin-bottom: 16px; }
+    .biz-zone .zone-body { padding: 0; }
+
+    /* ── Single business pipeline row ────────── */
+    .biz-row {
+      border-bottom: 1px solid var(--border);
+      padding: 14px 18px 16px;
+    }
+    .biz-row:last-child { border-bottom: none; }
+
+    .biz-row-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px; flex-wrap: wrap; gap: 8px;
+    }
+    .biz-row-left { display: flex; align-items: center; gap: 10px; }
+    .biz-name { font-size: 14px; font-weight: 600; }
+    .biz-type { font-size: 11px; color: var(--muted); margin-left: 4px; }
+    .biz-row-right { display: flex; align-items: center; gap: 10px; }
+
+    .status-badge {
+      font-size: 10px; font-weight: 600;
+      padding: 2px 8px; border-radius: 20px;
+    }
+    .st-growing   { background: rgba(16,185,129,.12);  color: var(--green); }
+    .st-stable    { background: rgba(59,130,246,.12);  color: var(--blue); }
+    .st-attention { background: rgba(239,68,68,.12);   color: var(--red); }
+    .st-new       { background: rgba(245,158,11,.12);  color: var(--amber); }
+
+    .biz-aside { font-size: 11px; color: var(--muted); }
+    .biz-link {
+      font-size: 11px; color: var(--blue); text-decoration: none;
+      opacity: .75; transition: opacity .13s;
+    }
+    .biz-link:hover { opacity: 1; }
+
+    /* ── Pipeline ─────────────────────────────── */
+    .pipeline {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+    .pipeline::-webkit-scrollbar { height: 4px; }
+    .pipeline::-webkit-scrollbar-track { background: transparent; }
+    .pipeline::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+    /* Stage box */
+    .p-stage {
+      flex: 1;
+      min-width: 88px;
+      border-radius: 10px;
+      padding: 10px 14px 10px;
+      text-align: center;
+      border: 1px solid transparent;
+    }
+    .p-stage-name {
+      font-size: 10px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .07em;
+      color: var(--muted); margin-bottom: 6px;
+    }
+    .p-stage-count {
+      font-size: 26px; font-weight: 700; line-height: 1;
+      margin-bottom: 2px;
+    }
+    .p-stage-period {
+      font-size: 10px; color: var(--muted);
+    }
+
+    /* Connector arrow between stages */
+    .p-conn {
+      flex-shrink: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 0 6px;
+      gap: 2px;
+      user-select: none;
+    }
+    .p-conn-pct {
+      font-size: 10px; color: var(--muted);
+      line-height: 1;
+    }
+    .p-conn-arrow {
+      font-size: 13px; color: var(--border2);
+      line-height: 1;
+    }
+
+    /* ── Config overlay ───────────────────────── */
+    .overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.7);
+      z-index: 100;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .cfg-panel {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 14px;
+      padding: 26px 30px;
+      width: 490px;
+      max-width: calc(100vw - 36px);
+    }
+    .cfg-title { font-size: 16px; font-weight: 600; margin-bottom: 20px; }
+    .cfg-lbl { font-size: 12px; color: var(--muted); margin-bottom: 5px; display: block; }
+    .cfg-input {
+      width: 100%; background: var(--bg);
+      border: 1px solid var(--border2); border-radius: 8px;
+      color: var(--text); font-size: 13px;
+      padding: 8px 11px; margin-bottom: 5px;
+      outline: none; font-family: inherit;
+    }
+    .cfg-input:focus { border-color: var(--blue); }
+    .cfg-hint { font-size: 11px; color: var(--muted); margin-bottom: 16px; line-height: 1.5; }
+    .cfg-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+    /* ── Mock badge ───────────────────────────── */
+    .mock-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: rgba(245,158,11,.12); color: var(--amber);
+      font-size: 10px; font-weight: 600;
+      padding: 3px 9px; border-radius: 20px;
+    }
+
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loading">
+  <div class="spinner"></div>
+  Life OS laden…
+</div>
+
+<!-- Canvas -->
+<div id="app" hidden>
+
+  <!-- Header -->
+  <header class="hdr">
+    <div class="hdr-left">
+      <div class="logo">Life <em>OS</em></div>
+      <div class="week-lbl" id="week-lbl"></div>
+    </div>
+    <div class="hdr-right">
+      <div id="mock-badge"></div>
+      <button class="btn" onclick="refreshData()">↻</button>
+      <button class="btn" onclick="openConfig()">⚙ Config</button>
+    </div>
+  </header>
+
+  <!-- Zone 1 — Briefing -->
+  <div class="zone briefing-zone" style="margin-bottom:16px">
+    <div class="zone-header">
+      <span class="zone-label">🧠 Weekbriefing — Claude</span>
+      <span class="briefing-meta" id="briefing-meta"></span>
+    </div>
+    <div class="zone-body">
+      <div class="briefing-body" id="briefing-body"></div>
+    </div>
+  </div>
+
+  <!-- Zone 2 — Overview (3 cols) -->
+  <div class="overview-row" style="margin-bottom:16px">
+
+    <!-- Life -->
+    <div class="zone">
+      <div class="zone-header"><span class="zone-label">🌱 Leven</span></div>
+      <div class="zone-body">
+        <div class="score-row">
+          <div class="score-num" id="life-score">—</div>
+          <div class="score-denom">/ 10</div>
+        </div>
+        <div class="score-bar">
+          <div class="score-fill" id="life-fill" style="width:0;background:var(--green)"></div>
+        </div>
+        <div class="stat-list" id="life-stats"></div>
+        <div id="life-tags"></div>
+      </div>
+    </div>
+
+    <!-- Finance -->
+    <div class="zone">
+      <div class="zone-header"><span class="zone-label">💰 Financiën</span></div>
+      <div class="zone-body">
+        <div class="fin-big" id="fin-big"></div>
+        <hr class="mini-sep">
+        <div class="stat-list" id="fin-stats"></div>
+      </div>
+    </div>
+
+    <!-- Marketing -->
+    <div class="zone">
+      <div class="zone-header"><span class="zone-label">📣 Marketing (MTD)</span></div>
+      <div class="zone-body">
+        <div class="stat-list" id="mkt-stats"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Zone 3 — Businesses (pipeline rows) -->
+  <div class="zone biz-zone" id="biz-zone">
+    <div class="zone-header">
+      <span class="zone-label">🏢 Bedrijven</span>
+      <a class="btn" id="notion-link" href="https://notion.so" target="_blank" style="font-size:11px">Notion →</a>
+    </div>
+    <div class="zone-body" id="biz-body"></div>
+  </div>
+
+</div>
+
+<!-- Config overlay -->
+<div class="overlay" id="cfg-overlay" hidden>
+  <div class="cfg-panel">
+    <div class="cfg-title">⚙ Life OS — Instellingen</div>
+    <label class="cfg-lbl">n8n Data Webhook URL</label>
+    <input class="cfg-input" type="url" id="cfg-webhook"
+      placeholder="https://jouw-n8n.app.n8n.cloud/webhook/life-os-data">
+    <div class="cfg-hint">GET-webhook die alle dashboard data teruggeeft als JSON. Laat leeg voor voorbeelddata.</div>
+    <label class="cfg-lbl">Notion Workspace URL (optioneel)</label>
+    <input class="cfg-input" type="url" id="cfg-notion"
+      placeholder="https://notion.so/…">
+    <div class="cfg-hint" style="margin-bottom:0"></div>
+    <div class="cfg-actions">
+      <button class="btn" onclick="closeCfg()">Annuleren</button>
+      <button class="btn btn-solid" onclick="saveCfg()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+function weekLabel() {
+  const d = new Date();
+  const onejan = new Date(d.getFullYear(), 0, 1);
+  const wk = Math.ceil((((d - onejan) / 86400000) + onejan.getDay() + 1) / 7);
+  return `Week ${wk} · ${d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+}
+
+function eur(n) {
+  if (n == null || isNaN(n)) return '—';
+  const abs = Math.abs(n);
+  const sign = n < 0 ? '-' : '';
+  if (abs >= 1e6) return sign + '€' + (abs / 1e6).toFixed(1) + 'M';
+  if (abs >= 1e3) return sign + '€' + Math.round(abs / 1e3) + 'k';
+  return sign + '€' + abs.toLocaleString('nl-NL');
+}
+
+function fmt(n) {
+  if (n == null || isNaN(n)) return '—';
+  if (Math.abs(n) >= 1e3) return (n / 1e3).toFixed(1) + 'k';
+  return String(n);
+}
+
+// ── Mock data ──────────────────────────────────────────────────────────────
+
+const MOCK = {
+  week: weekLabel(),
+  generated_at: new Date(Date.now() - 7200000).toISOString(),
+  briefing: `**Top 3 prioriteiten komende week**
+
+→ Reck-It: CPL staat op €8,50 — laagste ooit. Schaal de 2 beste ads met +20% budget. Doel: 60+ leads dit weekend.
+→ Bolshippers: Cashflow krap (€18k). Bel De Boer Logistiek maandag — factuur €6.400 is al 8 dagen te laat.
+→ KR Makler: 0 nieuwe leads deze week. Controleer of de PipeDrive webhook nog actief is voor dit park.
+
+**Wat goed gaat**
+Reck-It draait zijn beste maand ooit (€32k MTD). Meta-automatisering loopt foutloos. Persoonlijke energie sterk op 7,5 gemiddeld.
+
+**Let op**
+Bolshippers cashflow vereist actie vóór 15 juni. Trading stop-loss NVDA op $118 — niet aanraken zonder nieuw signaal.
+
+**Eén heldere actie**
+Verhoog Wielsche Dreef Meta budget van €120 → €145/dag. Verwacht: +14 leads/week bij huidige CPL.`,
+  life: {
+    energy_avg: 7.5, focus_avg: 8.1, mood_avg: 7.8,
+    streak_days: 14, goals_active: 3, goals_completed_week: 1,
+    wins: ['Wielsche Dreef record maand', 'Trading +3,1% week', '14 check-ins op rij'],
+    blockers: ['Bolshippers cashflow', 'KR Makler leads stil']
+  },
+  finance: {
+    month: 'Juni 2026',
+    revenue_mtd: 48500, expenses_mtd: 19200, profit_mtd: 29300,
+    net_worth: 385000, net_worth_delta_pct: 2.1, runway_months: 18
+  },
+  marketing: {
+    spend_mtd: 3200, leads_mtd: 215, appointments_mtd: 98,
+    sales_mtd: 26, cpl_avg: 14.9, cpa_avg: 123, best_business: 'Reck-It'
+  },
+  businesses: [
+    {
+      id: 'reck-it', name: 'Reck-It', emoji: '🏕️', color: '#E3A04A',
+      type: 'Vakantie Parken', status: 'growing', period: 'deze week',
+      pipeline: [
+        { stage: 'Clicks',    count: 1240 },
+        { stage: 'Leads',     count: 54,  conv: 4.4 },
+        { stage: 'Afspraken', count: 26,  conv: 48.1 },
+        { stage: 'Verkopen',  count: 7,   conv: 26.9 }
+      ],
+      aside: 'CPL €8,50',
+      dashboard_url: 'wielsche-dreef-dashboard.html'
+    },
+    {
+      id: 'bolshippers', name: 'Bolshippers', emoji: '🚢', color: '#3B82F6',
+      type: 'Logistics', status: 'attention', period: 'deze maand',
+      pipeline: [
+        { stage: 'Aanvragen', count: 52 },
+        { stage: 'Akkoord',   count: 47, conv: 90.4 },
+        { stage: 'Geleverd',  count: 38, conv: 80.9 }
+      ],
+      aside: 'Cash €18k ⚠',
+      dashboard_url: ''
+    },
+    {
+      id: 'kr-makler', name: 'KR Makler', emoji: '🏡', color: '#10B981',
+      type: 'Vakantie Vastgoed', status: 'stable', period: 'actieve pipeline',
+      pipeline: [
+        { stage: 'Interesse',      count: 8 },
+        { stage: 'Bezichtiging',   count: 3,  conv: 37.5 },
+        { stage: 'Onderhandeling', count: 2,  conv: 66.7 },
+        { stage: 'Getekend',       count: 1,  conv: 50.0 }
+      ],
+      aside: '€5.500 MTD',
+      dashboard_url: ''
+    },
+    {
+      id: 'trading', name: 'Trading', emoji: '📈', color: '#8B5CF6',
+      type: 'Financial Markets', status: 'growing', period: 'nu',
+      pipeline: [
+        { stage: 'Portfolio',    display: '€42k' },
+        { stage: 'Return week',  display: '+3,1%', color: '#10B981' },
+        { stage: 'Posities',     display: '4' },
+        { stage: 'Stop-loss',    display: '$118',  color: '#F59E0B' }
+      ],
+      aside: 'NVDA $118',
+      dashboard_url: ''
+    },
+    {
+      id: 'va', name: 'Virtual Assistance', emoji: '💻', color: '#06B6D4',
+      type: 'Diensten', status: 'stable', period: 'deze maand',
+      pipeline: [
+        { stage: 'Klanten', count: 3 },
+        { stage: 'Uren',    count: 24 },
+        { stage: 'Omzet',   display: '€1.800' }
+      ],
+      aside: '€75/uur',
+      dashboard_url: ''
+    }
+  ]
+};
+
+// ── Render — briefing ──────────────────────────────────────────────────────
+
+function renderBriefing(data) {
+  const meta = document.getElementById('briefing-meta');
+  const body = document.getElementById('briefing-body');
+  if (data.generated_at) {
+    const d = new Date(data.generated_at);
+    meta.textContent = `${d.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })} ${d.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}`;
+  }
+  if (data.briefing) {
+    body.innerHTML = data.briefing
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--amber)">$1</strong>')
+      .replace(/→/g, '<span style="color:var(--green)">→</span>')
+      .replace(/⚠/g, '<span style="color:var(--amber)">⚠</span>');
+  } else {
+    body.innerHTML = '<span class="briefing-empty">Nog geen briefing. Wordt automatisch gegenereerd elke zondag om 09:00 via n8n + Claude.</span>';
+  }
+}
+
+// ── Render — life ──────────────────────────────────────────────────────────
+
+function renderLife(life) {
+  const score = ((life.energy_avg + life.focus_avg + life.mood_avg) / 3);
+  const el = document.getElementById('life-score');
+  el.textContent = score.toFixed(1);
+  el.style.color = score >= 8 ? 'var(--green)' : score >= 6 ? 'var(--amber)' : 'var(--red)';
+  const fill = document.getElementById('life-fill');
+  fill.style.width = (score / 10 * 100) + '%';
+  fill.style.background = score >= 8 ? 'var(--green)' : score >= 6 ? 'var(--amber)' : 'var(--red)';
+
+  document.getElementById('life-stats').innerHTML = [
+    ['Energie', life.energy_avg + '/10', life.energy_avg >= 7 ? 'c-green' : 'c-amber'],
+    ['Focus',   life.focus_avg  + '/10', life.focus_avg  >= 7 ? 'c-green' : 'c-amber'],
+    ['Stemming',life.mood_avg   + '/10', life.mood_avg   >= 7 ? 'c-green' : 'c-amber'],
+    ['Streak',  life.streak_days + ' d', 'c-amber'],
+    ['Doelen actief',   life.goals_active,           ''],
+    ['Voltooid week',   life.goals_completed_week,   life.goals_completed_week > 0 ? 'c-green' : 'c-muted'],
+  ].map(([l, v, c]) =>
+    `<div class="stat-row"><span class="stat-lbl">${l}</span><span class="stat-val ${c}">${v}</span></div>`
+  ).join('');
+
+  let tags = '';
+  if (life.wins?.length) {
+    tags += `<hr class="mini-sep"><div class="tag-list">`
+      + life.wins.map(w => `<div class="tag-row"><span class="tag-bullet c-green" style="font-size:10px">↑</span><span style="color:var(--muted)">${w}</span></div>`).join('')
+      + '</div>';
+  }
+  if (life.blockers?.length) {
+    tags += `<div class="tag-list" style="margin-top:6px">`
+      + life.blockers.map(b => `<div class="tag-row"><span class="tag-bullet c-amber" style="font-size:10px">!</span><span style="color:var(--muted)">${b}</span></div>`).join('')
+      + '</div>';
+  }
+  document.getElementById('life-tags').innerHTML = tags;
+}
+
+// ── Render — finance ───────────────────────────────────────────────────────
+
+function renderFinance(fin) {
+  document.getElementById('fin-big').innerHTML = `
+    <div class="fin-big-item">
+      <div class="fin-big-val" style="color:var(--green)">${eur(fin.revenue_mtd)}</div>
+      <div class="fin-big-lbl">Omzet ${fin.month || ''}</div>
+    </div>
+    <div class="fin-big-item">
+      <div class="fin-big-val" style="color:var(--amber)">${eur(fin.profit_mtd)}</div>
+      <div class="fin-big-lbl">Winst</div>
+    </div>
+  `;
+  const d = fin.net_worth_delta_pct;
+  const dStr = d != null ? ` (${d > 0 ? '+' : ''}${d}%)` : '';
+  document.getElementById('fin-stats').innerHTML = [
+    ['Uitgaven', eur(fin.expenses_mtd), ''],
+    ['Nettovermogen', eur(fin.net_worth) + dStr, d > 0 ? 'c-green' : d < 0 ? 'c-red' : ''],
+    ['Runway', fin.runway_months + ' maanden', fin.runway_months >= 12 ? 'c-green' : fin.runway_months >= 6 ? 'c-amber' : 'c-red'],
+  ].map(([l, v, c]) =>
+    `<div class="stat-row"><span class="stat-lbl">${l}</span><span class="stat-val ${c}">${v}</span></div>`
+  ).join('');
+}
+
+// ── Render — marketing ─────────────────────────────────────────────────────
+
+function renderMarketing(mkt) {
+  const cplCls = mkt.cpl_avg < 20 ? 'c-green' : mkt.cpl_avg < 40 ? 'c-amber' : 'c-red';
+  document.getElementById('mkt-stats').innerHTML = [
+    ['Spend MTD',     eur(mkt.spend_mtd),       ''],
+    ['Leads MTD',     fmt(mkt.leads_mtd),        'c-green'],
+    ['Afspraken MTD', mkt.appointments_mtd,      ''],
+    ['Verkopen MTD',  mkt.sales_mtd,             'c-green'],
+    ['Gem. CPL',      eur(mkt.cpl_avg),          cplCls],
+    ['Gem. CPA',      eur(mkt.cpa_avg),          ''],
+    ['Beste',         mkt.best_business || '—',  'c-amber'],
+  ].map(([l, v, c]) =>
+    `<div class="stat-row"><span class="stat-lbl">${l}</span><span class="stat-val ${c}">${v}</span></div>`
+  ).join('');
+}
+
+// ── Render — businesses (pipelines) ───────────────────────────────────────
+
+function renderBusinesses(businesses) {
+  const statusMap = {
+    growing:   ['Groeiend',      'st-growing'],
+    stable:    ['Stabiel',       'st-stable'],
+    attention: ['Actie vereist', 'st-attention'],
+    new:       ['Nieuw',         'st-new']
+  };
+
+  document.getElementById('biz-body').innerHTML = businesses.map(b => {
+    const [sLabel, sCls] = statusMap[b.status] || [b.status, 'st-stable'];
+    const dashLink = b.dashboard_url
+      ? `<a class="biz-link" href="${b.dashboard_url}" target="_blank">dashboard →</a>`
+      : '';
+
+    // Build pipeline HTML
+    const stages = b.pipeline || [];
+    let pipeHTML = '';
+    stages.forEach((s, i) => {
+      // Stage box
+      const countVal  = s.display ?? (s.count != null ? fmt(s.count) : '—');
+      const countColor = s.color || b.color;
+      pipeHTML += `
+        <div class="p-stage" style="background:${b.color}0D;border-color:${b.color}28">
+          <div class="p-stage-name">${s.stage}</div>
+          <div class="p-stage-count" style="color:${countColor}">${countVal}</div>
+          <div class="p-stage-period">${i === 0 ? b.period : ''}</div>
+        </div>`;
+      // Connector (not after last)
+      if (i < stages.length - 1) {
+        const next = stages[i + 1];
+        pipeHTML += `
+          <div class="p-conn">
+            ${next.conv != null ? `<span class="p-conn-pct">${next.conv}%</span>` : ''}
+            <span class="p-conn-arrow">→</span>
+          </div>`;
+      }
+    });
+
+    return `
+      <div class="biz-row">
+        <div class="biz-row-header">
+          <div class="biz-row-left">
+            <span class="biz-name">${b.emoji} ${b.name}</span>
+            <span class="biz-type">${b.type}</span>
+          </div>
+          <div class="biz-row-right">
+            <span class="biz-aside">${b.aside || ''}</span>
+            <span class="status-badge ${sCls}">${sLabel}</span>
+            ${dashLink}
+          </div>
+        </div>
+        <div class="pipeline">${pipeHTML}</div>
+      </div>`;
+  }).join('');
+}
+
+// ── Main render ────────────────────────────────────────────────────────────
+
+function render(data, isMock) {
+  document.getElementById('week-lbl').textContent = data.week || weekLabel();
+  document.getElementById('mock-badge').innerHTML = isMock
+    ? '<span class="mock-badge">⚠ Voorbeelddata</span>' : '';
+
+  renderBriefing(data);
+  renderLife(data.life);
+  renderFinance(data.finance);
+  renderMarketing(data.marketing);
+  renderBusinesses(data.businesses);
+
+  document.getElementById('loading').hidden = true;
+  document.getElementById('app').hidden = false;
+}
+
+// ── Data loading ───────────────────────────────────────────────────────────
+
+async function refreshData() {
+  const url = localStorage.getItem('lifeOs_webhook');
+  if (!url) { render(MOCK, true); return; }
+
+  document.getElementById('app').hidden = true;
+  document.getElementById('loading').hidden = false;
+
+  try {
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    render(await res.json(), false);
+  } catch (e) {
+    console.warn('Webhook failed, falling back to mock data:', e.message);
+    render(MOCK, true);
+  }
+}
+
+// ── Config ─────────────────────────────────────────────────────────────────
+
+function openConfig() {
+  document.getElementById('cfg-webhook').value = localStorage.getItem('lifeOs_webhook') || '';
+  document.getElementById('cfg-notion').value  = localStorage.getItem('lifeOs_notion')  || '';
+  document.getElementById('cfg-overlay').hidden = false;
+}
+function closeCfg() { document.getElementById('cfg-overlay').hidden = true; }
+function saveCfg() {
+  const wh = document.getElementById('cfg-webhook').value.trim();
+  const no = document.getElementById('cfg-notion').value.trim();
+  wh ? localStorage.setItem('lifeOs_webhook', wh) : localStorage.removeItem('lifeOs_webhook');
+  if (no) {
+    localStorage.setItem('lifeOs_notion', no);
+    document.getElementById('notion-link').href = no;
+  }
+  closeCfg();
+  refreshData();
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+
+const savedNotion = localStorage.getItem('lifeOs_notion');
+if (savedNotion) document.getElementById('notion-link').href = savedNotion;
+
+refreshData();
+</script>
+</body>
+</html>
