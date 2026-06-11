@@ -382,6 +382,13 @@
     <input class="cfg-input" type="url" id="cfg-webhook"
       placeholder="https://jouw-n8n.app.n8n.cloud/webhook/life-os-data">
     <div class="cfg-hint">GET-webhook die alle dashboard data teruggeeft als JSON. Laat leeg voor voorbeelddata.</div>
+    <label class="cfg-lbl">Supabase URL (optioneel, overschrijft webhook)</label>
+    <input class="cfg-input" type="url" id="cfg-supa-url"
+      placeholder="https://xyzxyz.supabase.co">
+    <label class="cfg-lbl">Supabase Anon Key</label>
+    <input class="cfg-input" type="text" id="cfg-supa-key"
+      placeholder="eyJhbGci…">
+    <div class="cfg-hint">Anon key is veilig om op te slaan — RLS staat aan. Supabase heeft prioriteit boven n8n webhook als beide zijn ingevuld.</div>
     <label class="cfg-lbl">Notion Workspace URL (optioneel)</label>
     <input class="cfg-input" type="url" id="cfg-notion"
       placeholder="https://notion.so/…">
@@ -688,19 +695,140 @@ function render(data, isMock) {
 
 // ── Data loading ───────────────────────────────────────────────────────────
 
+// ── Supabase loader ────────────────────────────────────────────────────────
+
+async function sbFetch(baseUrl, key, path) {
+  const res = await fetch(baseUrl + '/rest/v1/' + path, {
+    headers: { 'apikey': key, 'Authorization': 'Bearer ' + key }
+  });
+  if (!res.ok) throw new Error('Supabase ' + res.status + ' — ' + path);
+  return res.json();
+}
+
+async function loadFromSupabase(baseUrl, key) {
+  const today = new Date();
+  const sevenAgo = new Date(today - 7 * 86400000).toISOString().slice(0, 10);
+  const firstOfMonth = today.toISOString().slice(0, 8) + '01';
+
+  const [briefings, sbBiz, finance, checkins] = await Promise.all([
+    sbFetch(baseUrl, key, 'weekly_briefings?order=week_start.desc&limit=1'),
+    sbFetch(baseUrl, key, 'v_dashboard_businesses?select=*'),
+    sbFetch(baseUrl, key, `finance_monthly?order=month.desc&limit=1`),
+    sbFetch(baseUrl, key, `life_checkins?date=gte.${sevenAgo}&order=date.desc`)
+  ]);
+
+  // Life aggregation
+  const n = checkins.length;
+  const lifeData = n === 0 ? {
+    energy_avg: null, focus_avg: null, mood_avg: null,
+    streak_days: 0, goals_active: 0, goals_completed_week: 0, wins: [], blockers: []
+  } : {
+    energy_avg:  parseFloat((checkins.reduce((s,c) => s+(c.energy||0),0)/n).toFixed(1)),
+    focus_avg:   parseFloat((checkins.reduce((s,c) => s+(c.focus||0), 0)/n).toFixed(1)),
+    mood_avg:    parseFloat((checkins.reduce((s,c) => s+(c.mood||0),  0)/n).toFixed(1)),
+    streak_days: (() => {
+      const dates = new Set(checkins.map(c => c.date));
+      let s = 0, d = new Date();
+      while (dates.has(d.toISOString().slice(0,10))) { s++; d.setDate(d.getDate()-1); }
+      return s;
+    })(),
+    goals_active: 0, goals_completed_week: 0,
+    wins:     [...new Set(checkins.flatMap(c => c.wins    || []))].slice(0,5),
+    blockers: [...new Set(checkins.flatMap(c => c.blockers|| []))].slice(0,3)
+  };
+
+  // Finance
+  const f = finance[0] || {};
+  const finData = {
+    month:               f.month ? new Date(f.month).toLocaleDateString('nl-NL',{month:'long',year:'numeric'}) : 'Huidig',
+    revenue_mtd:         f.revenue   || 0,
+    expenses_mtd:        f.expenses  || 0,
+    profit_mtd:          f.profit    || 0,
+    net_worth:           f.net_worth || null,
+    net_worth_delta_pct: null,
+    runway_months:       f.runway_months || null
+  };
+
+  // Marketing aggregate
+  const mktBiz = sbBiz.filter(b => b.leads != null);
+  const totalSpend = mktBiz.reduce((s,b) => s+(b.spend||0), 0);
+  const totalLeads = mktBiz.reduce((s,b) => s+(b.leads||0), 0);
+  const mktData = {
+    spend_mtd:       totalSpend,
+    leads_mtd:       totalLeads,
+    appointments_mtd: mktBiz.reduce((s,b) => s+(b.appointments||0), 0),
+    sales_mtd:       mktBiz.reduce((s,b) => s+(b.sales||0), 0),
+    cpl_avg:         totalLeads > 0 ? parseFloat((totalSpend/totalLeads).toFixed(2)) : null,
+    cpa_avg:         null,
+    best_business:   sbBiz.reduce((best,b) => (!best||(b.leads||0)>(best.leads||0))?b:best, null)?.name || null
+  };
+
+  // Businesses — map Supabase rows to pipeline format, fall back to MOCK for non-marketing KPIs
+  const PIPELINE_MAP = {
+    'reck-it':    { period:'deze week',      stages:[{k:'clicks',n:'Clicks'},{k:'leads',n:'Leads'},{k:'appointments',n:'Afspraken'},{k:'sales',n:'Verkopen'}] },
+    'bolshippers':{ period:'deze maand',     stages:[{k:'leads',n:'Aanvragen'},{k:'appointments',n:'Akkoord'},{k:'sales',n:'Geleverd'}] },
+    'kr-makler':  { period:'actieve pipeline',stages:[{k:'leads',n:'Interesse'},{k:'appointments',n:'Bezichtiging'},{k:'sales',n:'Getekend'}] }
+  };
+  const statusFor = b => b.leads > 40?'growing': b.leads > 0?'stable': b.leads===0?'attention':'stable';
+
+  const bizData = sbBiz.map(b => {
+    const cfg = PIPELINE_MAP[b.id];
+    let pipeline;
+    if (cfg) {
+      pipeline = cfg.stages.map((s, i) => {
+        const count = b[s.k] ?? null;
+        const prevCount = i > 0 ? (b[cfg.stages[i-1].k] || 0) : null;
+        const conv = (count != null && prevCount && prevCount > 0)
+          ? parseFloat((count/prevCount*100).toFixed(1)) : undefined;
+        return { stage: s.n, count, ...(conv !== undefined ? {conv} : {}) };
+      });
+    } else {
+      // Non-marketing business: pull pipeline from MOCK (static display values)
+      pipeline = (MOCK.businesses.find(m=>m.id===b.id)||{}).pipeline || [{stage:'Data',display:'—'}];
+    }
+    return {
+      id: b.id, name: b.name, emoji: b.emoji, color: b.color, type: b.type,
+      status: statusFor(b),
+      period: cfg ? cfg.period : 'nu',
+      pipeline,
+      aside: b.id==='reck-it' && b.cpl ? `CPL €${b.cpl}` : '',
+      dashboard_url: b.dashboard_url || ''
+    };
+  });
+
+  return {
+    week:         weekLabel(),
+    generated_at: briefings[0]?.created_at || null,
+    briefing:     briefings[0]?.content    || null,
+    life:         lifeData,
+    finance:      finData,
+    marketing:    mktData,
+    businesses:   bizData
+  };
+}
+
+// ── Refresh (Supabase → n8n webhook → mock) ────────────────────────────────
+
 async function refreshData() {
-  const url = localStorage.getItem('lifeOs_webhook');
-  if (!url) { render(MOCK, true); return; }
+  const supaUrl = localStorage.getItem('lifeOs_supa_url');
+  const supaKey = localStorage.getItem('lifeOs_supa_key');
+  const webhook = localStorage.getItem('lifeOs_webhook');
+
+  if (!supaUrl && !webhook) { render(MOCK, true); return; }
 
   document.getElementById('app').hidden = true;
   document.getElementById('loading').hidden = false;
 
   try {
-    const res = await fetch(url, { cache: 'no-store' });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    render(await res.json(), false);
+    if (supaUrl && supaKey) {
+      render(await loadFromSupabase(supaUrl, supaKey), false);
+    } else {
+      const res = await fetch(webhook, { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      render(await res.json(), false);
+    }
   } catch (e) {
-    console.warn('Webhook failed, falling back to mock data:', e.message);
+    console.warn('Data source failed, using mock:', e.message);
     render(MOCK, true);
   }
 }
@@ -708,19 +836,22 @@ async function refreshData() {
 // ── Config ─────────────────────────────────────────────────────────────────
 
 function openConfig() {
-  document.getElementById('cfg-webhook').value = localStorage.getItem('lifeOs_webhook') || '';
-  document.getElementById('cfg-notion').value  = localStorage.getItem('lifeOs_notion')  || '';
+  document.getElementById('cfg-webhook').value  = localStorage.getItem('lifeOs_webhook')  || '';
+  document.getElementById('cfg-supa-url').value = localStorage.getItem('lifeOs_supa_url') || '';
+  document.getElementById('cfg-supa-key').value = localStorage.getItem('lifeOs_supa_key') || '';
+  document.getElementById('cfg-notion').value   = localStorage.getItem('lifeOs_notion')   || '';
   document.getElementById('cfg-overlay').hidden = false;
 }
 function closeCfg() { document.getElementById('cfg-overlay').hidden = true; }
 function saveCfg() {
-  const wh = document.getElementById('cfg-webhook').value.trim();
-  const no = document.getElementById('cfg-notion').value.trim();
-  wh ? localStorage.setItem('lifeOs_webhook', wh) : localStorage.removeItem('lifeOs_webhook');
-  if (no) {
-    localStorage.setItem('lifeOs_notion', no);
-    document.getElementById('notion-link').href = no;
-  }
+  const wh  = document.getElementById('cfg-webhook').value.trim();
+  const su  = document.getElementById('cfg-supa-url').value.trim();
+  const sk  = document.getElementById('cfg-supa-key').value.trim();
+  const no  = document.getElementById('cfg-notion').value.trim();
+  wh ? localStorage.setItem('lifeOs_webhook',  wh) : localStorage.removeItem('lifeOs_webhook');
+  su ? localStorage.setItem('lifeOs_supa_url', su) : localStorage.removeItem('lifeOs_supa_url');
+  sk ? localStorage.setItem('lifeOs_supa_key', sk) : localStorage.removeItem('lifeOs_supa_key');
+  if (no) { localStorage.setItem('lifeOs_notion', no); document.getElementById('notion-link').href = no; }
   closeCfg();
   refreshData();
 }

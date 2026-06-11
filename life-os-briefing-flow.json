@@ -28,7 +28,7 @@
       "typeVersion": 2,
       "position": [380, 300],
       "parameters": {
-        "jsCode": "// ====================================================\n// LIFE OS — CONFIGURATIE\n// Vul hieronder jouw eigen waarden in\n// ====================================================\n\n// 1. Notion Integration Token\n//    Maak aan via: notion.so/my-integrations\n//    Voeg de integratie toe aan je Life Management pagina\nconst NOTION_TOKEN = 'secret_JOUW_NOTION_TOKEN';\n\n// 2. Anthropic API Key\n//    Maak aan via: console.anthropic.com\nconst ANTHROPIC_KEY = 'sk-ant-JOUW_ANTHROPIC_KEY';\n\n// 3. Notion Database IDs\n//    Kopieer de ID uit de URL van elke database:\n//    notion.so/workspace/PAGINA-TITLE-{DIT_IS_HET_ID}\nconst DB_DAILY_CHECKINS  = 'DAILY_CHECKINS_DB_ID';  // 📋 Daily Check-ins database\nconst DB_FINANCE_MONTHLY = 'FINANCE_MONTHLY_DB_ID'; // Finance maandoverzicht database\n\n// 4. Notion Pagina ID voor de briefing\n//    Dit is de 'Life Management' pagina\nconst BRIEFING_PARENT_PAGE_ID = '11f2a868d6bc8065a00ffcc1317ec147';\n\n// ── Datum berekeningen ──────────────────────────────\nconst now = new Date();\nconst today = now.toISOString().slice(0, 10);\nconst sevenDaysAgo = new Date(now - 7 * 86400000).toISOString().slice(0, 10);\nconst firstOfMonth = today.slice(0, 8) + '01';\n\nconst d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));\nd.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));\nconst yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));\nconst weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);\nconst weekLabel = `Week ${weekNo} — ${now.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}`;\nconst briefingTitle = `Weekbriefing ${weekLabel}`;\n\nreturn [{ json: {\n  notion_token:     NOTION_TOKEN,\n  anthropic_key:    ANTHROPIC_KEY,\n  db_checkins:      DB_DAILY_CHECKINS,\n  db_finance:       DB_FINANCE_MONTHLY,\n  briefing_parent:  BRIEFING_PARENT_PAGE_ID,\n  today,\n  seven_days_ago:   sevenDaysAgo,\n  first_of_month:   firstOfMonth,\n  week_no:          weekNo,\n  week_label:       weekLabel,\n  briefing_title:   briefingTitle\n}}];"
+        "jsCode": "// ====================================================\n// LIFE OS — CONFIGURATIE\n// Vul hieronder jouw eigen waarden in\n// ====================================================\n\n// 1. Notion Integration Token\n//    Maak aan via: notion.so/my-integrations\n//    Voeg de integratie toe aan je Life Management pagina\nconst NOTION_TOKEN = 'secret_JOUW_NOTION_TOKEN';\n\n// 2. Anthropic API Key\n//    Maak aan via: console.anthropic.com\nconst ANTHROPIC_KEY = 'sk-ant-JOUW_ANTHROPIC_KEY';\n\n// 3. Notion Database IDs\n//    Kopieer de ID uit de URL van elke database:\n//    notion.so/workspace/PAGINA-TITLE-{DIT_IS_HET_ID}\nconst DB_DAILY_CHECKINS  = 'DAILY_CHECKINS_DB_ID';  // 📋 Daily Check-ins database\nconst DB_FINANCE_MONTHLY = 'FINANCE_MONTHLY_DB_ID'; // Finance maandoverzicht database\n\n// 4. Notion Pagina ID voor de briefing\n//    Dit is de 'Life Management' pagina\nconst BRIEFING_PARENT_PAGE_ID = '11f2a868d6bc8065a00ffcc1317ec147';\n\n// 5. Supabase (optioneel — laat leeg als je geen Supabase hebt)\n//    Gebruik de SERVICE ROLE key (niet de anon key) voor schrijfrechten\nconst SUPABASE_URL         = 'https://JOUW_PROJECT.supabase.co';\nconst SUPABASE_SERVICE_KEY = 'eyJhbGci_JOUW_SERVICE_ROLE_KEY';\n\n// ── Datum berekeningen ──────────────────────────────\nconst now = new Date();\nconst today = now.toISOString().slice(0, 10);\nconst sevenDaysAgo = new Date(now - 7 * 86400000).toISOString().slice(0, 10);\nconst firstOfMonth = today.slice(0, 8) + '01';\n\nconst d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));\nd.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));\nconst yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));\nconst weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);\nconst weekLabel = `Week ${weekNo} — ${now.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}`;\nconst briefingTitle = `Weekbriefing ${weekLabel}`;\n\nreturn [{ json: {\n  notion_token:     NOTION_TOKEN,\n  anthropic_key:    ANTHROPIC_KEY,\n  db_checkins:      DB_DAILY_CHECKINS,\n  db_finance:       DB_FINANCE_MONTHLY,\n  briefing_parent:     BRIEFING_PARENT_PAGE_ID,\n  supabase_url:        SUPABASE_URL,\n  supabase_service_key:SUPABASE_SERVICE_KEY,\n  today,\n  seven_days_ago:   sevenDaysAgo,\n  first_of_month:   firstOfMonth,\n  week_no:          weekNo,\n  week_label:       weekLabel,\n  briefing_title:   briefingTitle\n}}];"
       }
     },
     {
@@ -138,6 +138,29 @@
         "contentType": "json",
         "body": "={{ JSON.stringify({ parent: { page_id: $json.briefing_parent }, icon: { emoji: '🧠' }, properties: { title: { title: [{ text: { content: $json.briefing_title } }] } }, children: $json.notion_blocks }) }}"
       }
+    },
+    {
+      "id": "node-supa-upsert",
+      "name": "Sla op in Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1920, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚙ Config').item.json.supabase_url + '/rest/v1/weekly_briefings' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey",        "value": "={{ $('⚙ Config').item.json.supabase_service_key }}" },
+            { "name": "Authorization", "value": "={{ 'Bearer ' + $('⚙ Config').item.json.supabase_service_key }}" },
+            { "name": "Content-Type",  "value": "application/json" },
+            { "name": "Prefer",        "value": "resolution=merge-duplicates" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify({ week_start: $('⚙ Config').item.json.today.slice(0,8)+'01', content: $('Verwerk briefing').item.json.briefing_text, model: 'claude-opus-4-8' }) }}"
+      }
     }
   ],
   "connections": {
@@ -161,6 +184,9 @@
     },
     "Verwerk briefing": {
       "main": [[{ "node": "Maak Notion pagina", "type": "main", "index": 0 }]]
+    },
+    "Maak Notion pagina": {
+      "main": [[{ "node": "Sla op in Supabase", "type": "main", "index": 0 }]]
     }
   },
   "active": false,
