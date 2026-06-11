@@ -1758,13 +1758,11 @@ function renderFunnel() {
     a.appointments += r.appointments; a.signed += r.signed; return a;
   }, { spend: 0, clicks: 0, leads: 0, appointments: 0, signed: 0 });
 
-  const impressies = MOCK.impressies;
   const stages = [
-    { naam: 'Impressies',  vol: impressies,       kleur: '#6366F1' },
-    { naam: 'Clicks',      vol: t.clicks,         kleur: '#3B82F6' },
-    { naam: 'Leads',       vol: t.leads,           kleur: '#06B6D4' },
-    { naam: 'Afspraken',   vol: t.appointments,   kleur: '#10B981' },
-    { naam: 'Verkopen',    vol: t.signed,         kleur: '#F59E0B' },
+    { naam: 'Clicks',    vol: t.clicks,       kleur: '#3B82F6' },
+    { naam: 'Leads',     vol: t.leads,         kleur: '#06B6D4' },
+    { naam: 'Afspraken', vol: t.appointments, kleur: '#10B981' },
+    { naam: 'Verkopen',  vol: t.signed,       kleur: '#F59E0B' },
   ];
 
   const maxVol = Math.max(...stages.map(s => s.vol), 1);
