@@ -1765,8 +1765,6 @@ function renderFunnel() {
     { naam: 'Verkopen',  vol: t.signed,       kleur: '#F59E0B' },
   ];
 
-  const maxVol = Math.max(...stages.map(s => s.vol), 1);
-
   function convRate(from, to) {
     return from > 0 ? fPct(to / from) : '—';
   }
@@ -1776,9 +1774,9 @@ function renderFunnel() {
 
   let html = '';
   stages.forEach((s, i) => {
-    const barPct = Math.max(4, (s.vol / maxVol) * 100);
+    const barPct = i === 0 ? 100 : Math.min(100, Math.max(2, stages[i-1].vol > 0 ? (s.vol / stages[i-1].vol) * 100 : 2));
     const conv = i > 0 ? convRate(stages[i-1].vol, s.vol) : '';
-    const cost = s.naam !== 'Impressies' ? costPer(s.vol) : '';
+    const cost = costPer(s.vol);
     if (i > 0) {
       html += `<div class="funnel-conv-arrow">↓ ${conv} conversie</div>`;
     }
