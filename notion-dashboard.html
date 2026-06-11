@@ -1774,7 +1774,7 @@ function renderFunnel() {
 
   let html = '';
   stages.forEach((s, i) => {
-    const barPct = i === 0 ? 100 : Math.min(100, Math.max(2, stages[i-1].vol > 0 ? (s.vol / stages[i-1].vol) * 100 : 2));
+    const barPct = stages[0].vol > 0 ? Math.max(2, (s.vol / stages[0].vol) * 100) : 2;
     const conv = i > 0 ? convRate(stages[i-1].vol, s.vol) : '';
     const cost = costPer(s.vol);
     if (i > 0) {
