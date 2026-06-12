@@ -1,0 +1,135 @@
+{
+  "name": "Sync CLAUDE.md → GitHub",
+  "nodes": [
+    {
+      "id": "node-schedule",
+      "name": "Elke zondag 09:15",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [160, 300],
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "weeks", "weeksInterval": 1, "triggerAtDay": [0], "triggerAtHour": 9, "triggerAtMinute": 15 }]
+        }
+      }
+    },
+    {
+      "id": "node-config",
+      "name": "⚙ Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [380, 300],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            { "name": "notion_token",  "value": "secret_JOUW_NOTION_TOKEN", "type": "string" },
+            { "name": "github_token",  "value": "ghp_JOUW_GITHUB_PAT",      "type": "string" },
+            { "name": "github_owner",  "value": "rubenkraan-droid",          "type": "string" },
+            { "name": "github_repo",   "value": "Code",                      "type": "string" },
+            { "name": "github_branch", "value": "claude/notion-life-business-org-k8nfp3", "type": "string" },
+            { "name": "db_needle_movers", "value": "a8196c3b-f0fc-4009-ba7b-82a4e15fef1b", "type": "string" },
+            { "name": "today", "value": "={{ $now.toFormat('yyyy-MM-dd') }}", "type": "string" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "node-get-needle-movers",
+      "name": "Haal needle movers op",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [620, 200],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://api.notion.com/v1/databases/' + $('⚙ Config').item.json.db_needle_movers + '/query' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization",  "value": "={{ 'Bearer ' + $('⚙ Config').item.json.notion_token }}" },
+            { "name": "Notion-Version", "value": "2022-06-28" },
+            { "name": "Content-Type",   "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": "{\"filter\":{\"property\":\"Status\",\"select\":{\"equals\":\"🎯 Actief\"}},\"sorts\":[{\"property\":\"Deadline\",\"direction\":\"ascending\"}],\"page_size\":5}"
+      }
+    },
+    {
+      "id": "node-get-sha",
+      "name": "Haal huidig CLAUDE.md SHA op",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [620, 420],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://api.github.com/repos/' + $('⚙ Config').item.json.github_owner + '/' + $('⚙ Config').item.json.github_repo + '/contents/CLAUDE.md?ref=' + $('⚙ Config').item.json.github_branch }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "={{ 'Bearer ' + $('⚙ Config').item.json.github_token }}" },
+            { "name": "Accept",        "value": "application/vnd.github+json" },
+            { "name": "X-GitHub-Api-Version", "value": "2022-11-28" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "node-build-claude-md",
+      "name": "Genereer CLAUDE.md inhoud",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 300],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const cfg          = $('⚙ Config').item.json;\nconst nmResults    = $('Haal needle movers op').item.json?.results || [];\nconst currentSha   = $('Haal huidig CLAUDE.md SHA op').item.json?.sha || '';\nconst today        = cfg.today;\n\n// Needle movers verwerken\nconst activeMovers = nmResults.map(p => {\n  const props = p.properties || {};\n  return {\n    move:    props.Move?.title?.[0]?.plain_text || '',\n    gebied:  props.Gebied?.select?.name || '',\n    nu:      props.Nu?.rich_text?.[0]?.plain_text || '—',\n    target:  props.Target?.rich_text?.[0]?.plain_text || '—',\n    metric:  props.Metric?.rich_text?.[0]?.plain_text || '',\n    deadline:props.Deadline?.date?.start || '—'\n  };\n}).filter(m => m.move);\n\nconst nmTable = activeMovers.length > 0\n  ? activeMovers.map(m =>\n      `| ${m.move} | ${m.nu} | ${m.target} | ${m.deadline} |`\n    ).join('\\n')\n  : '| Geen actieve needle movers | — | — | — |';\n\n// CLAUDE.md bouwen\nconst content = `# Ruben Kraan — Life OS Context\n\nDit bestand wordt automatisch bijgewerkt elke zondag door n8n.\nLaatst gesynchroniseerd: ${today}\n\n---\n\n## Wie ben ik\n\nOndernemer met meerdere bedrijven, gefocust op schaalbare systemen en financiële vrijheid.\nWerk vanuit Notion, n8n, Meta Ads, PipeDrive en Whoop.\n\n---\n\n## Bedrijven\n\n| Bedrijf | Type | Focus |\n|---|---|---|\n| **Reck-It** | Vakantie Parken marketing | Meta Ads, leads → verkopen |\n| **Bolshippers** | Logistiek | Cashflow, operationeel |\n| **KR Makler** | Vakantie Vastgoed | Pipeline activeren |\n| **Trading** | Financial Markets | Disciplined execution |\n| **Virtual Assistance** | Diensten | Stabiel, laag onderhoud |\n\n---\n\n## 🎯 Huidige Needle Movers\n\n> **Max 5 actief. Dit zijn de enige dingen die er nu écht toe doen.**\n> Bron: Notion → Life Management → 🎯 Needle Movers\n> Gesynchroniseerd: ${today}\n\n| Move | Nu | Target | Deadline |\n|---|---|---|---|\n${nmTable}\n\n---\n\n## Tech Stack\n\n- **Notion** — alle databases, briefings, taken, skills\n- **n8n** — automatiseringen (Whoop sync, weekbriefing, Meta flows)\n- **Claude API** — wekelijkse briefing genereren\n- **Meta Ads** — leadgeneratie voor Reck-It en KR Makler\n- **PipeDrive** — sales pipeline\n- **Whoop** — biometrie (recovery, HRV, slaap)\n- **Obsidian** — dagelijkse check-ins en reflecties\n- **GitHub repo** — \\`rubenkraan-droid/Code\\`, branch \\`claude/notion-life-business-org-k8nfp3\\`\n\n---\n\n## Werkwijze\n\n- Focus op needle movers bij elke sessie — vraag altijd: \"beweegt dit de naald?\"\n- Geen feature creep: bouw wat gevraagd wordt, niet meer\n- Liever werkend en simpel dan perfect en complex\n- Automatiseer repetitief werk, bewaar menselijk oordeel voor strategie\n- Communiceer in het Nederlands tenzij code/technisch\n\n---\n\n## Vaste databases (Notion IDs)\n\n| Database | ID |\n|---|---|\n| Daily Check-ins | \\`ebcc855d-5b66-424d-be78-e8a146587572\\` |\n| Task List | \\`2dd2a868-d6bc-80e0-bf75-df68b4f91019\\` |\n| Skills Archive | \\`14ceb6ea-974f-4f34-9f3d-7c3188fb32f4\\` |\n| Needle Movers | \\`a8196c3b-f0fc-4009-ba7b-82a4e15fef1b\\` |\n| Life Management (parent) | \\`11f2a868-d6bc-8065-a00f-fcc1317ec147\\` |\n`;\n\n// Base64 encoden voor GitHub API\nconst encoded = Buffer.from(content, 'utf8').toString('base64');\n\nreturn [{ json: {\n  content_base64: encoded,\n  sha:            currentSha,\n  github_token:   cfg.github_token,\n  github_owner:   cfg.github_owner,\n  github_repo:    cfg.github_repo,\n  github_branch:  cfg.github_branch,\n  needle_count:   activeMovers.length,\n  updated_at:     today\n}}];"
+      }
+    },
+    {
+      "id": "node-push-github",
+      "name": "Push CLAUDE.md naar GitHub",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1100, 300],
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ 'https://api.github.com/repos/' + $json.github_owner + '/' + $json.github_repo + '/contents/CLAUDE.md' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "={{ 'Bearer ' + $json.github_token }}" },
+            { "name": "Accept",        "value": "application/vnd.github+json" },
+            { "name": "X-GitHub-Api-Version", "value": "2022-11-28" },
+            { "name": "Content-Type",  "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify({ message: 'chore: sync CLAUDE.md needle movers — ' + $json.updated_at, content: $json.content_base64, sha: $json.sha, branch: $json.github_branch }) }}"
+      }
+    }
+  ],
+
+  "connections": {
+    "Elke zondag 09:15":           { "main": [[{ "node": "⚙ Config", "type": "main", "index": 0 }]] },
+    "⚙ Config": {
+      "main": [[
+        { "node": "Haal needle movers op",        "type": "main", "index": 0 },
+        { "node": "Haal huidig CLAUDE.md SHA op", "type": "main", "index": 0 }
+      ]]
+    },
+    "Haal needle movers op":        { "main": [[{ "node": "Genereer CLAUDE.md inhoud", "type": "main", "index": 0 }]] },
+    "Haal huidig CLAUDE.md SHA op": { "main": [[{ "node": "Genereer CLAUDE.md inhoud", "type": "main", "index": 0 }]] },
+    "Genereer CLAUDE.md inhoud":    { "main": [[{ "node": "Push CLAUDE.md naar GitHub", "type": "main", "index": 0 }]] }
+  },
+
+  "_setup": {
+    "github_pat": {
+      "url": "https://github.com/settings/tokens/new",
+      "scopes_needed": ["repo"],
+      "description": "Maak een Personal Access Token aan met 'repo' scope. Plak in ⚙ Config node onder github_token."
+    },
+    "trigger": "Loopt elke zondag 09:15 — 15 minuten na de weekbriefing, zodat je bij de volgende Claude Code sessie altijd de nieuwste needle movers hebt."
+  }
+}
