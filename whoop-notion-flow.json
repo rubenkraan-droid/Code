@@ -1,0 +1,231 @@
+{
+  "name": "Whoop → Notion Daily Check-in",
+  "nodes": [
+    {
+      "id": "node-schedule",
+      "name": "Elke dag 07:30",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [160, 300],
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "hours", "hoursInterval": 24, "triggerAtHour": 7, "triggerAtMinute": 30 }]
+        }
+      }
+    },
+    {
+      "id": "node-config",
+      "name": "⚙ Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [380, 300],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "name": "notion_token",
+              "value": "secret_JOUW_NOTION_TOKEN",
+              "type": "string"
+            },
+            {
+              "name": "notion_db_id",
+              "value": "ebcc855d-5b66-424d-be78-e8a146587572",
+              "type": "string"
+            },
+            {
+              "name": "today",
+              "value": "={{ $now.toFormat('yyyy-MM-dd') }}",
+              "type": "string"
+            },
+            {
+              "name": "today_title",
+              "value": "={{ $now.toFormat('dd MMMM yyyy') }}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "node-whoop-recovery",
+      "name": "Whoop — Recovery",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [620, 200],
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.prod.whoop.com/developer/v1/recovery?limit=1",
+        "authentication": "oAuth2",
+        "oAuth2Type": "generic",
+        "credentials": {
+          "oAuth2Api": { "id": "whoop-oauth2", "name": "Whoop OAuth2 API" }
+        }
+      }
+    },
+    {
+      "id": "node-whoop-sleep",
+      "name": "Whoop — Sleep",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [620, 420],
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.prod.whoop.com/developer/v1/sleep?limit=1",
+        "authentication": "oAuth2",
+        "oAuth2Type": "generic",
+        "credentials": {
+          "oAuth2Api": { "id": "whoop-oauth2", "name": "Whoop OAuth2 API" }
+        }
+      }
+    },
+    {
+      "id": "node-transform",
+      "name": "Verwerk Whoop data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 300],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const recovery = $('Whoop — Recovery').item.json.records?.[0];\nconst sleep    = $('Whoop — Sleep').item.json.records?.[0];\nconst config   = $('⚙ Config').item.json;\n\n// Recovery metrics\nconst recoveryScore = recovery?.score?.recovery_score ?? null;\nconst hrv           = recovery?.score?.hrv_rmssd_milli ?? null;\nconst restingHR     = recovery?.score?.resting_heart_rate ?? null;\n\n// Sleep metrics\nconst sleepScore    = sleep?.score?.sleep_performance_percentage ?? null;\nconst sleepMillis   = sleep ? (\n  new Date(sleep.end) - new Date(sleep.start)\n) : null;\nconst slaapuren     = sleepMillis ? parseFloat((sleepMillis / 3600000).toFixed(1)) : null;\n\n// Map recovery score → Energy Level select\nlet energyLevel = null;\nif (recoveryScore !== null) {\n  if (recoveryScore >= 67) energyLevel = '🔥 High';\n  else if (recoveryScore >= 34) energyLevel = '⚡ Medium';\n  else energyLevel = '😴 Low';\n}\n\n// Training done: check if there's a workout today (strain cycle)\nconst trainingDone = recovery?.score?.recovery_score !== null ? false : null;\n\nreturn [{\n  json: {\n    today:         config.today,\n    today_title:   config.today_title,\n    notion_token:  config.notion_token,\n    notion_db_id:  config.notion_db_id,\n    recoveryScore,\n    hrv,\n    restingHR,\n    sleepScore,\n    slaapuren,\n    energyLevel\n  }\n}];"
+      }
+    },
+    {
+      "id": "node-check-existing",
+      "name": "Check bestaande entry",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1100, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.notion.com/v1/databases/{{ $json.notion_db_id }}/query",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization",  "value": "={{ 'Bearer ' + $json.notion_token }}" },
+            { "name": "Notion-Version", "value": "2022-06-28" },
+            { "name": "Content-Type",   "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify({ filter: { property: 'Check-in Date', date: { equals: $json.today } }, page_size: 1 }) }}"
+      }
+    },
+    {
+      "id": "node-exists-if",
+      "name": "Bestaat al?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1320, 300],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "exists-check",
+              "leftValue": "={{ $json.results.length }}",
+              "rightValue": 0,
+              "operator": { "type": "number", "operation": "gt" }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "node-update",
+      "name": "Update bestaande pagina",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1560, 180],
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.notion.com/v1/pages/{{ $('Check bestaande entry').item.json.results[0].id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization",  "value": "={{ 'Bearer ' + $('Verwerk Whoop data').item.json.notion_token }}" },
+            { "name": "Notion-Version", "value": "2022-06-28" },
+            { "name": "Content-Type",   "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify(buildNotionProperties($('Verwerk Whoop data').item.json)) }}"
+      }
+    },
+    {
+      "id": "node-create",
+      "name": "Maak nieuwe pagina",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1560, 420],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.notion.com/v1/pages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization",  "value": "={{ 'Bearer ' + $('Verwerk Whoop data').item.json.notion_token }}" },
+            { "name": "Notion-Version", "value": "2022-06-28" },
+            { "name": "Content-Type",   "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify({ parent: { database_id: $('Verwerk Whoop data').item.json.notion_db_id }, properties: buildNotionProperties($('Verwerk Whoop data').item.json) }) }}"
+      }
+    }
+  ],
+
+  "connections": {
+    "Elke dag 07:30":        { "main": [[{ "node": "⚙ Config",               "type": "main", "index": 0 }]] },
+    "⚙ Config":              { "main": [[{ "node": "Whoop — Recovery",        "type": "main", "index": 0 },
+                                          { "node": "Whoop — Sleep",           "type": "main", "index": 0 }]] },
+    "Whoop — Recovery":      { "main": [[{ "node": "Verwerk Whoop data",      "type": "main", "index": 0 }]] },
+    "Whoop — Sleep":         { "main": [[{ "node": "Verwerk Whoop data",      "type": "main", "index": 0 }]] },
+    "Verwerk Whoop data":    { "main": [[{ "node": "Check bestaande entry",   "type": "main", "index": 0 }]] },
+    "Check bestaande entry": { "main": [[{ "node": "Bestaat al?",             "type": "main", "index": 0 }]] },
+    "Bestaat al?": {
+      "main": [
+        [{ "node": "Update bestaande pagina", "type": "main", "index": 0 }],
+        [{ "node": "Maak nieuwe pagina",      "type": "main", "index": 0 }]
+      ]
+    }
+  },
+
+  "_notes": {
+    "whoop_oauth2_setup": {
+      "credential_type": "oAuth2Api",
+      "grant_type": "authorizationCode",
+      "authorization_url": "https://api.prod.whoop.com/oauth/oauth2/auth",
+      "access_token_url": "https://api.prod.whoop.com/oauth/oauth2/token",
+      "scope": "offline read:recovery read:sleep read:body_measurement read:profile read:workout",
+      "client_id": "VUL_IN_UIT_WHOOP_DEVELOPER_PORTAL",
+      "client_secret": "VUL_IN_UIT_WHOOP_DEVELOPER_PORTAL"
+    },
+    "notion_properties_helper": {
+      "comment": "De buildNotionProperties functie hieronder kun je in een Code node zetten als custom function, of inline in de body expressions verwerken.",
+      "properties_body": {
+        "Name":              { "title": [{ "text": { "content": "{{today_title}}" } }] },
+        "Check-in Date":     { "date": { "start": "{{today}}" } },
+        "Recovery Score":    { "number": "{{recoveryScore}}" },
+        "HRV (ms)":          { "number": "{{hrv}}" },
+        "Resting HR":        { "number": "{{restingHR}}" },
+        "Sleep Score":       { "number": "{{sleepScore}}" },
+        "Slaapuren":         { "number": "{{slaapuren}}" },
+        "Energy Level":      { "select": { "name": "{{energyLevel}}" } }
+      }
+    },
+    "setup_steps": [
+      "1. Ga naar developer.whoop.com — maak een app aan",
+      "2. Kopieer client_id en client_secret",
+      "3. In n8n: Credentials → New → OAuth2 API → vul in zoals whoop_oauth2_setup hierboven",
+      "4. Klik 'Connect' — log in met je Whoop account → autoriseert de app",
+      "5. Open de ⚙ Config node → vul je Notion token in",
+      "6. Test de flow handmatig → check of de pagina in Notion verschijnt",
+      "7. Activeer de flow"
+    ]
+  }
+}
