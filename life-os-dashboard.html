@@ -278,6 +278,26 @@
     .cfg-hint { font-size: 11px; color: var(--muted); margin-bottom: 16px; line-height: 1.5; }
     .cfg-actions { display: flex; gap: 8px; justify-content: flex-end; }
 
+    /* ── Needle Movers zone ──────────────────── */
+    .nm-zone {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      padding: 10px 14px; margin-bottom: 12px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .nm-label {
+      font-size: 10px; font-weight: 700; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--muted); white-space: nowrap;
+    }
+    .nm-item {
+      display: flex; align-items: center; gap: 5px;
+      background: rgba(255,255,255,.04); border: 1px solid var(--border);
+      border-radius: 20px; padding: 4px 10px; font-size: 11px; cursor: default;
+    }
+    .nm-move { color: var(--text); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .nm-prog { color: var(--muted); white-space: nowrap; }
+    .nm-dl   { color: var(--muted); font-size: 10px; white-space: nowrap; }
+
     /* ── Mock badge ───────────────────────────── */
     .mock-badge {
       display: inline-flex; align-items: center; gap: 4px;
@@ -312,6 +332,12 @@
       <button class="btn" onclick="openConfig()">⚙ Config</button>
     </div>
   </header>
+
+  <!-- Needle Movers strip -->
+  <div class="nm-zone" id="nm-zone" hidden>
+    <span class="nm-label">🎯 Needle movers</span>
+    <div id="nm-items" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+  </div>
 
   <!-- Zone 1 — Briefing -->
   <div class="zone briefing-zone" style="margin-bottom:16px">
@@ -444,6 +470,13 @@ Bolshippers cashflow vereist actie vóór 15 juni. Trading stop-loss NVDA op $11
 
 **Eén heldere actie**
 Verhoog Wielsche Dreef Meta budget van €120 → €145/dag. Verwacht: +14 leads/week bij huidige CPL.`,
+  needle_movers: [
+    { move: 'Reck-It CPL < €10',           gebied: '💼', nu: '€14,90',  target: '< €10',    deadline: '30 jun' },
+    { move: 'Bolshippers cashflow',         gebied: '💰', nu: '€18k',    target: '> €40k',   deadline: '30 jun' },
+    { move: 'KR Makler pipeline actief',    gebied: '💼', nu: '0 leads', target: '5/week',   deadline: '15 jul' },
+    { move: 'Check-in streak 30 dagen',     gebied: '🌱', nu: '14d',     target: '30d',      deadline: '12 jul' },
+    { move: 'Nettovermogen €400k',          gebied: '💰', nu: '€385k',   target: '€400k',    deadline: '31 dec' },
+  ],
   life: {
     energy_avg: 7.5, focus_avg: 8.1, mood_avg: 7.8,
     streak_days: 14, goals_active: 3, goals_completed_week: 1,
@@ -539,6 +572,22 @@ function renderBriefing(data) {
   } else {
     body.innerHTML = '<span class="briefing-empty">Nog geen briefing. Wordt automatisch gegenereerd elke zondag om 09:00 via n8n + Claude.</span>';
   }
+}
+
+// ── Render — needle movers ────────────────────────────────────────────────
+
+function renderNeedleMovers(movers) {
+  const zone = document.getElementById('nm-zone');
+  if (!movers?.length) { zone.hidden = true; return; }
+  zone.hidden = false;
+  document.getElementById('nm-items').innerHTML = movers.map(m =>
+    `<div class="nm-item" title="${m.move}">
+      <span>${m.gebied}</span>
+      <span class="nm-move">${m.move}</span>
+      <span class="nm-prog">${m.nu} → ${m.target}</span>
+      <span class="nm-dl">${m.deadline}</span>
+    </div>`
+  ).join('');
 }
 
 // ── Render — life ──────────────────────────────────────────────────────────
@@ -683,6 +732,7 @@ function render(data, isMock) {
   document.getElementById('mock-badge').innerHTML = isMock
     ? '<span class="mock-badge">⚠ Voorbeelddata</span>' : '';
 
+  renderNeedleMovers(data.needle_movers);
   renderBriefing(data);
   renderLife(data.life);
   renderFinance(data.finance);
