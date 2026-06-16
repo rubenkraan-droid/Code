@@ -1543,6 +1543,10 @@ const _md = (monthsAgo, day = 15) => {
   const d = new Date(); d.setDate(day); d.setMonth(d.getMonth() - monthsAgo);
   return d.toISOString().slice(0, 10);
 };
+const _dd = (daysAgo) => {
+  const d = new Date(); d.setDate(d.getDate() - daysAgo);
+  return d.toISOString().slice(0, 10);
+};
 
 const MOCK = {
   inventaris: {
@@ -1566,35 +1570,52 @@ const MOCK = {
   },
   funnel: { clicks: 100, leads: 70, afspraken: 50, verkopen: 25 },
   allTime: [
-    { adId: 'wd-1', adName: 'Wielsche Dreef – Natuur & Rust (Video)',          status: 'Actief'     },
-    { adId: 'wd-2', adName: 'Wielsche Dreef – Stacaravan Deal (Carousel)',      status: 'Actief'     },
-    { adId: 'wd-3', adName: 'Wielsche Dreef – Familie Vakantie (Afbeelding)',   status: 'Gepauzeerd' },
-    { adId: 'wd-4', adName: 'Wielsche Dreef – Chalet Special (Video)',          status: 'Actief'     },
+    { adId: 'wd-1', adName: 'H1 – Wellness als standaard',       status: 'Actief' },
+    { adId: 'wd-2', adName: 'H2 – Rust op ieder gewenst moment', status: 'Actief' },
+    { adId: 'wd-3', adName: 'H3 – Een tweede thuis',             status: 'Actief' },
   ],
   dagelijks: [
-    // ── Ad 1: Natuur & Rust (Video) ──────────────────────────────────────
-    { date:_md(5), adId:'wd-1', adName:'Wielsche Dreef – Natuur & Rust (Video)',        spend:920,  clicks:310, leads:78,  appointments:24, signed:1, closed:0, omzet:58000,  imageUrl:null },
-    { date:_md(4), adId:'wd-1', adName:'Wielsche Dreef – Natuur & Rust (Video)',        spend:1050, clicks:355, leads:89,  appointments:27, signed:1, closed:0, omzet:58000,  imageUrl:null },
-    { date:_md(3), adId:'wd-1', adName:'Wielsche Dreef – Natuur & Rust (Video)',        spend:1180, clicks:400, leads:100, appointments:31, signed:2, closed:0, omzet:116000, imageUrl:null },
-    { date:_md(2), adId:'wd-1', adName:'Wielsche Dreef – Natuur & Rust (Video)',        spend:840,  clicks:285, leads:71,  appointments:22, signed:1, closed:0, omzet:58000,  imageUrl:null },
-    { date:_md(1), adId:'wd-1', adName:'Wielsche Dreef – Natuur & Rust (Video)',        spend:1020, clicks:345, leads:86,  appointments:26, signed:1, closed:0, omzet:58000,  imageUrl:null },
-    { date:_md(0), adId:'wd-1', adName:'Wielsche Dreef – Natuur & Rust (Video)',        spend:680,  clicks:230, leads:57,  appointments:18, signed:0, closed:0, omzet:0,      imageUrl:null },
-    // ── Ad 2: Stacaravan Deal (Carousel) ─────────────────────────────────
-    { date:_md(5), adId:'wd-2', adName:'Wielsche Dreef – Stacaravan Deal (Carousel)',   spend:620,  clicks:205, leads:52,  appointments:16, signed:0, closed:0, omzet:0,      imageUrl:null },
-    { date:_md(4), adId:'wd-2', adName:'Wielsche Dreef – Stacaravan Deal (Carousel)',   spend:550,  clicks:182, leads:46,  appointments:14, signed:1, closed:0, omzet:52000,  imageUrl:null },
-    { date:_md(3), adId:'wd-2', adName:'Wielsche Dreef – Stacaravan Deal (Carousel)',   spend:730,  clicks:245, leads:61,  appointments:19, signed:1, closed:0, omzet:52000,  imageUrl:null },
-    { date:_md(2), adId:'wd-2', adName:'Wielsche Dreef – Stacaravan Deal (Carousel)',   spend:680,  clicks:225, leads:56,  appointments:17, signed:1, closed:0, omzet:52000,  imageUrl:null },
-    { date:_md(1), adId:'wd-2', adName:'Wielsche Dreef – Stacaravan Deal (Carousel)',   spend:790,  clicks:265, leads:66,  appointments:20, signed:1, closed:0, omzet:52000,  imageUrl:null },
-    { date:_md(0), adId:'wd-2', adName:'Wielsche Dreef – Stacaravan Deal (Carousel)',   spend:510,  clicks:170, leads:43,  appointments:13, signed:0, closed:0, omzet:0,      imageUrl:null },
-    // ── Ad 3: Familie Vakantie (Afbeelding) — gepauzeerd ─────────────────
-    { date:_md(5), adId:'wd-3', adName:'Wielsche Dreef – Familie Vakantie (Afbeelding)',spend:440,  clicks:145, leads:36,  appointments:11, signed:0, closed:0, omzet:0,      imageUrl:null },
-    { date:_md(4), adId:'wd-3', adName:'Wielsche Dreef – Familie Vakantie (Afbeelding)',spend:510,  clicks:170, leads:43,  appointments:13, signed:1, closed:0, omzet:55000,  imageUrl:null },
-    { date:_md(3), adId:'wd-3', adName:'Wielsche Dreef – Familie Vakantie (Afbeelding)',spend:580,  clicks:192, leads:48,  appointments:15, signed:0, closed:0, omzet:0,      imageUrl:null },
-    { date:_md(2), adId:'wd-3', adName:'Wielsche Dreef – Familie Vakantie (Afbeelding)',spend:470,  clicks:155, leads:39,  appointments:12, signed:1, closed:0, omzet:55000,  imageUrl:null },
-    // ── Ad 4: Chalet Special (Video) — nieuw ─────────────────────────────
-    { date:_md(2), adId:'wd-4', adName:'Wielsche Dreef – Chalet Special (Video)',       spend:410,  clicks:135, leads:34,  appointments:10, signed:0, closed:0, omzet:0,      imageUrl:null },
-    { date:_md(1), adId:'wd-4', adName:'Wielsche Dreef – Chalet Special (Video)',       spend:880,  clicks:295, leads:74,  appointments:22, signed:0, closed:0, omzet:0,      imageUrl:null },
-    { date:_md(0), adId:'wd-4', adName:'Wielsche Dreef – Chalet Special (Video)',       spend:1100, clicks:370, leads:92,  appointments:28, signed:1, closed:0, omzet:65000,  imageUrl:null },
+    // ── Historisch (maandelijkse samenvatting) ────────────────
+    { date:_md(5), adId:'wd-1', adName:'H1 – Wellness als standaard',       spend:680,  clicks:228, leads:57, appointments:18, signed:1, closed:0, omzet:58000, imageUrl:null },
+    { date:_md(5), adId:'wd-2', adName:'H2 – Rust op ieder gewenst moment', spend:480,  clicks:160, leads:40, appointments:12, signed:0, closed:0, omzet:0,     imageUrl:null },
+    { date:_md(5), adId:'wd-3', adName:'H3 – Een tweede thuis',             spend:390,  clicks:130, leads:33, appointments:10, signed:1, closed:0, omzet:62000, imageUrl:null },
+    { date:_md(4), adId:'wd-1', adName:'H1 – Wellness als standaard',       spend:720,  clicks:242, leads:61, appointments:19, signed:1, closed:0, omzet:58000, imageUrl:null },
+    { date:_md(4), adId:'wd-2', adName:'H2 – Rust op ieder gewenst moment', spend:540,  clicks:180, leads:45, appointments:14, signed:0, closed:0, omzet:0,     imageUrl:null },
+    { date:_md(4), adId:'wd-3', adName:'H3 – Een tweede thuis',             spend:410,  clicks:137, leads:34, appointments:11, signed:0, closed:0, omzet:0,     imageUrl:null },
+    { date:_md(3), adId:'wd-1', adName:'H1 – Wellness als standaard',       spend:850,  clicks:285, leads:71, appointments:22, signed:1, closed:0, omzet:58000, imageUrl:null },
+    { date:_md(3), adId:'wd-2', adName:'H2 – Rust op ieder gewenst moment', spend:620,  clicks:207, leads:52, appointments:16, signed:1, closed:0, omzet:62000, imageUrl:null },
+    { date:_md(3), adId:'wd-3', adName:'H3 – Een tweede thuis',             spend:480,  clicks:160, leads:40, appointments:12, signed:0, closed:0, omzet:0,     imageUrl:null },
+    { date:_md(2), adId:'wd-1', adName:'H1 – Wellness als standaard',       spend:930,  clicks:312, leads:78, appointments:24, signed:1, closed:0, omzet:58000, imageUrl:null },
+    { date:_md(2), adId:'wd-2', adName:'H2 – Rust op ieder gewenst moment', spend:700,  clicks:234, leads:59, appointments:18, signed:0, closed:0, omzet:0,     imageUrl:null },
+    { date:_md(2), adId:'wd-3', adName:'H3 – Een tweede thuis',             spend:560,  clicks:187, leads:47, appointments:14, signed:1, closed:0, omzet:62000, imageUrl:null },
+    { date:_md(1), adId:'wd-1', adName:'H1 – Wellness als standaard',       spend:1050, clicks:352, leads:88, appointments:27, signed:1, closed:0, omzet:58000, imageUrl:null },
+    { date:_md(1), adId:'wd-2', adName:'H2 – Rust op ieder gewenst moment', spend:800,  clicks:268, leads:67, appointments:21, signed:0, closed:0, omzet:0,     imageUrl:null },
+    { date:_md(1), adId:'wd-3', adName:'H3 – Een tweede thuis',             spend:650,  clicks:217, leads:54, appointments:17, signed:0, closed:0, omzet:0,     imageUrl:null },
+    // ── Deze maand — dagelijks uitgespreid ──────────────────────
+    { date:_dd(14), adId:'wd-1', adName:'H1 – Wellness als standaard',       spend:260,  clicks:87,  leads:22, appointments:7,  signed:0, closed:0, omzet:0,     imageUrl:null },
+    { date:_dd(14), adId:'wd-2', adName:'H2 – Rust op ieder gewenst moment', spend:195,  clicks:65,  leads:16, appointments:5,  signed:0, closed:0, omzet:0,     imageUrl:null },
+    { date:_dd(14), adId:'wd-3', adName:'H3 – Een tweede thuis',             spend:150,  clicks:50,  leads:13, appointments:4,  signed:0, closed:0, omzet:0,     imageUrl:null },
+    { date:_dd(12), adId:'wd-1', adName:'H1 – Wellness als standaard',       spend:290,  clicks:97,  leads:24, appointments:7,  signed:0, closed:0, omzet:0,     imageUrl:null },
+    { date:_dd(12), adId:'wd-2', adName:'H2 – Rust op ieder gewenst moment', spend:215,  clicks:72,  leads:18, appointments:5,  signed:0, closed:0, omzet:0,     imageUrl:null },
+    { date:_dd(12), adId:'wd-3', adName:'H3 – Een tweede thuis',             spend:165,  clicks:55,  leads:14, appointments:4,  signed:0, closed:0, omzet:0,     imageUrl:null },
+    { date:_dd(10), adId:'wd-1', adName:'H1 – Wellness als standaard',       spend:325,  clicks:109, leads:27, appointments:8,  signed:0, closed:0, omzet:0,     imageUrl:null },
+    { date:_dd(10), adId:'wd-2', adName:'H2 – Rust op ieder gewenst moment', spend:240,  clicks:80,  leads:20, appointments:6,  signed:0, closed:0, omzet:0,     imageUrl:null },
+    { date:_dd(10), adId:'wd-3', adName:'H3 – Een tweede thuis',             spend:185,  clicks:62,  leads:16, appointments:5,  signed:0, closed:0, omzet:0,     imageUrl:null },
+    { date:_dd(8),  adId:'wd-1', adName:'H1 – Wellness als standaard',       spend:360,  clicks:120, leads:30, appointments:9,  signed:1, closed:0, omzet:58000, imageUrl:null },
+    { date:_dd(8),  adId:'wd-2', adName:'H2 – Rust op ieder gewenst moment', spend:270,  clicks:90,  leads:23, appointments:7,  signed:0, closed:0, omzet:0,     imageUrl:null },
+    { date:_dd(8),  adId:'wd-3', adName:'H3 – Een tweede thuis',             spend:210,  clicks:70,  leads:18, appointments:5,  signed:0, closed:0, omzet:0,     imageUrl:null },
+    { date:_dd(6),  adId:'wd-1', adName:'H1 – Wellness als standaard',       spend:395,  clicks:132, leads:33, appointments:10, signed:0, closed:0, omzet:0,     imageUrl:null },
+    { date:_dd(6),  adId:'wd-2', adName:'H2 – Rust op ieder gewenst moment', spend:295,  clicks:98,  leads:25, appointments:7,  signed:0, closed:0, omzet:0,     imageUrl:null },
+    { date:_dd(6),  adId:'wd-3', adName:'H3 – Een tweede thuis',             spend:230,  clicks:77,  leads:19, appointments:6,  signed:0, closed:0, omzet:0,     imageUrl:null },
+    { date:_dd(4),  adId:'wd-1', adName:'H1 – Wellness als standaard',       spend:430,  clicks:144, leads:36, appointments:11, signed:0, closed:0, omzet:0,     imageUrl:null },
+    { date:_dd(4),  adId:'wd-2', adName:'H2 – Rust op ieder gewenst moment', spend:325,  clicks:108, leads:27, appointments:8,  signed:0, closed:0, omzet:0,     imageUrl:null },
+    { date:_dd(4),  adId:'wd-3', adName:'H3 – Een tweede thuis',             spend:255,  clicks:85,  leads:21, appointments:6,  signed:1, closed:0, omzet:62000, imageUrl:null },
+    { date:_dd(2),  adId:'wd-1', adName:'H1 – Wellness als standaard',       spend:470,  clicks:157, leads:39, appointments:12, signed:0, closed:0, omzet:0,     imageUrl:null },
+    { date:_dd(2),  adId:'wd-2', adName:'H2 – Rust op ieder gewenst moment', spend:350,  clicks:117, leads:29, appointments:9,  signed:0, closed:0, omzet:0,     imageUrl:null },
+    { date:_dd(2),  adId:'wd-3', adName:'H3 – Een tweede thuis',             spend:275,  clicks:92,  leads:23, appointments:7,  signed:0, closed:0, omzet:0,     imageUrl:null },
+    { date:_dd(1),  adId:'wd-1', adName:'H1 – Wellness als standaard',       spend:510,  clicks:170, leads:43, appointments:13, signed:0, closed:0, omzet:0,     imageUrl:null },
+    { date:_dd(1),  adId:'wd-2', adName:'H2 – Rust op ieder gewenst moment', spend:380,  clicks:127, leads:32, appointments:10, signed:0, closed:0, omzet:0,     imageUrl:null },
+    { date:_dd(1),  adId:'wd-3', adName:'H3 – Een tweede thuis',             spend:300,  clicks:100, leads:25, appointments:8,  signed:0, closed:0, omzet:0,     imageUrl:null },
   ]
 };
 
