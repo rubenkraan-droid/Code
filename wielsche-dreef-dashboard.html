@@ -1467,17 +1467,20 @@ async function init() {
     const cfgIdx = dailyPages.findIndex(p => p._type === 'config');
     if (cfgIdx >= 0) applyParkConfig(dailyPages.splice(cfgIdx, 1)[0]);
 
-    // Use mock data when webhook returns nothing (nog geen echte koppeling)
-    if (dailyPages.length === 0) {
+    // Use mock data when webhook returns nothing OR all spend is zero
+    const realLog = dailyPages.map(parseDailyLog).filter(r => r.date);
+    const hasRealSpend = realLog.some(r => r.spend > 0);
+
+    if (!hasRealSpend) {
       state.dailyLog = MOCK.dagelijks;
     } else {
       if (dailyPages[0]) console.log('[Dashboard] Daily props:', Object.keys(dailyPages[0]).filter(k => k.startsWith('property_')));
-      state.dailyLog = dailyPages.map(parseDailyLog).filter(r => r.date);
+      state.dailyLog = realLog;
     }
 
     // Build allTime lookup by Ad ID and Ad Name
     state.allTimeMap = new Map();
-    const atSource = allTimePages.length > 0 ? allTimePages.map(parseAllTime) : MOCK.allTime;
+    const atSource = (allTimePages.length > 0 && hasRealSpend) ? allTimePages.map(parseAllTime) : MOCK.allTime;
     for (const at of atSource) {
       if (at.adId)   state.allTimeMap.set(at.adId,   at);
       if (at.adName) state.allTimeMap.set(at.adName, at);
@@ -1535,6 +1538,12 @@ document.querySelectorAll('#main-table th[data-sort]').forEach(th => {
 //  park config die uit de n8n notion-daily webhook komt
 //  (item met _type:'config' als eerste in de array)
 // ════════════════════════════════════════════════════════════
+// ── Mock datums — altijd relatief aan vandaag ────────────────
+const _md = (monthsAgo, day = 15) => {
+  const d = new Date(); d.setDate(day); d.setMonth(d.getMonth() - monthsAgo);
+  return d.toISOString().slice(0, 10);
+};
+
 const MOCK = {
   inventaris: {
     totaalEenheden: 62,
@@ -1544,22 +1553,18 @@ const MOCK = {
       ...Array.from({length: 15}, (_, i) => ({ nr: i + 48, status: 'beschikbaar',  type: i < 6  ? 'Stacaravan' : i < 11 ? 'Chalet' : 'Lodge' })),
     ],
     verkopenPerMaand: [
-      { key: '2024-10', verkopen: 4 },
-      { key: '2024-11', verkopen: 5 },
-      { key: '2024-12', verkopen: 3 },
-      { key: '2025-01', verkopen: 6 },
-      { key: '2025-02', verkopen: 7 },
-      { key: '2025-03', verkopen: 8 },
-      { key: '2025-04', verkopen: 5 },
-      { key: '2025-05', verkopen: 4 },
-      { key: '2025-06', verkopen: 6 },
+      { key: _md(8).slice(0,7), verkopen: 4 },
+      { key: _md(7).slice(0,7), verkopen: 5 },
+      { key: _md(6).slice(0,7), verkopen: 3 },
+      { key: _md(5).slice(0,7), verkopen: 6 },
+      { key: _md(4).slice(0,7), verkopen: 7 },
+      { key: _md(3).slice(0,7), verkopen: 8 },
+      { key: _md(2).slice(0,7), verkopen: 5 },
+      { key: _md(1).slice(0,7), verkopen: 4 },
+      { key: _md(0).slice(0,7), verkopen: 6 },
     ]
   },
-  // Funnel fallback — wordt gebruikt wanneer er (nog) geen echte data is
   funnel: { clicks: 100, leads: 70, afspraken: 50, verkopen: 25 },
-
-  // Advertentie mock-data — wordt gebruikt zolang de n8n webhooks nog geen data teruggeven
-  // Verwijder dit blok (of laat het staan) zodra echte data binnenkomt
   allTime: [
     { adId: 'wd-1', adName: 'Wielsche Dreef – Natuur & Rust (Video)',          status: 'Actief'     },
     { adId: 'wd-2', adName: 'Wielsche Dreef – Stacaravan Deal (Carousel)',      status: 'Actief'     },
@@ -1568,28 +1573,28 @@ const MOCK = {
   ],
   dagelijks: [
     // ── Ad 1: Natuur & Rust (Video) ──────────────────────────────────────
-    { date:'2025-01-15', adId:'wd-1', adName:'Wielsche Dreef – Natuur & Rust (Video)',        spend:920,  clicks:310, leads:78,  appointments:24, signed:1, closed:0, omzet:58000,  imageUrl:null },
-    { date:'2025-02-15', adId:'wd-1', adName:'Wielsche Dreef – Natuur & Rust (Video)',        spend:1050, clicks:355, leads:89,  appointments:27, signed:1, closed:0, omzet:58000,  imageUrl:null },
-    { date:'2025-03-15', adId:'wd-1', adName:'Wielsche Dreef – Natuur & Rust (Video)',        spend:1180, clicks:400, leads:100, appointments:31, signed:2, closed:0, omzet:116000, imageUrl:null },
-    { date:'2025-04-15', adId:'wd-1', adName:'Wielsche Dreef – Natuur & Rust (Video)',        spend:840,  clicks:285, leads:71,  appointments:22, signed:1, closed:0, omzet:58000,  imageUrl:null },
-    { date:'2025-05-15', adId:'wd-1', adName:'Wielsche Dreef – Natuur & Rust (Video)',        spend:1020, clicks:345, leads:86,  appointments:26, signed:1, closed:0, omzet:58000,  imageUrl:null },
-    { date:'2025-06-15', adId:'wd-1', adName:'Wielsche Dreef – Natuur & Rust (Video)',        spend:680,  clicks:230, leads:57,  appointments:18, signed:0, closed:0, omzet:0,      imageUrl:null },
+    { date:_md(5), adId:'wd-1', adName:'Wielsche Dreef – Natuur & Rust (Video)',        spend:920,  clicks:310, leads:78,  appointments:24, signed:1, closed:0, omzet:58000,  imageUrl:null },
+    { date:_md(4), adId:'wd-1', adName:'Wielsche Dreef – Natuur & Rust (Video)',        spend:1050, clicks:355, leads:89,  appointments:27, signed:1, closed:0, omzet:58000,  imageUrl:null },
+    { date:_md(3), adId:'wd-1', adName:'Wielsche Dreef – Natuur & Rust (Video)',        spend:1180, clicks:400, leads:100, appointments:31, signed:2, closed:0, omzet:116000, imageUrl:null },
+    { date:_md(2), adId:'wd-1', adName:'Wielsche Dreef – Natuur & Rust (Video)',        spend:840,  clicks:285, leads:71,  appointments:22, signed:1, closed:0, omzet:58000,  imageUrl:null },
+    { date:_md(1), adId:'wd-1', adName:'Wielsche Dreef – Natuur & Rust (Video)',        spend:1020, clicks:345, leads:86,  appointments:26, signed:1, closed:0, omzet:58000,  imageUrl:null },
+    { date:_md(0), adId:'wd-1', adName:'Wielsche Dreef – Natuur & Rust (Video)',        spend:680,  clicks:230, leads:57,  appointments:18, signed:0, closed:0, omzet:0,      imageUrl:null },
     // ── Ad 2: Stacaravan Deal (Carousel) ─────────────────────────────────
-    { date:'2025-01-15', adId:'wd-2', adName:'Wielsche Dreef – Stacaravan Deal (Carousel)',   spend:620,  clicks:205, leads:52,  appointments:16, signed:0, closed:0, omzet:0,      imageUrl:null },
-    { date:'2025-02-15', adId:'wd-2', adName:'Wielsche Dreef – Stacaravan Deal (Carousel)',   spend:550,  clicks:182, leads:46,  appointments:14, signed:1, closed:0, omzet:52000,  imageUrl:null },
-    { date:'2025-03-15', adId:'wd-2', adName:'Wielsche Dreef – Stacaravan Deal (Carousel)',   spend:730,  clicks:245, leads:61,  appointments:19, signed:1, closed:0, omzet:52000,  imageUrl:null },
-    { date:'2025-04-15', adId:'wd-2', adName:'Wielsche Dreef – Stacaravan Deal (Carousel)',   spend:680,  clicks:225, leads:56,  appointments:17, signed:1, closed:0, omzet:52000,  imageUrl:null },
-    { date:'2025-05-15', adId:'wd-2', adName:'Wielsche Dreef – Stacaravan Deal (Carousel)',   spend:790,  clicks:265, leads:66,  appointments:20, signed:1, closed:0, omzet:52000,  imageUrl:null },
-    { date:'2025-06-15', adId:'wd-2', adName:'Wielsche Dreef – Stacaravan Deal (Carousel)',   spend:510,  clicks:170, leads:43,  appointments:13, signed:0, closed:0, omzet:0,      imageUrl:null },
-    // ── Ad 3: Familie Vakantie (Afbeelding) — gepauzeerd vanaf mei ───────
-    { date:'2025-01-15', adId:'wd-3', adName:'Wielsche Dreef – Familie Vakantie (Afbeelding)',spend:440,  clicks:145, leads:36,  appointments:11, signed:0, closed:0, omzet:0,      imageUrl:null },
-    { date:'2025-02-15', adId:'wd-3', adName:'Wielsche Dreef – Familie Vakantie (Afbeelding)',spend:510,  clicks:170, leads:43,  appointments:13, signed:1, closed:0, omzet:55000,  imageUrl:null },
-    { date:'2025-03-15', adId:'wd-3', adName:'Wielsche Dreef – Familie Vakantie (Afbeelding)',spend:580,  clicks:192, leads:48,  appointments:15, signed:0, closed:0, omzet:0,      imageUrl:null },
-    { date:'2025-04-15', adId:'wd-3', adName:'Wielsche Dreef – Familie Vakantie (Afbeelding)',spend:470,  clicks:155, leads:39,  appointments:12, signed:1, closed:0, omzet:55000,  imageUrl:null },
-    // ── Ad 4: Chalet Special (Video) — nieuw, gestart april ──────────────
-    { date:'2025-04-15', adId:'wd-4', adName:'Wielsche Dreef – Chalet Special (Video)',       spend:410,  clicks:135, leads:34,  appointments:10, signed:0, closed:0, omzet:0,      imageUrl:null },
-    { date:'2025-05-15', adId:'wd-4', adName:'Wielsche Dreef – Chalet Special (Video)',       spend:880,  clicks:295, leads:74,  appointments:22, signed:0, closed:0, omzet:0,      imageUrl:null },
-    { date:'2025-06-15', adId:'wd-4', adName:'Wielsche Dreef – Chalet Special (Video)',       spend:1100, clicks:370, leads:92,  appointments:28, signed:1, closed:0, omzet:65000,  imageUrl:null },
+    { date:_md(5), adId:'wd-2', adName:'Wielsche Dreef – Stacaravan Deal (Carousel)',   spend:620,  clicks:205, leads:52,  appointments:16, signed:0, closed:0, omzet:0,      imageUrl:null },
+    { date:_md(4), adId:'wd-2', adName:'Wielsche Dreef – Stacaravan Deal (Carousel)',   spend:550,  clicks:182, leads:46,  appointments:14, signed:1, closed:0, omzet:52000,  imageUrl:null },
+    { date:_md(3), adId:'wd-2', adName:'Wielsche Dreef – Stacaravan Deal (Carousel)',   spend:730,  clicks:245, leads:61,  appointments:19, signed:1, closed:0, omzet:52000,  imageUrl:null },
+    { date:_md(2), adId:'wd-2', adName:'Wielsche Dreef – Stacaravan Deal (Carousel)',   spend:680,  clicks:225, leads:56,  appointments:17, signed:1, closed:0, omzet:52000,  imageUrl:null },
+    { date:_md(1), adId:'wd-2', adName:'Wielsche Dreef – Stacaravan Deal (Carousel)',   spend:790,  clicks:265, leads:66,  appointments:20, signed:1, closed:0, omzet:52000,  imageUrl:null },
+    { date:_md(0), adId:'wd-2', adName:'Wielsche Dreef – Stacaravan Deal (Carousel)',   spend:510,  clicks:170, leads:43,  appointments:13, signed:0, closed:0, omzet:0,      imageUrl:null },
+    // ── Ad 3: Familie Vakantie (Afbeelding) — gepauzeerd ─────────────────
+    { date:_md(5), adId:'wd-3', adName:'Wielsche Dreef – Familie Vakantie (Afbeelding)',spend:440,  clicks:145, leads:36,  appointments:11, signed:0, closed:0, omzet:0,      imageUrl:null },
+    { date:_md(4), adId:'wd-3', adName:'Wielsche Dreef – Familie Vakantie (Afbeelding)',spend:510,  clicks:170, leads:43,  appointments:13, signed:1, closed:0, omzet:55000,  imageUrl:null },
+    { date:_md(3), adId:'wd-3', adName:'Wielsche Dreef – Familie Vakantie (Afbeelding)',spend:580,  clicks:192, leads:48,  appointments:15, signed:0, closed:0, omzet:0,      imageUrl:null },
+    { date:_md(2), adId:'wd-3', adName:'Wielsche Dreef – Familie Vakantie (Afbeelding)',spend:470,  clicks:155, leads:39,  appointments:12, signed:1, closed:0, omzet:55000,  imageUrl:null },
+    // ── Ad 4: Chalet Special (Video) — nieuw ─────────────────────────────
+    { date:_md(2), adId:'wd-4', adName:'Wielsche Dreef – Chalet Special (Video)',       spend:410,  clicks:135, leads:34,  appointments:10, signed:0, closed:0, omzet:0,      imageUrl:null },
+    { date:_md(1), adId:'wd-4', adName:'Wielsche Dreef – Chalet Special (Video)',       spend:880,  clicks:295, leads:74,  appointments:22, signed:0, closed:0, omzet:0,      imageUrl:null },
+    { date:_md(0), adId:'wd-4', adName:'Wielsche Dreef – Chalet Special (Video)',       spend:1100, clicks:370, leads:92,  appointments:28, signed:1, closed:0, omzet:65000,  imageUrl:null },
   ]
 };
 
