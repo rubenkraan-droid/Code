@@ -518,8 +518,8 @@
 
     <!-- Period Toggle -->
     <div class="period-row">
-      <button class="period-btn active" data-period="7d">Laatste 7 dagen</button>
-      <button class="period-btn" data-period="30d">Laatste 30 dagen</button>
+      <button class="period-btn" data-period="7d">Laatste 7 dagen</button>
+      <button class="period-btn active" data-period="30d">Laatste 30 dagen</button>
       <button class="period-btn" data-period="month">Deze maand</button>
       <select id="month-picker" class="month-picker">
         <option value="">Kies maand&hellip;</option>
@@ -774,7 +774,7 @@ const esc   = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').re
 const state = {
   dailyLog:   [],       // parsed daily log rows
   allTimeMap: new Map(),// Ad ID → allTime record
-  period:     '7d',
+  period:     '30d',
   sortCol:    'cpa',
   sortDir:    -1,       // -1 desc, 1 asc
   chart:      null
