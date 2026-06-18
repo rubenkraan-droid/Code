@@ -146,6 +146,26 @@
     }
     .month-picker:focus, .month-picker.active-month { border-color: var(--blue); color: var(--text); }
 
+    /* ── Demo mode ── */
+    .demo-btn {
+      background: var(--card); border: 1px solid var(--border);
+      color: var(--muted); padding: 7px 16px; border-radius: 999px;
+      cursor: pointer; font-size: 13px; transition: all .15s; white-space: nowrap;
+      margin-left: 10px;
+    }
+    .demo-btn:hover { border-color: var(--amber); color: var(--amber); }
+    .demo-btn.active {
+      background: rgba(245,158,11,.15); border-color: var(--amber);
+      color: var(--amber); font-weight: 600;
+    }
+    .demo-banner {
+      display: flex; align-items: center; gap: 10px;
+      background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.3);
+      border-radius: 8px; padding: 10px 16px; margin-bottom: 18px;
+      font-size: 13px; color: var(--amber);
+    }
+    .demo-banner strong { font-weight: 700; }
+
     /* ── Summary Bar ── */
     .summary-bar {
       display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 18px;
@@ -524,6 +544,12 @@
       <select id="month-picker" class="month-picker">
         <option value="">Kies maand&hellip;</option>
       </select>
+      <button id="demo-toggle-btn" class="demo-btn">&#9654; Demo</button>
+    </div>
+
+    <!-- Demo banner -->
+    <div id="demo-banner" class="demo-banner" hidden>
+      <strong>Demo modus</strong> — voorbeelddata voor presentaties. Werkelijke campagnedata is verborgen.
     </div>
 
     <!-- Summary Bar -->
@@ -777,8 +803,53 @@ const state = {
   period:     '30d',
   sortCol:    'cpa',
   sortDir:    -1,       // -1 desc, 1 asc
-  chart:      null
+  chart:      null,
+  demoMode:   false
 };
+
+function getDemoLog() {
+  const dd = n => { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); };
+  return [
+    // NH-AD2 – 5 entries, 1 sale @ €195k
+    { date: dd(29), adId: null, adName: 'Niet huren. Bezitten. - NH-AD2',              spend: 28, clicks: 108, leads: 1, appointments: 0, signed: 0, closed: 0, omzet: 0 },
+    { date: dd(22), adId: null, adName: 'Niet huren. Bezitten. - NH-AD2',              spend: 31, clicks: 118, leads: 2, appointments: 1, signed: 1, closed: 0, omzet: 195000 },
+    { date: dd(14), adId: null, adName: 'Niet huren. Bezitten. - NH-AD2',              spend: 25, clicks:  97, leads: 2, appointments: 0, signed: 0, closed: 0, omzet: 0 },
+    { date: dd( 8), adId: null, adName: 'Niet huren. Bezitten. - NH-AD2',              spend: 29, clicks: 112, leads: 1, appointments: 0, signed: 0, closed: 0, omzet: 0 },
+    { date: dd( 3), adId: null, adName: 'Niet huren. Bezitten. - NH-AD2',              spend: 27, clicks: 103, leads: 1, appointments: 0, signed: 0, closed: 0, omzet: 0 },
+    // DHR-AD2 – 4 entries, 1 sale @ €248k
+    { date: dd(28), adId: null, adName: 'De harde rekening - DHR-AD2',                 spend: 32, clicks: 151, leads: 2, appointments: 1, signed: 0, closed: 0, omzet: 0 },
+    { date: dd(20), adId: null, adName: 'De harde rekening - DHR-AD2',                 spend: 35, clicks: 162, leads: 3, appointments: 1, signed: 1, closed: 0, omzet: 248000 },
+    { date: dd(11), adId: null, adName: 'De harde rekening - DHR-AD2',                 spend: 28, clicks: 138, leads: 2, appointments: 0, signed: 0, closed: 0, omzet: 0 },
+    { date: dd( 4), adId: null, adName: 'De harde rekening - DHR-AD2',                 spend: 30, clicks: 144, leads: 2, appointments: 0, signed: 0, closed: 0, omzet: 0 },
+    // JT-AD1 – 4 entries, 1 sale @ €215k
+    { date: dd(26), adId: null, adName: 'Jouw twee weken - JT-AD1',                    spend: 24, clicks:  88, leads: 1, appointments: 0, signed: 0, closed: 0, omzet: 0 },
+    { date: dd(17), adId: null, adName: 'Jouw twee weken - JT-AD1',                    spend: 28, clicks: 102, leads: 1, appointments: 1, signed: 1, closed: 0, omzet: 215000 },
+    { date: dd( 9), adId: null, adName: 'Jouw twee weken - JT-AD1',                    spend: 22, clicks:  83, leads: 1, appointments: 0, signed: 0, closed: 0, omzet: 0 },
+    { date: dd( 2), adId: null, adName: 'Jouw twee weken - JT-AD1',                    spend: 26, clicks:  94, leads: 1, appointments: 0, signed: 0, closed: 0, omzet: 0 },
+    // DB-AD2 – 4 entries, 1 sale @ €262k
+    { date: dd(25), adId: null, adName: 'Dit bestaat - DB-AD2',                        spend: 25, clicks:  92, leads: 1, appointments: 0, signed: 0, closed: 0, omzet: 0 },
+    { date: dd(16), adId: null, adName: 'Dit bestaat - DB-AD2',                        spend: 29, clicks: 108, leads: 1, appointments: 1, signed: 0, closed: 0, omzet: 0 },
+    { date: dd( 7), adId: null, adName: 'Dit bestaat - DB-AD2',                        spend: 23, clicks:  86, leads: 1, appointments: 1, signed: 1, closed: 0, omzet: 262000 },
+    { date: dd( 1), adId: null, adName: 'Dit bestaat - DB-AD2',                        spend: 27, clicks:  99, leads: 1, appointments: 0, signed: 0, closed: 0, omzet: 0 },
+    // DV-AD1 – 3 entries, 0 sales
+    { date: dd(27), adId: null, adName: 'De vergelijking - DV-AD1',                    spend: 21, clicks:  77, leads: 1, appointments: 0, signed: 0, closed: 0, omzet: 0 },
+    { date: dd(15), adId: null, adName: 'De vergelijking - DV-AD1',                    spend: 24, clicks:  88, leads: 1, appointments: 0, signed: 0, closed: 0, omzet: 0 },
+    { date: dd( 6), adId: null, adName: 'De vergelijking - DV-AD1',                    spend: 22, clicks:  82, leads: 0, appointments: 0, signed: 0, closed: 0, omzet: 0 },
+    // DD-AD2 – 2 entries, 0 sales
+    { date: dd(23), adId: null, adName: 'Droomplek die zichzelf terugbetaalt - DD-AD2',spend: 24, clicks:  79, leads: 1, appointments: 0, signed: 0, closed: 0, omzet: 0 },
+    { date: dd(12), adId: null, adName: 'Droomplek die zichzelf terugbetaalt - DD-AD2',spend: 26, clicks:  86, leads: 0, appointments: 0, signed: 0, closed: 0, omzet: 0 },
+    // DB-AD3 – 2 entries, 0 sales
+    { date: dd(24), adId: null, adName: 'Dit bestaat - DB-AD3',                        spend: 14, clicks:  52, leads: 0, appointments: 0, signed: 0, closed: 0, omzet: 0 },
+    { date: dd(13), adId: null, adName: 'Dit bestaat - DB-AD3',                        spend: 13, clicks:  47, leads: 0, appointments: 0, signed: 0, closed: 0, omzet: 0 },
+    // JT-AD3 – 2 entries, 0 sales
+    { date: dd(21), adId: null, adName: 'Jouw twee weken - JT-AD3',                    spend: 12, clicks:  38, leads: 0, appointments: 0, signed: 0, closed: 0, omzet: 0 },
+    { date: dd(10), adId: null, adName: 'Jouw twee weken - JT-AD3',                    spend: 11, clicks:  35, leads: 0, appointments: 0, signed: 0, closed: 0, omzet: 0 },
+  ];
+}
+
+function getActiveLog() {
+  return state.demoMode ? getDemoLog() : state.dailyLog;
+}
 
 // ════════════════════════════════════════════════════════════
 //  Notion API
@@ -1074,8 +1145,8 @@ function renderMainTable(ads) {
 // ════════════════════════════════════════════════════════════
 //  Render: Monthly Overview
 // ════════════════════════════════════════════════════════════
-function renderMonthlyTable() {
-  const monthly = aggMonthly(state.dailyLog);
+function renderMonthlyTable(log) {
+  const monthly = aggMonthly(log ?? state.dailyLog);
   const now = new Date();
   const curKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
 
@@ -1280,16 +1351,20 @@ function populateMonthPicker() {
 //  Main update cycle
 // ════════════════════════════════════════════════════════════
 function update() {
+  const log   = getActiveLog();
   const range = getRange(state.period);
   if (!range) return;
-  const rows = filterRows(state.dailyLog, range);
+  const rows = filterRows(log, range);
   const ads  = aggAds(rows);
 
   renderSummary(ads);
   renderMainTable(ads);
   renderChart(rows, range);
-  renderMonthlyTable();   // always full history
+  renderMonthlyTable(log);
   renderBeste(ads);
+
+  document.getElementById('demo-banner').hidden       = !state.demoMode;
+  document.getElementById('demo-toggle-btn').classList.toggle('active', state.demoMode);
 
   // Sync period toggle UI
   document.querySelectorAll('.period-btn').forEach(b => {
@@ -1504,6 +1579,12 @@ async function init() {
 // Period toggle buttons
 document.querySelectorAll('.period-btn').forEach(btn => {
   btn.addEventListener('click', () => { state.period = btn.dataset.period; update(); });
+});
+
+// Demo mode toggle
+document.getElementById('demo-toggle-btn').addEventListener('click', () => {
+  state.demoMode = !state.demoMode;
+  update();
 });
 
 // Month picker
