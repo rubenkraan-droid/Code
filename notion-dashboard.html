@@ -1223,7 +1223,7 @@ function renderBeste(ads) {
     .filter(a => a.appointments >= 1 && a.cpa != null)
     .sort((a, b) => a.cpa - b.cpa);
   const withCpl = ads
-    .filter(a => a.appointments === 0 && a.cpl != null && a.cpl < 25)
+    .filter(a => a.appointments === 0 && a.cpl != null)
     .sort((a, b) => a.cpl - b.cpl);
   const top5 = [...withCpa, ...withCpl].slice(0, 5);
 
