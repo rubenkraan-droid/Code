@@ -574,6 +574,7 @@
               <th data-sort="status">Status</th>
               <th data-sort="spend"        class="right">Uitgaven</th>
               <th data-sort="clicks"       class="right">Clicks</th>
+              <th data-sort="cpc"          class="right muted">CPC</th>
               <th data-sort="optInRate"    class="right muted">Opt-In%</th>
               <th data-sort="leads"        class="right">Leads</th>
               <th data-sort="cpl"          class="right">CPL</th>
@@ -588,6 +589,43 @@
             </tr>
           </thead>
           <tbody id="main-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- All-time Overzicht -->
+    <div class="card">
+      <div class="card-title" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        All-time overzicht
+        <div id="alltime-filter" style="display:flex;gap:6px">
+          <button class="period-btn active" data-filter="all">Alle</button>
+          <button class="period-btn" data-filter="active">Actief</button>
+          <button class="period-btn" data-filter="killed">Gestopt</button>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <table id="alltime-table">
+          <thead>
+            <tr>
+              <th>Advertentie</th>
+              <th>Status</th>
+              <th class="right">Uitgaven</th>
+              <th class="right">Clicks</th>
+              <th class="right muted">CPC</th>
+              <th class="right muted">Opt-In%</th>
+              <th class="right">Leads</th>
+              <th class="right">CPL</th>
+              <th class="right muted">Afspr%</th>
+              <th class="right">Afspraken</th>
+              <th class="right">CPA</th>
+              <th class="right muted">Sales%</th>
+              <th class="right">Sales</th>
+              <th class="right">CPS</th>
+              <th class="right">Omzet</th>
+              <th class="right">ROAS</th>
+            </tr>
+          </thead>
+          <tbody id="alltime-tbody"></tbody>
         </table>
       </div>
     </div>
@@ -806,14 +844,15 @@ const esc   = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').re
 //  State
 // ════════════════════════════════════════════════════════════
 const state = {
-  dailyLog:   [],       // parsed daily log rows
-  allTimeMap: new Map(),// Ad ID → allTime record
-  period:     '30d',
-  sortCol:    'cpa',
-  sortDir:    -1,       // -1 desc, 1 asc
-  chart:      null,
-  cpcChart:   null,
-  demoMode:   false
+  dailyLog:      [],       // parsed daily log rows
+  allTimeMap:    new Map(),// Ad ID → allTime record
+  period:        '30d',
+  sortCol:       'cpa',
+  sortDir:       -1,       // -1 desc, 1 asc
+  chart:         null,
+  cpcChart:      null,
+  demoMode:      false,
+  allTimeFilter: 'all'    // 'all' | 'active' | 'killed'
 };
 
 function getDemoLog() {
@@ -1040,6 +1079,7 @@ function aggAds(rows) {
   }
   return Array.from(map.values()).map(a => ({
     ...a,
+    cpc:       a.clicks       > 0 ? a.spend / a.clicks        : null,
     cpl:       a.leads        > 0 ? a.spend / a.leads        : null,
     cpa:       a.appointments > 0 ? a.spend / a.appointments : null,
     cpsSigned: a.signed       > 0 ? a.spend / a.signed       : null,
@@ -1160,6 +1200,7 @@ function renderMainTable(ads) {
       <td>${statusBadge}</td>
       <td class="mono right">${fEur(ad.spend)}</td>
       <td class="mono right">${fNum(ad.clicks)}</td>
+      <td class="mono right muted">${fEur(ad.cpc)}</td>
       <td class="mono right muted">${fPct(ad.optInRate)}</td>
       <td class="mono right">${fNum(ad.leads)}</td>
       <td class="mono right">${fEur(ad.cpl)}</td>
@@ -1320,6 +1361,52 @@ function renderChart(rows, range) {
 }
 
 // ════════════════════════════════════════════════════════════
+//  Render: All-time Table
+// ════════════════════════════════════════════════════════════
+function renderAllTimeTable() {
+  const log = getActiveLog();
+  let ads = aggAds(log).filter(a => a.spend > 0);
+
+  const f = state.allTimeFilter;
+  if (f === 'active') {
+    ads = ads.filter(a => a.status === 'Active' || a.status === 'Actief');
+  } else if (f === 'killed') {
+    ads = ads.filter(a => a.status && a.status !== 'Active' && a.status !== 'Actief');
+  }
+
+  ads.sort((a, b) => (a.cpl ?? 999) - (b.cpl ?? 999));
+
+  document.getElementById('alltime-tbody').innerHTML = ads.map(ad => {
+    const isActive = ad.status === 'Active' || ad.status === 'Actief';
+    const statusBadge = ad.status
+      ? (isActive ? '<span class="badge badge-green">Actief</span>' : '<span class="badge badge-grey">Gestopt</span>')
+      : '<span class="muted">—</span>';
+    return `<tr>
+      <td class="ad-name-cell" title="${esc(ad.adName)}">${esc(ad.adName)}</td>
+      <td>${statusBadge}</td>
+      <td class="mono right">${fEur(ad.spend)}</td>
+      <td class="mono right">${fNum(ad.clicks)}</td>
+      <td class="mono right muted">${fEur(ad.cpc)}</td>
+      <td class="mono right muted">${fPct(ad.optInRate)}</td>
+      <td class="mono right">${fNum(ad.leads)}</td>
+      <td class="mono right">${fEur(ad.cpl)}</td>
+      <td class="mono right muted">${fPct(ad.afsprRate)}</td>
+      <td class="mono right">${fNum(ad.appointments)}</td>
+      <td class="mono right">${fEur(ad.cpa)}</td>
+      <td class="mono right muted">${fPct(ad.signRate)}</td>
+      <td class="mono right amber">${fNum(ad.signed)}</td>
+      <td class="mono right amber">${fEur(ad.cpsSigned)}</td>
+      <td class="mono right">${fEur(ad.omzet || null)}</td>
+      <td class="mono right blue">${fRoas(ad.roas)}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="16" class="muted" style="padding:12px">Geen advertenties.</td></tr>';
+
+  document.querySelectorAll('#alltime-filter .period-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.filter === state.allTimeFilter);
+  });
+}
+
+// ════════════════════════════════════════════════════════════
 //  Render: Beste Advertenties (top 5 by lowest CPA)
 // ════════════════════════════════════════════════════════════
 function renderBeste(ads) {
@@ -1456,6 +1543,7 @@ function update() {
 
   renderSummary(ads);
   renderMainTable(ads);
+  renderAllTimeTable();
   renderChart(rows, range);
   renderCpcChart(ads);
   renderMonthlyTable(log);
@@ -1688,6 +1776,14 @@ document.getElementById('demo-toggle-btn').addEventListener('click', () => {
 // Month picker
 document.getElementById('month-picker').addEventListener('change', e => {
   if (e.target.value) { state.period = e.target.value; update(); }
+});
+
+// All-time filter buttons
+document.querySelectorAll('#alltime-filter .period-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    state.allTimeFilter = b.dataset.filter;
+    renderAllTimeTable();
+  });
 });
 
 // Sortable headers on main table
