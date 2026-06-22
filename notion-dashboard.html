@@ -1058,16 +1058,18 @@ function driveUrl(url) {
 function getRange(period) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+
   if (period === '7d') {
-    const s = new Date(today); s.setDate(today.getDate() - 6);
-    return { start: s, end: today };
+    const s = new Date(yesterday); s.setDate(yesterday.getDate() - 6);
+    return { start: s, end: yesterday };
   }
   if (period === '30d') {
-    const s = new Date(today); s.setDate(today.getDate() - 29);
-    return { start: s, end: today };
+    const s = new Date(yesterday); s.setDate(yesterday.getDate() - 29);
+    return { start: s, end: yesterday };
   }
   if (period === 'month') {
-    return { start: new Date(today.getFullYear(), today.getMonth(), 1), end: today };
+    return { start: new Date(today.getFullYear(), today.getMonth(), 1), end: yesterday };
   }
   if (/^\d{4}-\d{2}$/.test(period)) {
     const [y, m] = period.split('-').map(Number);
