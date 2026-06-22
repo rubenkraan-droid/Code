@@ -1361,9 +1361,10 @@ function renderChart(rows, range) {
     cur.setDate(cur.getDate() + 1);
   }
 
-  const labels    = dates.map(d => { const dt = new Date(d+'T00:00:00'); return `${dt.getDate()} ${MONTHS_SHORT[dt.getMonth()]}`; });
-  const spendData = dates.map(d => dm.get(d)?.spend || 0);
-  const cplData   = dates.map(d => { const v = dm.get(d); return v && v.leads > 0 ? v.spend / v.leads : null; });
+  const labels     = dates.map(d => { const dt = new Date(d+'T00:00:00'); return `${dt.getDate()} ${MONTHS_SHORT[dt.getMonth()]}`; });
+  const spendData  = dates.map(d => dm.get(d)?.spend || 0);
+  const cplData    = dates.map(d => { const v = dm.get(d); return v && v.leads > 0 ? v.spend / v.leads : null; });
+  const leadsData  = dates.map(d => dm.get(d)?.leads || 0);
 
   if (state.chart) { state.chart.destroy(); state.chart = null; }
 
@@ -1378,6 +1379,14 @@ function renderChart(rows, range) {
           borderColor: '#3B82F6', backgroundColor: 'rgba(59,130,246,.07)',
           fill: true, tension: 0.3, yAxisID: 'y',
           pointRadius: 3, pointHoverRadius: 5
+        },
+        {
+          label: 'Leads',
+          data: leadsData,
+          borderColor: '#F59E0B', backgroundColor: 'rgba(245,158,11,.07)',
+          fill: false, tension: 0.3, yAxisID: 'y2',
+          pointRadius: 4, pointHoverRadius: 6,
+          borderWidth: 2
         },
         {
           label: 'CPL',
@@ -1399,7 +1408,11 @@ function renderChart(rows, range) {
           backgroundColor: '#1E293B', borderColor: '#334155', borderWidth: 1,
           titleColor: '#F1F5F9', bodyColor: '#94A3B8',
           callbacks: {
-            label: ctx => ctx.parsed.y == null ? null : `${ctx.dataset.label}: ${fEur(ctx.parsed.y)}`
+            label: ctx => {
+              if (ctx.parsed.y == null) return null;
+              if (ctx.dataset.label === 'Leads') return `Leads: ${ctx.parsed.y}`;
+              return `${ctx.dataset.label}: ${fEur(ctx.parsed.y)}`;
+            }
           }
         }
       },
@@ -1416,6 +1429,12 @@ function renderChart(rows, range) {
         y1: {
           position: 'right',
           ticks: { color: '#10B981', callback: v => fEur(v) },
+          grid: { drawOnChartArea: false }
+        },
+        y2: {
+          position: 'right',
+          offset: true,
+          ticks: { color: '#F59E0B', stepSize: 1, callback: v => Number.isInteger(v) ? v : null },
           grid: { drawOnChartArea: false }
         }
       }
