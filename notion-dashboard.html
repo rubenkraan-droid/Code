@@ -831,9 +831,14 @@ const _eur = new Intl.NumberFormat('nl-NL', {
   style: 'currency', currency: 'EUR',
   minimumFractionDigits: 0, maximumFractionDigits: 0
 });
+const _eur2 = new Intl.NumberFormat('nl-NL', {
+  style: 'currency', currency: 'EUR',
+  minimumFractionDigits: 2, maximumFractionDigits: 2
+});
 const _num = new Intl.NumberFormat('nl-NL', { maximumFractionDigits: 0 });
 
 const fEur  = v => (v == null || isNaN(v)) ? '—' : _eur.format(v);
+const fEur2 = v => (v == null || isNaN(v)) ? '—' : _eur2.format(v);
 const fNum  = v => (v == null || isNaN(v)) ? '—' : _num.format(Math.round(v));
 const fRoas = v => (v == null || isNaN(v)) ? '—' : `${v.toFixed(2)}×`;
 const fPct  = v => (v == null || isNaN(v)) ? '—' : `${Math.round(v * 100)}%`;
@@ -1179,7 +1184,7 @@ function renderSummary(ads) {
 // ════════════════════════════════════════════════════════════
 function renderMainTable(ads) {
   const { sortCol, sortDir } = state;
-  const sorted = [...ads].sort((a, b) => {
+  const sorted = [...ads].filter(a => a.spend > 0).sort((a, b) => {
     let va = a[sortCol] ?? (sortDir === -1 ? -Infinity : Infinity);
     let vb = b[sortCol] ?? (sortDir === -1 ? -Infinity : Infinity);
     return (typeof va === 'string' ? va.localeCompare(vb) : va - vb) * sortDir;
@@ -1200,7 +1205,7 @@ function renderMainTable(ads) {
       <td>${statusBadge}</td>
       <td class="mono right">${fEur(ad.spend)}</td>
       <td class="mono right">${fNum(ad.clicks)}</td>
-      <td class="mono right muted">${fEur(ad.cpc)}</td>
+      <td class="mono right muted">${fEur2(ad.cpc)}</td>
       <td class="mono right muted">${fPct(ad.optInRate)}</td>
       <td class="mono right">${fNum(ad.leads)}</td>
       <td class="mono right">${fEur(ad.cpl)}</td>
@@ -1386,7 +1391,7 @@ function renderAllTimeTable() {
       <td>${statusBadge}</td>
       <td class="mono right">${fEur(ad.spend)}</td>
       <td class="mono right">${fNum(ad.clicks)}</td>
-      <td class="mono right muted">${fEur(ad.cpc)}</td>
+      <td class="mono right muted">${fEur2(ad.cpc)}</td>
       <td class="mono right muted">${fPct(ad.optInRate)}</td>
       <td class="mono right">${fNum(ad.leads)}</td>
       <td class="mono right">${fEur(ad.cpl)}</td>
