@@ -530,6 +530,8 @@
     <button class="tab-btn" data-tab="inventaris">Verkoop &amp; Inventaris</button>
     <button class="tab-btn" data-tab="projector">Sell-out Projector</button>
     <button class="tab-btn" data-tab="funnel">Marketingfunnel</button>
+    <button class="tab-btn" data-tab="alltime">All-time</button>
+    <button class="tab-btn" data-tab="aangepast">Aangepast</button>
     <button class="tab-btn" data-tab="briefing">AI Briefing</button>
   </div>
 
@@ -593,43 +595,6 @@
       </div>
     </div>
 
-    <!-- All-time Overzicht -->
-    <div class="card">
-      <div class="card-title" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-        All-time overzicht
-        <div id="alltime-filter" style="display:flex;gap:6px">
-          <button class="period-btn active" data-filter="all">Alle</button>
-          <button class="period-btn" data-filter="active">Actief</button>
-          <button class="period-btn" data-filter="killed">Gestopt</button>
-        </div>
-      </div>
-      <div class="tbl-wrap">
-        <table id="alltime-table">
-          <thead>
-            <tr>
-              <th>Advertentie</th>
-              <th>Status</th>
-              <th class="right">Uitgaven</th>
-              <th class="right">Clicks</th>
-              <th class="right muted">CPC</th>
-              <th class="right muted">Opt-In%</th>
-              <th class="right">Leads</th>
-              <th class="right">CPL</th>
-              <th class="right muted">Afspr%</th>
-              <th class="right">Afspraken</th>
-              <th class="right">CPA</th>
-              <th class="right muted">Sales%</th>
-              <th class="right">Sales</th>
-              <th class="right">CPS</th>
-              <th class="right">Omzet</th>
-              <th class="right">ROAS</th>
-            </tr>
-          </thead>
-          <tbody id="alltime-tbody"></tbody>
-        </table>
-      </div>
-    </div>
-
     <!-- CPC & Opt-in Bar Chart -->
     <div class="card">
       <div class="card-title">CPC per advertentie <span class="muted" style="font-size:11px;font-weight:400">— kleur = opt-in%</span></div>
@@ -674,6 +639,88 @@
     </div>
 
   </div><!-- /#tab-advertenties -->
+
+  <!-- Tab: All-time -->
+  <div id="tab-alltime" class="tab-pane" hidden>
+    <div class="card">
+      <div class="card-title" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        All-time overzicht
+        <div id="alltime-filter" style="display:flex;gap:6px">
+          <button class="period-btn active" data-filter="all">Alle</button>
+          <button class="period-btn" data-filter="active">Actief</button>
+          <button class="period-btn" data-filter="killed">Gestopt</button>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <table id="alltime-table">
+          <thead>
+            <tr>
+              <th>Advertentie</th>
+              <th>Status</th>
+              <th class="right">Uitgaven</th>
+              <th class="right">Clicks</th>
+              <th class="right muted">CPC</th>
+              <th class="right muted">Opt-In%</th>
+              <th class="right">Leads</th>
+              <th class="right">CPL</th>
+              <th class="right muted">Afspr%</th>
+              <th class="right">Afspraken</th>
+              <th class="right">CPA</th>
+              <th class="right muted">Sales%</th>
+              <th class="right">Sales</th>
+              <th class="right">CPS</th>
+              <th class="right">Omzet</th>
+              <th class="right">ROAS</th>
+            </tr>
+          </thead>
+          <tbody id="alltime-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div><!-- /#tab-alltime -->
+
+  <!-- Tab: Aangepast -->
+  <div id="tab-aangepast" class="tab-pane" hidden>
+    <div class="card">
+      <div class="card-title">Aangepaste periode</div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:4px">
+        <label style="color:var(--muted);font-size:13px">Van</label>
+        <input type="date" id="custom-from" class="month-picker" style="width:160px">
+        <label style="color:var(--muted);font-size:13px">Tot</label>
+        <input type="date" id="custom-to" class="month-picker" style="width:160px">
+        <button id="custom-apply" class="btn">Toepassen</button>
+      </div>
+    </div>
+    <div class="summary-bar" id="custom-summary-bar" hidden></div>
+    <div class="card" id="custom-table-card" hidden>
+      <div class="card-title" id="custom-table-title"></div>
+      <div class="tbl-wrap">
+        <table id="custom-table">
+          <thead>
+            <tr>
+              <th>Advertentie</th>
+              <th>Status</th>
+              <th class="right">Uitgaven</th>
+              <th class="right">Clicks</th>
+              <th class="right muted">CPC</th>
+              <th class="right muted">Opt-In%</th>
+              <th class="right">Leads</th>
+              <th class="right">CPL</th>
+              <th class="right muted">Afspr%</th>
+              <th class="right">Afspraken</th>
+              <th class="right">CPA</th>
+              <th class="right muted">Sales%</th>
+              <th class="right">Sales</th>
+              <th class="right">CPS</th>
+              <th class="right">Omzet</th>
+              <th class="right">ROAS</th>
+            </tr>
+          </thead>
+          <tbody id="custom-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div><!-- /#tab-aangepast -->
 
   <!-- Tab 2: Verkoop & Inventaris -->
   <div id="tab-inventaris" class="tab-pane" hidden>
@@ -863,65 +910,60 @@ const state = {
 function getDemoLog() {
   const dd = n => { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); };
   return [
-    // NH-AD2 – €2.100 spend, 14 leads, 1 sale @ €195k
-    { date: dd(29), adId: null, adName: 'Niet huren. Bezitten. - NH-AD2',              spend:  360, clicks: 178, leads: 3, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    { date: dd(22), adId: null, adName: 'Niet huren. Bezitten. - NH-AD2',              spend:  420, clicks: 208, leads: 3, appointments: 1, signed: 1, closed: 0, omzet: 195000 },
-    { date: dd(15), adId: null, adName: 'Niet huren. Bezitten. - NH-AD2',              spend:  400, clicks: 198, leads: 3, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    { date: dd( 8), adId: null, adName: 'Niet huren. Bezitten. - NH-AD2',              spend:  460, clicks: 228, leads: 3, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    { date: dd( 2), adId: null, adName: 'Niet huren. Bezitten. - NH-AD2',              spend:  460, clicks: 228, leads: 2, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    // DHR-AD2 – €1.890 spend, 13 leads, 1 sale @ €248k
-    { date: dd(28), adId: null, adName: 'De harde rekening - DHR-AD2',                 spend:  350, clicks: 174, leads: 3, appointments: 1, signed: 0, closed: 0, omzet:       0 },
-    { date: dd(21), adId: null, adName: 'De harde rekening - DHR-AD2',                 spend:  400, clicks: 198, leads: 3, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    { date: dd(14), adId: null, adName: 'De harde rekening - DHR-AD2',                 spend:  420, clicks: 208, leads: 3, appointments: 1, signed: 1, closed: 0, omzet: 248000 },
-    { date: dd( 7), adId: null, adName: 'De harde rekening - DHR-AD2',                 spend:  380, clicks: 188, leads: 2, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    { date: dd( 1), adId: null, adName: 'De harde rekening - DHR-AD2',                 spend:  340, clicks: 168, leads: 2, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    // JT-AD1 – €1.650 spend, 12 leads, 1 sale @ €215k
-    { date: dd(27), adId: null, adName: 'Jouw twee weken - JT-AD1',                    spend:  300, clicks: 148, leads: 2, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    { date: dd(20), adId: null, adName: 'Jouw twee weken - JT-AD1',                    spend:  350, clicks: 174, leads: 3, appointments: 1, signed: 0, closed: 0, omzet:       0 },
-    { date: dd(13), adId: null, adName: 'Jouw twee weken - JT-AD1',                    spend:  330, clicks: 163, leads: 2, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    { date: dd( 6), adId: null, adName: 'Jouw twee weken - JT-AD1',                    spend:  360, clicks: 178, leads: 3, appointments: 1, signed: 1, closed: 0, omzet: 215000 },
-    { date: dd( 1), adId: null, adName: 'Jouw twee weken - JT-AD1',                    spend:  310, clicks: 153, leads: 2, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    // DB-AD2 – €1.900 spend, 13 leads, 1 sale @ €262k
-    { date: dd(26), adId: null, adName: 'Dit bestaat - DB-AD2',                        spend:  340, clicks: 168, leads: 2, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    { date: dd(19), adId: null, adName: 'Dit bestaat - DB-AD2',                        spend:  400, clicks: 198, leads: 3, appointments: 1, signed: 0, closed: 0, omzet:       0 },
-    { date: dd(12), adId: null, adName: 'Dit bestaat - DB-AD2',                        spend:  380, clicks: 188, leads: 3, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    { date: dd( 5), adId: null, adName: 'Dit bestaat - DB-AD2',                        spend:  420, clicks: 208, leads: 3, appointments: 1, signed: 1, closed: 0, omzet: 262000 },
-    { date: dd( 1), adId: null, adName: 'Dit bestaat - DB-AD2',                        spend:  360, clicks: 178, leads: 2, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    // DV-AD1 – €1.150 spend, 9 leads
-    { date: dd(25), adId: null, adName: 'De vergelijking - DV-AD1',                    spend:  240, clicks: 118, leads: 2, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    { date: dd(18), adId: null, adName: 'De vergelijking - DV-AD1',                    spend:  250, clicks: 123, leads: 2, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    { date: dd(11), adId: null, adName: 'De vergelijking - DV-AD1',                    spend:  230, clicks: 113, leads: 2, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    { date: dd( 4), adId: null, adName: 'De vergelijking - DV-AD1',                    spend:  250, clicks: 123, leads: 2, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    { date: dd( 1), adId: null, adName: 'De vergelijking - DV-AD1',                    spend:  180, clicks:  88, leads: 1, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    // DD-AD2 – €970 spend, 7 leads
-    { date: dd(24), adId: null, adName: 'Droomplek die zichzelf terugbetaalt - DD-AD2',spend:  200, clicks:  98, leads: 1, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    { date: dd(17), adId: null, adName: 'Droomplek die zichzelf terugbetaalt - DD-AD2',spend:  210, clicks: 103, leads: 2, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    { date: dd(10), adId: null, adName: 'Droomplek die zichzelf terugbetaalt - DD-AD2',spend:  200, clicks:  98, leads: 2, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    { date: dd( 3), adId: null, adName: 'Droomplek die zichzelf terugbetaalt - DD-AD2',spend:  180, clicks:  88, leads: 1, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    { date: dd( 1), adId: null, adName: 'Droomplek die zichzelf terugbetaalt - DD-AD2',spend:  180, clicks:  88, leads: 1, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    // DB-AD3 – €680 spend, 3 leads
-    { date: dd(23), adId: null, adName: 'Dit bestaat - DB-AD3',                        spend:  150, clicks:  73, leads: 1, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    { date: dd(16), adId: null, adName: 'Dit bestaat - DB-AD3',                        spend:  160, clicks:  78, leads: 1, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    { date: dd( 9), adId: null, adName: 'Dit bestaat - DB-AD3',                        spend:  150, clicks:  73, leads: 1, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    { date: dd( 3), adId: null, adName: 'Dit bestaat - DB-AD3',                        spend:  110, clicks:  53, leads: 0, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    { date: dd( 1), adId: null, adName: 'Dit bestaat - DB-AD3',                        spend:  110, clicks:  53, leads: 0, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    // JT-AD3 – €560 spend, 3 leads
-    { date: dd(22), adId: null, adName: 'Jouw twee weken - JT-AD3',                    spend:  130, clicks:  63, leads: 1, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    { date: dd(15), adId: null, adName: 'Jouw twee weken - JT-AD3',                    spend:  120, clicks:  58, leads: 1, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    { date: dd( 8), adId: null, adName: 'Jouw twee weken - JT-AD3',                    spend:  130, clicks:  63, leads: 1, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    { date: dd( 3), adId: null, adName: 'Jouw twee weken - JT-AD3',                    spend:   90, clicks:  43, leads: 0, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    { date: dd( 1), adId: null, adName: 'Jouw twee weken - JT-AD3',                    spend:   90, clicks:  43, leads: 0, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    // DD-AD3 – €420 spend, 0 leads
-    { date: dd(21), adId: null, adName: 'Droomplek die zichzelf terugbetaalt - DD-AD3',spend:  100, clicks:  48, leads: 0, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    { date: dd(14), adId: null, adName: 'Droomplek die zichzelf terugbetaalt - DD-AD3',spend:  100, clicks:  48, leads: 0, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    { date: dd( 7), adId: null, adName: 'Droomplek die zichzelf terugbetaalt - DD-AD3',spend:  100, clicks:  48, leads: 0, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    { date: dd( 1), adId: null, adName: 'Droomplek die zichzelf terugbetaalt - DD-AD3',spend:  120, clicks:  58, leads: 0, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    // DV-AD2 – €370 spend, 0 leads
-    { date: dd(20), adId: null, adName: 'De vergelijking - DV-AD2',                    spend:  100, clicks:  48, leads: 0, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    { date: dd(12), adId: null, adName: 'De vergelijking - DV-AD2',                    spend:   90, clicks:  43, leads: 0, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    { date: dd( 5), adId: null, adName: 'De vergelijking - DV-AD2',                    spend:   90, clicks:  43, leads: 0, appointments: 0, signed: 0, closed: 0, omzet:       0 },
-    { date: dd( 1), adId: null, adName: 'De vergelijking - DV-AD2',                    spend:   90, clicks:  43, leads: 0, appointments: 0, signed: 0, closed: 0, omzet:       0 },
+    // NH-AD2 – €1.900 spend, 100 leads, 5 afspraken, 1 sale @ €195k  → CPL €19, CPA €380
+    { date: dd(29), adId: null, adName: 'Niet huren. Bezitten. - NH-AD2',              spend:  380, clicks: 286, leads: 20, appointments: 0, signed: 0, closed: 0, omzet:       0 },
+    { date: dd(22), adId: null, adName: 'Niet huren. Bezitten. - NH-AD2',              spend:  420, clicks: 315, leads: 22, appointments: 1, signed: 1, closed: 0, omzet: 195000 },
+    { date: dd(15), adId: null, adName: 'Niet huren. Bezitten. - NH-AD2',              spend:  380, clicks: 286, leads: 20, appointments: 2, signed: 0, closed: 0, omzet:       0 },
+    { date: dd( 8), adId: null, adName: 'Niet huren. Bezitten. - NH-AD2',              spend:  360, clicks: 271, leads: 19, appointments: 1, signed: 0, closed: 0, omzet:       0 },
+    { date: dd( 2), adId: null, adName: 'Niet huren. Bezitten. - NH-AD2',              spend:  360, clicks: 271, leads: 19, appointments: 1, signed: 0, closed: 0, omzet:       0 },
+    // DHR-AD2 – €1.800 spend, 86 leads, 5 afspraken, 1 sale @ €248k  → CPL €20.9, CPA €360
+    { date: dd(28), adId: null, adName: 'De harde rekening - DHR-AD2',                 spend:  360, clicks: 245, leads: 17, appointments: 1, signed: 0, closed: 0, omzet:       0 },
+    { date: dd(21), adId: null, adName: 'De harde rekening - DHR-AD2',                 spend:  360, clicks: 245, leads: 17, appointments: 0, signed: 0, closed: 0, omzet:       0 },
+    { date: dd(14), adId: null, adName: 'De harde rekening - DHR-AD2',                 spend:  360, clicks: 245, leads: 17, appointments: 2, signed: 1, closed: 0, omzet: 248000 },
+    { date: dd( 7), adId: null, adName: 'De harde rekening - DHR-AD2',                 spend:  360, clicks: 245, leads: 17, appointments: 1, signed: 0, closed: 0, omzet:       0 },
+    { date: dd( 1), adId: null, adName: 'De harde rekening - DHR-AD2',                 spend:  360, clicks: 249, leads: 18, appointments: 1, signed: 0, closed: 0, omzet:       0 },
+    // JT-AD1 – €1.700 spend, 82 leads, 4 afspraken, 1 sale @ €215k  → CPL €20.7, CPA €425
+    { date: dd(27), adId: null, adName: 'Jouw twee weken - JT-AD1',                    spend:  340, clicks: 234, leads: 16, appointments: 0, signed: 0, closed: 0, omzet:       0 },
+    { date: dd(20), adId: null, adName: 'Jouw twee weken - JT-AD1',                    spend:  340, clicks: 234, leads: 16, appointments: 1, signed: 0, closed: 0, omzet:       0 },
+    { date: dd(13), adId: null, adName: 'Jouw twee weken - JT-AD1',                    spend:  340, clicks: 234, leads: 17, appointments: 1, signed: 1, closed: 0, omzet: 215000 },
+    { date: dd( 6), adId: null, adName: 'Jouw twee weken - JT-AD1',                    spend:  340, clicks: 235, leads: 17, appointments: 1, signed: 0, closed: 0, omzet:       0 },
+    { date: dd( 1), adId: null, adName: 'Jouw twee weken - JT-AD1',                    spend:  340, clicks: 234, leads: 16, appointments: 1, signed: 0, closed: 0, omzet:       0 },
+    // DB-AD2 – €1.800 spend, 86 leads, 4 afspraken, 1 sale @ €262k  → CPL €20.9, CPA €450
+    { date: dd(26), adId: null, adName: 'Dit bestaat - DB-AD2',                        spend:  360, clicks: 245, leads: 17, appointments: 0, signed: 0, closed: 0, omzet:       0 },
+    { date: dd(19), adId: null, adName: 'Dit bestaat - DB-AD2',                        spend:  360, clicks: 245, leads: 17, appointments: 1, signed: 0, closed: 0, omzet:       0 },
+    { date: dd(12), adId: null, adName: 'Dit bestaat - DB-AD2',                        spend:  360, clicks: 245, leads: 17, appointments: 1, signed: 1, closed: 0, omzet: 262000 },
+    { date: dd( 5), adId: null, adName: 'Dit bestaat - DB-AD2',                        spend:  360, clicks: 247, leads: 18, appointments: 1, signed: 0, closed: 0, omzet:       0 },
+    { date: dd( 1), adId: null, adName: 'Dit bestaat - DB-AD2',                        spend:  360, clicks: 247, leads: 17, appointments: 1, signed: 0, closed: 0, omzet:       0 },
+    // DV-AD1 – €1.000 spend, 48 leads, 3 afspraken  → CPL €20.8, CPA €333
+    { date: dd(25), adId: null, adName: 'De vergelijking - DV-AD1',                    spend:  250, clicks: 172, leads: 12, appointments: 1, signed: 0, closed: 0, omzet:       0 },
+    { date: dd(18), adId: null, adName: 'De vergelijking - DV-AD1',                    spend:  250, clicks: 171, leads: 12, appointments: 1, signed: 0, closed: 0, omzet:       0 },
+    { date: dd(11), adId: null, adName: 'De vergelijking - DV-AD1',                    spend:  250, clicks: 172, leads: 12, appointments: 1, signed: 0, closed: 0, omzet:       0 },
+    { date: dd( 4), adId: null, adName: 'De vergelijking - DV-AD1',                    spend:  250, clicks: 171, leads: 12, appointments: 0, signed: 0, closed: 0, omzet:       0 },
+    // DD-AD2 – €800 spend, 40 leads  → CPL €20
+    { date: dd(24), adId: null, adName: 'Droomplek die zichzelf terugbetaalt - DD-AD2',spend:  200, clicks: 143, leads: 10, appointments: 0, signed: 0, closed: 0, omzet:       0 },
+    { date: dd(17), adId: null, adName: 'Droomplek die zichzelf terugbetaalt - DD-AD2',spend:  200, clicks: 143, leads: 10, appointments: 0, signed: 0, closed: 0, omzet:       0 },
+    { date: dd(10), adId: null, adName: 'Droomplek die zichzelf terugbetaalt - DD-AD2',spend:  200, clicks: 142, leads: 10, appointments: 0, signed: 0, closed: 0, omzet:       0 },
+    { date: dd( 3), adId: null, adName: 'Droomplek die zichzelf terugbetaalt - DD-AD2',spend:  200, clicks: 143, leads: 10, appointments: 0, signed: 0, closed: 0, omzet:       0 },
+    // DB-AD3 – €500 spend, 24 leads  → CPL €20.8
+    { date: dd(23), adId: null, adName: 'Dit bestaat - DB-AD3',                        spend:  125, clicks:  85, leads:  6, appointments: 0, signed: 0, closed: 0, omzet:       0 },
+    { date: dd(16), adId: null, adName: 'Dit bestaat - DB-AD3',                        spend:  125, clicks:  85, leads:  6, appointments: 0, signed: 0, closed: 0, omzet:       0 },
+    { date: dd( 9), adId: null, adName: 'Dit bestaat - DB-AD3',                        spend:  125, clicks:  85, leads:  6, appointments: 0, signed: 0, closed: 0, omzet:       0 },
+    { date: dd( 3), adId: null, adName: 'Dit bestaat - DB-AD3',                        spend:  125, clicks:  86, leads:  6, appointments: 0, signed: 0, closed: 0, omzet:       0 },
+    // JT-AD3 – €300 spend, 14 leads  → CPL €21.4
+    { date: dd(22), adId: null, adName: 'Jouw twee weken - JT-AD3',                    spend:  100, clicks:  68, leads:  5, appointments: 0, signed: 0, closed: 0, omzet:       0 },
+    { date: dd(15), adId: null, adName: 'Jouw twee weken - JT-AD3',                    spend:  100, clicks:  68, leads:  4, appointments: 0, signed: 0, closed: 0, omzet:       0 },
+    { date: dd( 8), adId: null, adName: 'Jouw twee weken - JT-AD3',                    spend:  100, clicks:  69, leads:  5, appointments: 0, signed: 0, closed: 0, omzet:       0 },
+    // DD-AD3 – €200 spend, 0 leads
+    { date: dd(21), adId: null, adName: 'Droomplek die zichzelf terugbetaalt - DD-AD3',spend:   67, clicks:  46, leads:  0, appointments: 0, signed: 0, closed: 0, omzet:       0 },
+    { date: dd(14), adId: null, adName: 'Droomplek die zichzelf terugbetaalt - DD-AD3',spend:   67, clicks:  46, leads:  0, appointments: 0, signed: 0, closed: 0, omzet:       0 },
+    { date: dd( 7), adId: null, adName: 'Droomplek die zichzelf terugbetaalt - DD-AD3',spend:   66, clicks:  46, leads:  0, appointments: 0, signed: 0, closed: 0, omzet:       0 },
+    // DV-AD2 – €200 spend, 0 leads
+    { date: dd(20), adId: null, adName: 'De vergelijking - DV-AD2',                    spend:   67, clicks:  46, leads:  0, appointments: 0, signed: 0, closed: 0, omzet:       0 },
+    { date: dd(12), adId: null, adName: 'De vergelijking - DV-AD2',                    spend:   67, clicks:  46, leads:  0, appointments: 0, signed: 0, closed: 0, omzet:       0 },
+    { date: dd( 5), adId: null, adName: 'De vergelijking - DV-AD2',                    spend:   66, clicks:  46, leads:  0, appointments: 0, signed: 0, closed: 0, omzet:       0 },
   ];
+  // Totals: spend €10.200 | clicks 7.137 | leads 480 | afspraken 21 | sales 4 | omzet €920k
+  // CPL €21,25 ✓ | CPA €485 ✓ | CPS €2.550 ✓ | ROAS 90× | CPC €1,43
 }
 
 function getActiveLog() {
@@ -1185,6 +1227,10 @@ function renderSummary(ads) {
 function renderMainTable(ads) {
   const { sortCol, sortDir } = state;
   const sorted = [...ads].filter(a => a.spend > 0).sort((a, b) => {
+    if (sortCol === 'status') {
+      const key = x => (x.status === 'Active' || x.status === 'Actief') ? 0 : 1;
+      return (key(a) - key(b)) * sortDir;
+    }
     let va = a[sortCol] ?? (sortDir === -1 ? -Infinity : Infinity);
     let vb = b[sortCol] ?? (sortDir === -1 ? -Infinity : Infinity);
     return (typeof va === 'string' ? va.localeCompare(vb) : va - vb) * sortDir;
@@ -1791,6 +1837,84 @@ document.querySelectorAll('#alltime-filter .period-btn').forEach(b => {
   });
 });
 
+// Custom period tab
+function renderAangepast() {
+  const fromVal = document.getElementById('custom-from').value;
+  const toVal   = document.getElementById('custom-to').value;
+  if (!fromVal || !toVal) return;
+
+  const range = {
+    start: new Date(fromVal + 'T00:00:00'),
+    end:   new Date(toVal   + 'T00:00:00')
+  };
+  if (range.start > range.end) return;
+
+  const log  = getActiveLog();
+  const rows = filterRows(log, range);
+  const ads  = aggAds(rows).filter(a => a.spend > 0).sort((a, b) => (a.cpl ?? 999) - (b.cpl ?? 999));
+
+  // Summary
+  const t = ads.reduce((acc, a) => {
+    acc.spend += a.spend; acc.clicks += a.clicks; acc.leads += a.leads;
+    acc.appointments += a.appointments; acc.signed += a.signed; acc.omzet += a.omzet; return acc;
+  }, { spend:0, clicks:0, leads:0, appointments:0, signed:0, omzet:0 });
+  const optInR = t.clicks > 0 ? t.leads / t.clicks : null;
+  const afsprR = t.leads  > 0 ? t.appointments / t.leads : null;
+  const signR  = t.appointments > 0 ? t.signed / t.appointments : null;
+  const cpl  = t.leads        > 0 ? t.spend / t.leads        : null;
+  const cpa  = t.appointments > 0 ? t.spend / t.appointments : null;
+  const cps  = t.signed       > 0 ? t.spend / t.signed       : null;
+  const roas = t.spend        > 0 ? t.omzet  / t.spend       : null;
+
+  const summaryEl = document.getElementById('custom-summary-bar');
+  summaryEl.hidden = false;
+  summaryEl.innerHTML = `
+    <div class="stat-card"><div class="stat-label">Totaal Uitgaven</div><div class="stat-value mono">${fEur(t.spend)}</div></div>
+    <div class="stat-card"><div class="stat-label">Clicks</div><div class="stat-value mono">${fNum(t.clicks)}</div></div>
+    <div class="stat-card"><div class="stat-label">Leads <span class="ilabel ilabel-amber">${fPct(optInR)} opt-in</span></div><div class="stat-value mono">${fNum(t.leads)}</div></div>
+    <div class="stat-card"><div class="stat-label">CPL</div><div class="stat-value mono">${fEur(cpl)}</div></div>
+    <div class="stat-card"><div class="stat-label">Afspraken <span class="ilabel ilabel-amber">${fPct(afsprR)}</span></div><div class="stat-value mono">${fNum(t.appointments)}</div></div>
+    <div class="stat-card"><div class="stat-label">CPA Afspraak</div><div class="stat-value mono">${fEur(cpa)}</div></div>
+    <div class="stat-card"><div class="stat-label">Sales <span class="ilabel ilabel-amber">${fPct(signR)}</span></div><div class="stat-value mono amber">${fNum(t.signed)}</div></div>
+    <div class="stat-card c-amber"><div class="stat-label">CPS</div><div class="stat-value mono amber">${fEur(cps)}</div></div>
+    <div class="stat-card"><div class="stat-label">Omzet</div><div class="stat-value mono">${fEur(t.omzet)}</div></div>
+    <div class="stat-card"><div class="stat-label">ROAS</div><div class="stat-value mono blue">${fRoas(roas)}</div></div>`;
+
+  // Format dates Dutch style
+  const dfmt = d => d.toLocaleDateString('nl-NL', { day:'numeric', month:'short', year:'numeric' });
+  document.getElementById('custom-table-title').textContent = `${dfmt(range.start)} – ${dfmt(range.end)}`;
+
+  const cardEl = document.getElementById('custom-table-card');
+  cardEl.hidden = false;
+
+  document.getElementById('custom-tbody').innerHTML = ads.map(ad => {
+    const isActive = ad.status === 'Active' || ad.status === 'Actief';
+    const statusBadge = ad.status
+      ? (isActive ? '<span class="badge badge-green">Actief</span>' : '<span class="badge badge-grey">Gestopt</span>')
+      : '<span class="muted">—</span>';
+    return `<tr>
+      <td class="ad-name-cell" title="${esc(ad.adName)}">${esc(ad.adName)}</td>
+      <td>${statusBadge}</td>
+      <td class="mono right">${fEur(ad.spend)}</td>
+      <td class="mono right">${fNum(ad.clicks)}</td>
+      <td class="mono right muted">${fEur2(ad.cpc)}</td>
+      <td class="mono right muted">${fPct(ad.optInRate)}</td>
+      <td class="mono right">${fNum(ad.leads)}</td>
+      <td class="mono right">${fEur(ad.cpl)}</td>
+      <td class="mono right muted">${fPct(ad.afsprRate)}</td>
+      <td class="mono right">${fNum(ad.appointments)}</td>
+      <td class="mono right">${fEur(ad.cpa)}</td>
+      <td class="mono right muted">${fPct(ad.signRate)}</td>
+      <td class="mono right amber">${fNum(ad.signed)}</td>
+      <td class="mono right amber">${fEur(ad.cpsSigned)}</td>
+      <td class="mono right">${fEur(ad.omzet || null)}</td>
+      <td class="mono right blue">${fRoas(ad.roas)}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="16" class="muted" style="padding:12px">Geen data voor deze periode.</td></tr>';
+}
+
+document.getElementById('custom-apply').addEventListener('click', renderAangepast);
+
 // Sortable headers on main table
 document.querySelectorAll('#main-table th[data-sort]').forEach(th => {
   th.addEventListener('click', () => {
@@ -1846,6 +1970,7 @@ function switchTab(tabId) {
   if (tabId === 'projector')  renderProjector();
   if (tabId === 'funnel')     renderFunnel();
   if (tabId === 'briefing')   renderBriefHistory();
+  if (tabId === 'alltime')    renderAllTimeTable();
 }
 document.querySelectorAll('.tab-btn').forEach(btn =>
   btn.addEventListener('click', () => switchTab(btn.dataset.tab))
