@@ -530,8 +530,6 @@
     <button class="tab-btn" data-tab="inventaris">Verkoop &amp; Inventaris</button>
     <button class="tab-btn" data-tab="projector">Sell-out Projector</button>
     <button class="tab-btn" data-tab="funnel">Marketingfunnel</button>
-    <button class="tab-btn" data-tab="alltime">All-time</button>
-    <button class="tab-btn" data-tab="aangepast">Aangepast</button>
     <button class="tab-btn" data-tab="briefing">AI Briefing</button>
   </div>
 
@@ -546,6 +544,8 @@
       <select id="month-picker" class="month-picker">
         <option value="">Kies maand&hellip;</option>
       </select>
+      <button class="period-btn" data-period="alltime">All-time</button>
+      <button class="period-btn" data-period="aangepast">Aangepast</button>
       <span style="width:1px;height:22px;background:var(--border);display:inline-block;margin:0 4px;align-self:center"></span>
       <div id="main-status-filter" style="display:flex;gap:6px">
         <button class="period-btn active" data-status="all">Alle</button>
@@ -564,7 +564,7 @@
     <div class="summary-bar" id="summary-bar"></div>
 
     <!-- Trend Chart -->
-    <div class="card">
+    <div class="card" id="section-trend">
       <div class="card-title">Trend</div>
       <div class="chart-wrap">
         <canvas id="trend-chart"></canvas>
@@ -572,7 +572,7 @@
     </div>
 
     <!-- Main Ads Table -->
-    <div class="card">
+    <div class="card" id="section-main-table">
       <div class="card-title">Advertenties</div>
       <div class="tbl-wrap">
         <table id="main-table">
@@ -602,7 +602,7 @@
     </div>
 
     <!-- CPC & Opt-in Bar Chart -->
-    <div class="card">
+    <div class="card" id="section-cpc-chart">
       <div class="card-title">CPC per advertentie <span class="muted" style="font-size:11px;font-weight:400">— kleur = opt-in%</span></div>
       <div class="chart-wrap" id="cpc-chart-wrap" style="height:380px">
         <canvas id="cpc-chart"></canvas>
@@ -610,7 +610,7 @@
     </div>
 
     <!-- Maandoverzicht -->
-    <div class="card">
+    <div class="card" id="section-monthly">
       <div class="card-title">Maandoverzicht</div>
       <div class="tbl-wrap">
         <table id="monthly-table">
@@ -639,94 +639,74 @@
     </div>
 
     <!-- Beste Advertenties -->
-    <div class="card">
+    <div class="card" id="section-beste">
       <div class="card-title">Beste Advertenties</div>
       <div class="creative-grid" id="creative-grid"></div>
     </div>
 
-  </div><!-- /#tab-advertenties -->
-
-  <!-- Tab: All-time -->
-  <div id="tab-alltime" class="tab-pane" hidden>
-    <div class="card">
-      <div class="card-title" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-        All-time overzicht
-        <div id="alltime-filter" style="display:flex;gap:6px">
-          <button class="period-btn active" data-filter="all">Alle</button>
-          <button class="period-btn" data-filter="active">Actief</button>
-          <button class="period-btn" data-filter="killed">Gestopt</button>
+    <!-- All-time section (shown when period = alltime) -->
+    <div id="section-alltime" hidden>
+      <div class="card">
+        <div class="card-title" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          All-time overzicht
+          <div id="alltime-filter" style="display:flex;gap:6px">
+            <button class="period-btn active" data-filter="all">Alle</button>
+            <button class="period-btn" data-filter="active">Actief</button>
+            <button class="period-btn" data-filter="killed">Gestopt</button>
+          </div>
+        </div>
+        <div class="tbl-wrap">
+          <table id="alltime-table">
+            <thead><tr>
+              <th>Advertentie</th><th>Status</th>
+              <th class="right">Uitgaven</th><th class="right">Clicks</th>
+              <th class="right muted">CPC</th><th class="right muted">Opt-In%</th>
+              <th class="right">Leads</th><th class="right">CPL</th>
+              <th class="right muted">Afspr%</th><th class="right">Afspraken</th>
+              <th class="right">CPA</th><th class="right muted">Sales%</th>
+              <th class="right">Sales</th><th class="right">CPS</th>
+              <th class="right">Omzet</th><th class="right">ROAS</th>
+            </tr></thead>
+            <tbody id="alltime-tbody"></tbody>
+          </table>
         </div>
       </div>
-      <div class="tbl-wrap">
-        <table id="alltime-table">
-          <thead>
-            <tr>
-              <th>Advertentie</th>
-              <th>Status</th>
-              <th class="right">Uitgaven</th>
-              <th class="right">Clicks</th>
-              <th class="right muted">CPC</th>
-              <th class="right muted">Opt-In%</th>
-              <th class="right">Leads</th>
-              <th class="right">CPL</th>
-              <th class="right muted">Afspr%</th>
-              <th class="right">Afspraken</th>
-              <th class="right">CPA</th>
-              <th class="right muted">Sales%</th>
-              <th class="right">Sales</th>
-              <th class="right">CPS</th>
-              <th class="right">Omzet</th>
-              <th class="right">ROAS</th>
-            </tr>
-          </thead>
-          <tbody id="alltime-tbody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div><!-- /#tab-alltime -->
+    </div><!-- /#section-alltime -->
 
-  <!-- Tab: Aangepast -->
-  <div id="tab-aangepast" class="tab-pane" hidden>
-    <div class="card">
-      <div class="card-title">Aangepaste periode</div>
-      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:4px">
-        <label style="color:var(--muted);font-size:13px">Van</label>
-        <input type="date" id="custom-from" class="month-picker" style="width:160px">
-        <label style="color:var(--muted);font-size:13px">Tot</label>
-        <input type="date" id="custom-to" class="month-picker" style="width:160px">
-        <button id="custom-apply" class="btn">Toepassen</button>
+    <!-- Aangepast section (shown when period = aangepast) -->
+    <div id="section-aangepast" hidden>
+      <div class="card">
+        <div class="card-title">Aangepaste periode</div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:4px">
+          <label style="color:var(--muted);font-size:13px">Van</label>
+          <input type="date" id="custom-from" class="month-picker" style="width:160px">
+          <label style="color:var(--muted);font-size:13px">Tot</label>
+          <input type="date" id="custom-to" class="month-picker" style="width:160px">
+          <button id="custom-apply" class="btn">Toepassen</button>
+        </div>
       </div>
-    </div>
-    <div class="summary-bar" id="custom-summary-bar" hidden></div>
-    <div class="card" id="custom-table-card" hidden>
-      <div class="card-title" id="custom-table-title"></div>
-      <div class="tbl-wrap">
-        <table id="custom-table">
-          <thead>
-            <tr>
-              <th>Advertentie</th>
-              <th>Status</th>
-              <th class="right">Uitgaven</th>
-              <th class="right">Clicks</th>
-              <th class="right muted">CPC</th>
-              <th class="right muted">Opt-In%</th>
-              <th class="right">Leads</th>
-              <th class="right">CPL</th>
-              <th class="right muted">Afspr%</th>
-              <th class="right">Afspraken</th>
-              <th class="right">CPA</th>
-              <th class="right muted">Sales%</th>
-              <th class="right">Sales</th>
-              <th class="right">CPS</th>
-              <th class="right">Omzet</th>
-              <th class="right">ROAS</th>
-            </tr>
-          </thead>
-          <tbody id="custom-tbody"></tbody>
-        </table>
+      <div class="summary-bar" id="custom-summary-bar" hidden></div>
+      <div class="card" id="custom-table-card" hidden>
+        <div class="card-title" id="custom-table-title"></div>
+        <div class="tbl-wrap">
+          <table id="custom-table">
+            <thead><tr>
+              <th>Advertentie</th><th>Status</th>
+              <th class="right">Uitgaven</th><th class="right">Clicks</th>
+              <th class="right muted">CPC</th><th class="right muted">Opt-In%</th>
+              <th class="right">Leads</th><th class="right">CPL</th>
+              <th class="right muted">Afspr%</th><th class="right">Afspraken</th>
+              <th class="right">CPA</th><th class="right muted">Sales%</th>
+              <th class="right">Sales</th><th class="right">CPS</th>
+              <th class="right">Omzet</th><th class="right">ROAS</th>
+            </tr></thead>
+            <tbody id="custom-tbody"></tbody>
+          </table>
+        </div>
       </div>
-    </div>
-  </div><!-- /#tab-aangepast -->
+    </div><!-- /#section-aangepast -->
+
+  </div><!-- /#tab-advertenties -->
 
   <!-- Tab 2: Verkoop & Inventaris -->
   <div id="tab-inventaris" class="tab-pane" hidden>
@@ -1617,25 +1597,40 @@ function renderCpcChart(ads) {
 //  Main update cycle
 // ════════════════════════════════════════════════════════════
 function update() {
-  const log   = getActiveLog();
-  const range = getRange(state.period);
-  if (!range) return;
-  const rows = filterRows(log, range);
-  const ads  = aggAds(rows);
+  const isAllTime   = state.period === 'alltime';
+  const isAangepast = state.period === 'aangepast';
+  const isSpecial   = isAllTime || isAangepast;
 
-  renderSummary(ads);
-  renderMainTable(ads);
-  renderAllTimeTable();
-  renderChart(rows, range);
-  renderCpcChart(ads);
-  renderMonthlyTable(log);
-  renderBeste(ads);
+  // Show/hide normal sections vs special sections
+  ['section-trend','section-main-table','section-cpc-chart','section-monthly','section-beste'].forEach(id => {
+    document.getElementById(id).hidden = isSpecial;
+  });
+  document.getElementById('summary-bar').hidden       = isSpecial;
+  document.getElementById('section-alltime').hidden   = !isAllTime;
+  document.getElementById('section-aangepast').hidden = !isAangepast;
+  document.getElementById('main-status-filter').style.display = isSpecial ? 'none' : 'flex';
 
-  document.getElementById('demo-banner').hidden       = !state.demoMode;
+  if (isAllTime) {
+    renderAllTimeTable();
+  } else if (!isAangepast) {
+    const log   = getActiveLog();
+    const range = getRange(state.period);
+    if (!range) return;
+    const rows = filterRows(log, range);
+    const ads  = aggAds(rows);
+    renderSummary(ads);
+    renderMainTable(ads);
+    renderChart(rows, range);
+    renderCpcChart(ads);
+    renderMonthlyTable(log);
+    renderBeste(ads);
+  }
+
+  document.getElementById('demo-banner').hidden = !state.demoMode;
   document.getElementById('demo-toggle-btn').classList.toggle('active', state.demoMode);
 
-  // Sync period toggle UI
-  document.querySelectorAll('.period-btn').forEach(b => {
+  // Sync period toggle UI (only data-period buttons, not data-status)
+  document.querySelectorAll('[data-period]').forEach(b => {
     b.classList.toggle('active', b.dataset.period === state.period);
   });
   const picker = document.getElementById('month-picker');
@@ -1844,8 +1839,8 @@ async function init() {
 //  Events
 // ════════════════════════════════════════════════════════════
 
-// Period toggle buttons
-document.querySelectorAll('.period-btn').forEach(btn => {
+// Period toggle buttons (only buttons with data-period, not data-status/data-filter)
+document.querySelectorAll('[data-period]').forEach(btn => {
   btn.addEventListener('click', () => { state.period = btn.dataset.period; update(); });
 });
 
@@ -2008,11 +2003,11 @@ function switchTab(tabId) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
   const pane = document.getElementById('tab-' + tabId);
   if (pane) pane.hidden = false;
+  if (tabId === 'advertenties') update();
   if (tabId === 'inventaris') renderInventaris();
   if (tabId === 'projector')  renderProjector();
   if (tabId === 'funnel')     renderFunnel();
   if (tabId === 'briefing')   renderBriefHistory();
-  if (tabId === 'alltime')    renderAllTimeTable();
 }
 document.querySelectorAll('.tab-btn').forEach(btn =>
   btn.addEventListener('click', () => switchTab(btn.dataset.tab))
