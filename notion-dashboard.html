@@ -546,6 +546,12 @@
       <select id="month-picker" class="month-picker">
         <option value="">Kies maand&hellip;</option>
       </select>
+      <span style="width:1px;height:22px;background:var(--border);display:inline-block;margin:0 4px;align-self:center"></span>
+      <div id="main-status-filter" style="display:flex;gap:6px">
+        <button class="period-btn active" data-status="all">Alle</button>
+        <button class="period-btn" data-status="active">Actief</button>
+        <button class="period-btn" data-status="killed">Gestopt</button>
+      </div>
       <button id="demo-toggle-btn" class="demo-btn">&#9654; Demo</button>
     </div>
 
@@ -903,8 +909,9 @@ const state = {
   sortDir:       -1,       // -1 desc, 1 asc
   chart:         null,
   cpcChart:      null,
-  demoMode:      false,
-  allTimeFilter: 'all'    // 'all' | 'active' | 'killed'
+  demoMode:           false,
+  allTimeFilter:      'all',  // 'all' | 'active' | 'killed'
+  mainStatusFilter:   'all'   // 'all' | 'active' | 'killed'
 };
 
 function getDemoLog() {
@@ -1225,10 +1232,15 @@ function renderSummary(ads) {
 //  Render: Main Table
 // ════════════════════════════════════════════════════════════
 function renderMainTable(ads) {
-  const { sortCol, sortDir } = state;
-  const sorted = [...ads].filter(a => a.spend > 0).sort((a, b) => {
+  const { sortCol, sortDir, mainStatusFilter } = state;
+  const isActive = a => a.status === 'Active' || a.status === 'Actief';
+  let filtered = [...ads].filter(a => a.spend > 0);
+  if (mainStatusFilter === 'active') filtered = filtered.filter(isActive);
+  else if (mainStatusFilter === 'killed') filtered = filtered.filter(a => !isActive(a));
+
+  const sorted = filtered.sort((a, b) => {
     if (sortCol === 'status') {
-      const key = x => (x.status === 'Active' || x.status === 'Actief') ? 0 : 1;
+      const key = x => isActive(x) ? 0 : 1;
       return (key(a) - key(b)) * sortDir;
     }
     let va = a[sortCol] ?? (sortDir === -1 ? -Infinity : Infinity);
@@ -1827,6 +1839,17 @@ document.getElementById('demo-toggle-btn').addEventListener('click', () => {
 // Month picker
 document.getElementById('month-picker').addEventListener('change', e => {
   if (e.target.value) { state.period = e.target.value; update(); }
+});
+
+// Main tab status filter buttons (Alle / Actief / Gestopt)
+document.querySelectorAll('#main-status-filter .period-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    state.mainStatusFilter = b.dataset.status;
+    document.querySelectorAll('#main-status-filter .period-btn').forEach(x =>
+      x.classList.toggle('active', x.dataset.status === state.mainStatusFilter)
+    );
+    update();
+  });
 });
 
 // All-time filter buttons
