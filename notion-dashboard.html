@@ -867,6 +867,7 @@ const fEur2 = v => (v == null || isNaN(v)) ? '—' : _eur2.format(v);
 const fNum  = v => (v == null || isNaN(v)) ? '—' : _num.format(Math.round(v));
 const fRoas = v => (v == null || isNaN(v)) ? '—' : `${v.toFixed(2)}×`;
 const fPct  = v => (v == null || isNaN(v)) ? '—' : `${Math.round(v * 100)}%`;
+const fPct2 = v => (v == null || isNaN(v)) ? '—' : `${(v * 100).toFixed(2)}%`;
 const fMon  = (y, m) => `${MONTHS_SHORT[m]} ${y}`;
 const esc   = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
@@ -1168,7 +1169,7 @@ function renderSummary(ads) {
       <div class="stat-value mono">${fNum(t.clicks)}</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">Leads <span class="ilabel ilabel-amber">${fPct(optInR)} opt-in</span></div>
+      <div class="stat-label">Leads <span class="ilabel ilabel-amber">${fPct2(optInR)} opt-in</span></div>
       <div class="stat-value mono">${fNum(t.leads)}</div>
     </div>
     <div class="stat-card">
@@ -1237,7 +1238,7 @@ function renderMainTable(ads) {
       <td class="mono right">${fEur2(ad.spend)}</td>
       <td class="mono right">${fNum(ad.clicks)}</td>
       <td class="mono right muted">${fEur2(ad.cpc)}</td>
-      <td class="mono right muted">${fPct(ad.optInRate)}</td>
+      <td class="mono right muted">${fPct2(ad.optInRate)}</td>
       <td class="mono right">${fNum(ad.leads)}</td>
       <td class="mono right">${fEur(ad.cpl)}</td>
       <td class="mono right muted">${fPct(ad.afsprRate)}</td>
@@ -1277,7 +1278,7 @@ function renderMonthlyTable(log) {
       <td>${fMon(m.year, m.month)} ${badges.join(' ')}</td>
       <td class="mono right">${fEur2(m.spend)}</td>
       <td class="mono right">${fNum(m.clicks)}</td>
-      <td class="mono right muted">${fPct(m.optInRate)}</td>
+      <td class="mono right muted">${fPct2(m.optInRate)}</td>
       <td class="mono right">${fNum(m.leads)}</td>
       <td class="mono right">${fEur(m.cpl)}</td>
       <td class="mono right muted">${fPct(m.afsprRate)}</td>
@@ -1442,7 +1443,7 @@ function renderAllTimeTable() {
       <td class="mono right">${fEur2(ad.spend)}</td>
       <td class="mono right">${fNum(ad.clicks)}</td>
       <td class="mono right muted">${fEur2(ad.cpc)}</td>
-      <td class="mono right muted">${fPct(ad.optInRate)}</td>
+      <td class="mono right muted">${fPct2(ad.optInRate)}</td>
       <td class="mono right">${fNum(ad.leads)}</td>
       <td class="mono right">${fEur(ad.cpl)}</td>
       <td class="mono right muted">${fPct(ad.afsprRate)}</td>
@@ -1837,7 +1838,7 @@ function renderAangepast() {
   summaryEl.innerHTML = `
     <div class="stat-card"><div class="stat-label">Totaal Uitgaven</div><div class="stat-value mono">${fEur2(t.spend)}</div></div>
     <div class="stat-card"><div class="stat-label">Clicks</div><div class="stat-value mono">${fNum(t.clicks)}</div></div>
-    <div class="stat-card"><div class="stat-label">Leads <span class="ilabel ilabel-amber">${fPct(optInR)} opt-in</span></div><div class="stat-value mono">${fNum(t.leads)}</div></div>
+    <div class="stat-card"><div class="stat-label">Leads <span class="ilabel ilabel-amber">${fPct2(optInR)} opt-in</span></div><div class="stat-value mono">${fNum(t.leads)}</div></div>
     <div class="stat-card"><div class="stat-label">CPL</div><div class="stat-value mono">${fEur(cpl)}</div></div>
     <div class="stat-card"><div class="stat-label">Afspraken <span class="ilabel ilabel-amber">${fPct(afsprR)}</span></div><div class="stat-value mono">${fNum(t.appointments)}</div></div>
     <div class="stat-card"><div class="stat-label">CPA Afspraak</div><div class="stat-value mono">${fEur(cpa)}</div></div>
@@ -1864,7 +1865,7 @@ function renderAangepast() {
       <td class="mono right">${fEur2(ad.spend)}</td>
       <td class="mono right">${fNum(ad.clicks)}</td>
       <td class="mono right muted">${fEur2(ad.cpc)}</td>
-      <td class="mono right muted">${fPct(ad.optInRate)}</td>
+      <td class="mono right muted">${fPct2(ad.optInRate)}</td>
       <td class="mono right">${fNum(ad.leads)}</td>
       <td class="mono right">${fEur(ad.cpl)}</td>
       <td class="mono right muted">${fPct(ad.afsprRate)}</td>
