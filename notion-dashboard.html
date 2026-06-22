@@ -601,14 +601,6 @@
       </div>
     </div>
 
-    <!-- CPC & Opt-in Bar Chart -->
-    <div class="card" id="section-cpc-chart">
-      <div class="card-title">CPC per advertentie <span class="muted" style="font-size:11px;font-weight:400">— kleur = opt-in%</span></div>
-      <div class="chart-wrap" id="cpc-chart-wrap" style="height:380px">
-        <canvas id="cpc-chart"></canvas>
-      </div>
-    </div>
-
     <!-- Maandoverzicht -->
     <div class="card" id="section-monthly">
       <div class="card-title">Maandoverzicht</div>
@@ -888,7 +880,6 @@ const state = {
   sortCol:       'cpa',
   sortDir:       -1,       // -1 desc, 1 asc
   chart:         null,
-  cpcChart:      null,
   demoMode:           false,
   allTimeFilter:      'all',  // 'all' | 'active' | 'killed'
   mainStatusFilter:   'all'   // 'all' | 'active' | 'killed'
@@ -1531,69 +1522,6 @@ function populateMonthPicker() {
   }
 }
 
-// ════════════════════════════════════════════════════════════
-//  Render: CPC & Opt-in Bar Chart
-// ════════════════════════════════════════════════════════════
-function renderCpcChart(ads) {
-  const sorted = ads
-    .filter(a => a.clicks > 0 && a.spend > 0)
-    .map(a => ({ ...a, cpc: a.spend / a.clicks }))
-    .sort((a, b) => a.cpc - b.cpc);
-
-  const wrap = document.getElementById('cpc-chart-wrap');
-  if (!sorted.length) {
-    wrap.innerHTML = '<p class="muted" style="padding:12px">Geen click-data in deze periode.</p>';
-    return;
-  }
-  if (!document.getElementById('cpc-chart')) {
-    wrap.innerHTML = '<canvas id="cpc-chart"></canvas>';
-  }
-
-  const optInColor = r => {
-    if (r == null) return 'rgba(107,114,128,0.55)';
-    if (r >= 0.06) return 'rgba(16,185,129,0.75)';
-    if (r >= 0.03) return 'rgba(245,158,11,0.75)';
-    return 'rgba(239,68,68,0.70)';
-  };
-
-  const labels = sorted.map(a => a.adName);
-  const cpcData = sorted.map(a => +a.cpc.toFixed(2));
-  const colors  = sorted.map(a => optInColor(a.optInRate));
-
-  if (state.cpcChart) { state.cpcChart.destroy(); state.cpcChart = null; }
-
-  state.cpcChart = new Chart(document.getElementById('cpc-chart').getContext('2d'), {
-    type: 'bar',
-    data: { labels, datasets: [{ label: 'CPC', data: cpcData, backgroundColor: colors, borderRadius: 4 }] },
-    options: {
-      indexAxis: 'y',
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: '#1E293B', borderColor: '#334155', borderWidth: 1,
-          titleColor: '#F1F5F9', bodyColor: '#94A3B8',
-          callbacks: {
-            label: ctx => {
-              const a = sorted[ctx.dataIndex];
-              return `CPC ${fEur(ctx.parsed.x)}  |  Opt-in ${fPct(a.optInRate)}  |  ${fNum(a.clicks)} clicks`;
-            }
-          }
-        }
-      },
-      scales: {
-        x: {
-          ticks: { color: '#94A3B8', callback: v => fEur(v) },
-          grid: { color: 'rgba(51,65,85,.4)' }
-        },
-        y: {
-          ticks: { color: '#F1F5F9', font: { size: 11 } },
-          grid: { color: 'rgba(51,65,85,.25)' }
-        }
-      }
-    }
-  });
-}
 
 // ════════════════════════════════════════════════════════════
 //  Main update cycle
@@ -1604,7 +1532,7 @@ function update() {
   const isSpecial   = isAllTime || isAangepast;
 
   // Show/hide normal sections vs special sections
-  ['section-trend','section-main-table','section-cpc-chart','section-monthly','section-beste'].forEach(id => {
+  ['section-trend','section-main-table','section-monthly','section-beste'].forEach(id => {
     document.getElementById(id).hidden = isSpecial;
   });
   document.getElementById('summary-bar').hidden       = isSpecial;
@@ -1623,7 +1551,6 @@ function update() {
     renderSummary(ads);
     renderMainTable(ads);
     renderChart(rows, range);
-    renderCpcChart(ads);
     renderMonthlyTable(log);
     renderBeste(ads);
   }
