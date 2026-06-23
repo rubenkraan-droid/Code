@@ -508,7 +508,7 @@
   <div class="error-card">
     <h2>Fout bij laden</h2>
     <p id="error-msg"></p>
-    <button class="btn" onclick="init()">Opnieuw proberen</button>
+    <button class="btn" onclick="forceRefresh()">Opnieuw proberen</button>
   </div>
 </div>
 
@@ -520,6 +520,7 @@
     <div>
       <h1 id="dash-title">Advertentie Dashboard</h1>
       <span id="last-updated"></span>
+      <button onclick="forceRefresh()" title="Vernieuwen" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px;padding:2px 4px;margin-top:2px;">&#8635;</button>
     </div>
     <button class="print-btn" onclick="printDashboard()">&#128438; Print rapport</button>
   </div>
@@ -1719,40 +1720,81 @@ function applyParkConfig(cfg) {
 }
 
 // ════════════════════════════════════════════════════════════
+//  Cache
+// ════════════════════════════════════════════════════════════
+const CACHE_KEY = 'adsDash_v1';
+
+function isCacheValid(cache) {
+  if (!cache?.fetchedAt || !cache?.dailyPages || !cache?.allTimePages) return false;
+  const fetched = new Date(cache.fetchedAt);
+  const now = new Date();
+  const threshold = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 5, 0);
+  return fetched >= threshold;
+}
+
+function saveCache(dailyPages, allTimePages) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ fetchedAt: new Date().toISOString(), dailyPages, allTimePages }));
+  } catch(e) {}
+}
+
+function processPages(dailyPages, allTimePages) {
+  const cfgIdx = dailyPages.findIndex(p => p._type === 'config');
+  if (cfgIdx >= 0) applyParkConfig(dailyPages.splice(cfgIdx, 1)[0]);
+  if (dailyPages[0]) console.log('[Dashboard] Daily props:', Object.keys(dailyPages[0]).filter(k => k.startsWith('property_')));
+  if (dailyPages[0]) console.log('[Dashboard] Daily image candidates:', Object.fromEntries(Object.entries(dailyPages[0]).filter(([k]) => k.startsWith('property_') && (k.includes('image') || k.includes('url') || k.includes('foto') || k.includes('afb') || k.includes('drive')))));
+  state.dailyLog = dailyPages.map(parseDailyLog).filter(r => r.date);
+  state.allTimeMap = new Map();
+  for (const p of allTimePages) {
+    const at = parseAllTime(p);
+    if (at.adId)   state.allTimeMap.set(at.adId,   at);
+    if (at.adName) state.allTimeMap.set(at.adName, at);
+  }
+  populateMonthPicker();
+}
+
+function setLastUpdated(date, fromCache) {
+  const d = date.toLocaleDateString('nl-NL');
+  const t = date.toLocaleTimeString('nl-NL', {hour:'2-digit', minute:'2-digit'});
+  document.getElementById('last-updated').textContent =
+    `Gegevens van ${d} om ${t}${fromCache ? ' · uit cache' : ''}`;
+}
+
+// ════════════════════════════════════════════════════════════
 //  Init
 // ════════════════════════════════════════════════════════════
-async function init() {
+async function init(forceFetch = false) {
   document.getElementById('loading-screen').hidden = false;
   document.getElementById('error-screen').hidden   = true;
   document.getElementById('dashboard').hidden      = true;
 
   try {
-    const [dailyPages, allTimePages] = await Promise.all([
-      fetchWebhook(CONFIG.DAILY_URL),
-      fetchWebhook(CONFIG.ALL_TIME_URL)
-    ]);
+    let dailyPages, allTimePages, fetchedAt, fromCache = false;
 
-    // Extract park config item if n8n injected one
-    const cfgIdx = dailyPages.findIndex(p => p._type === 'config');
-    if (cfgIdx >= 0) applyParkConfig(dailyPages.splice(cfgIdx, 1)[0]);
-
-    if (dailyPages[0]) console.log('[Dashboard] Daily props:', Object.keys(dailyPages[0]).filter(k => k.startsWith('property_')));
-    if (dailyPages[0]) console.log('[Dashboard] Daily image candidates:', Object.fromEntries(Object.entries(dailyPages[0]).filter(([k]) => k.startsWith('property_') && (k.includes('image') || k.includes('url') || k.includes('foto') || k.includes('afb') || k.includes('drive')))));
-    state.dailyLog = dailyPages.map(parseDailyLog).filter(r => r.date);
-
-    // Build allTime lookup by Ad ID and Ad Name
-    state.allTimeMap = new Map();
-    for (const p of allTimePages) {
-      const at = parseAllTime(p);
-      if (at.adId)   state.allTimeMap.set(at.adId,   at);
-      if (at.adName) state.allTimeMap.set(at.adName, at);
+    if (!forceFetch) {
+      try {
+        const raw = localStorage.getItem(CACHE_KEY);
+        const cache = raw ? JSON.parse(raw) : null;
+        if (isCacheValid(cache)) {
+          dailyPages  = cache.dailyPages;
+          allTimePages = cache.allTimePages;
+          fetchedAt   = new Date(cache.fetchedAt);
+          fromCache   = true;
+        }
+      } catch(e) {}
     }
 
-    populateMonthPicker();
+    if (!dailyPages) {
+      [dailyPages, allTimePages] = await Promise.all([
+        fetchWebhook(CONFIG.DAILY_URL),
+        fetchWebhook(CONFIG.ALL_TIME_URL)
+      ]);
+      saveCache(dailyPages, allTimePages);
+      fetchedAt = new Date();
+    }
 
-    const now = new Date();
-    document.getElementById('last-updated').textContent =
-      `Laatst bijgewerkt: ${now.toLocaleDateString('nl-NL')} om ${now.toLocaleTimeString('nl-NL', {hour:'2-digit',minute:'2-digit'})}`;
+    processPages(dailyPages, allTimePages);
+    setLastUpdated(fetchedAt, fromCache);
 
     document.getElementById('loading-screen').hidden = true;
     document.getElementById('dashboard').hidden      = false;
@@ -1764,6 +1806,22 @@ async function init() {
     document.getElementById('error-msg').textContent = err.message;
     console.error('[Dashboard]', err);
   }
+}
+
+async function forceRefresh() {
+  localStorage.removeItem(CACHE_KEY);
+  await init(true);
+}
+
+function scheduleAutoRefresh() {
+  const now  = new Date();
+  const t005 = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 5, 0);
+  const next = now < t005 ? t005 : new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 5, 0);
+  setTimeout(async () => {
+    localStorage.removeItem(CACHE_KEY);
+    await init(true);
+    scheduleAutoRefresh();
+  }, next - now);
 }
 
 // ════════════════════════════════════════════════════════════
@@ -2336,6 +2394,7 @@ function loadHistoryItem(i) {
 //  Boot
 // ════════════════════════════════════════════════════════════
 init();
+scheduleAutoRefresh();
 </script>
 </body>
 </html>
