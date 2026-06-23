@@ -1465,16 +1465,19 @@ function renderAllTimeTable() {
 }
 
 // ════════════════════════════════════════════════════════════
-//  Render: Beste Advertenties (top 5 by lowest CPA)
+//  Render: Beste Advertenties (sort: CPS → CPA → CPL)
 // ════════════════════════════════════════════════════════════
 function renderBeste(ads) {
+  const withCps = ads
+    .filter(a => a.signed >= 1 && a.cpsSigned != null)
+    .sort((a, b) => a.cpsSigned - b.cpsSigned);
   const withCpa = ads
-    .filter(a => a.appointments >= 1 && a.cpa != null)
+    .filter(a => a.signed === 0 && a.appointments >= 1 && a.cpa != null)
     .sort((a, b) => a.cpa - b.cpa);
   const withCpl = ads
     .filter(a => a.appointments === 0 && a.cpl != null)
     .sort((a, b) => a.cpl - b.cpl);
-  const top5 = [...withCpa, ...withCpl].slice(0, 5);
+  const top5 = [...withCps, ...withCpa, ...withCpl].slice(0, 5);
 
   const grid = document.getElementById('creative-grid');
   if (!top5.length) {
