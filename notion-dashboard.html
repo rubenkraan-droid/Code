@@ -887,7 +887,7 @@ const state = {
 };
 
 function getDemoLog() {
-  const dd = n => { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); };
+  const dd = n => { const d = new Date(); d.setDate(d.getDate() - n); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
   return [
     // NH-AD2 – €1.900 spend, 100 leads, 5 afspraken, 1 sale @ €195k  → CPL €19, CPA €380
     { date: dd(29), adId: null, adName: 'Niet huren. Bezitten. - NH-AD2',              spend:  380, clicks: 286, leads: 20, appointments: 0, signed: 0, closed: 0, omzet:       0 },
@@ -1331,7 +1331,8 @@ function renderChart(rows, range) {
   const dates = [];
   const cur = new Date(range.start);
   while (cur <= range.end) {
-    dates.push(cur.toISOString().split('T')[0]);
+    const y = cur.getFullYear(), mo = cur.getMonth() + 1, da = cur.getDate();
+    dates.push(`${y}-${String(mo).padStart(2,'0')}-${String(da).padStart(2,'0')}`);
     cur.setDate(cur.getDate() + 1);
   }
 
