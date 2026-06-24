@@ -318,6 +318,34 @@
     /* ── Print view (hidden normally, shown on print) ── */
     #print-view { display: none; }
 
+    /* ── CSV Import Modal ── */
+    .csv-modal-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55);
+      z-index: 1000; align-items: center; justify-content: center;
+    }
+    .csv-modal-overlay.open { display: flex; }
+    .csv-modal {
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      padding: 28px 32px; width: min(680px, 95vw); max-height: 80vh;
+      overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.4);
+    }
+    .csv-modal h2 { font-size: 17px; font-weight: 700; margin: 0 0 16px; }
+    .csv-drop-zone {
+      border: 2px dashed var(--border); border-radius: 10px;
+      padding: 36px; text-align: center; cursor: pointer; color: var(--muted);
+      transition: border-color .2s, background .2s;
+    }
+    .csv-drop-zone:hover, .csv-drop-zone.drag { border-color: #3B82F6; background: rgba(59,130,246,.05); }
+    .csv-drop-zone input { display: none; }
+    .csv-preview-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 16px; }
+    .csv-preview-table th { text-align: left; padding: 6px 8px; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border); font-size: 10px; text-transform: uppercase; }
+    .csv-preview-table td { padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,.05); }
+    .csv-preview-table tr:last-child td { border-bottom: none; }
+    .csv-modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+    .csv-status { font-size: 12px; color: var(--muted); margin-top: 10px; min-height: 18px; }
+    .csv-status.ok { color: #10B981; }
+    .csv-status.err { color: #EF4444; }
+
     @media print {
       * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
       body { background: #fff !important; color: #111 !important; margin: 0; }
@@ -512,6 +540,29 @@
   </div>
 </div>
 
+<!-- ════════════════ CSV IMPORT MODAL ════════════════ -->
+<div class="csv-modal-overlay" id="csv-modal-overlay">
+  <div class="csv-modal">
+    <h2>&#128196; Meta Ads CSV importeren</h2>
+    <div class="csv-drop-zone" id="csv-drop-zone" onclick="document.getElementById('csv-file-input').click()">
+      <input type="file" id="csv-file-input" accept=".csv">
+      <div>Sleep een CSV hier of <strong>klik om te kiezen</strong></div>
+      <div style="font-size:11px;margin-top:6px;color:var(--muted)">Alleen Spend, Clicks en CPC worden bijgewerkt — Leads nooit</div>
+    </div>
+    <div id="csv-preview-wrap" hidden>
+      <table class="csv-preview-table">
+        <thead><tr><th>Datum</th><th>Advertentie</th><th>Spend</th><th>Clicks</th><th>CPC</th></tr></thead>
+        <tbody id="csv-preview-body"></tbody>
+      </table>
+    </div>
+    <div class="csv-status" id="csv-status"></div>
+    <div class="csv-modal-actions">
+      <button class="period-btn" onclick="closeCsvModal()">Annuleren</button>
+      <button class="period-btn active" id="csv-send-btn" hidden onclick="sendCsvToNotion()">Bijwerken in Notion</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════════════════════════════ DASHBOARD ══════════════════════════════════ -->
 <div id="dashboard" hidden>
 
@@ -522,7 +573,10 @@
       <span id="last-updated"></span>
       <button onclick="forceRefresh()" title="Vernieuwen" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px;padding:2px 4px;margin-top:2px;">&#8635;</button>
     </div>
-    <button class="print-btn" onclick="printDashboard()">&#128438; Print rapport</button>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="period-btn" onclick="openCsvModal()" style="font-size:12px">&#128196; CSV importeren</button>
+      <button class="print-btn" onclick="printDashboard()">&#128438; Print rapport</button>
+    </div>
   </div>
 
   <!-- Tab Navigation -->
@@ -846,6 +900,7 @@
 const CONFIG = {
   DAILY_URL:    'https://mabekra.app.n8n.cloud/webhook/notion-daily',
   ALL_TIME_URL: 'https://mabekra.app.n8n.cloud/webhook/notion-alltime',
+  CSV_URL:      'https://mabekra.app.n8n.cloud/webhook/notion-csv-import',
 };
 
 // ════════════════════════════════════════════════════════════
@@ -2393,6 +2448,146 @@ function loadHistoryItem(i) {
   document.getElementById('brief-actions').hidden = false;
   switchTab('briefing');
 }
+
+// ════════════════════════════════════════════════════════════
+//  CSV Import
+// ════════════════════════════════════════════════════════════
+let csvParsed = [];
+
+function openCsvModal() {
+  csvParsed = [];
+  document.getElementById('csv-preview-wrap').hidden = true;
+  document.getElementById('csv-send-btn').hidden = true;
+  document.getElementById('csv-status').textContent = '';
+  document.getElementById('csv-status').className = 'csv-status';
+  document.getElementById('csv-file-input').value = '';
+  document.getElementById('csv-modal-overlay').classList.add('open');
+}
+function closeCsvModal() {
+  document.getElementById('csv-modal-overlay').classList.remove('open');
+}
+
+function parseMetaCsv(text) {
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) return [];
+  // Parse header
+  const header = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim());
+  const col = name => header.findIndex(h => h.toLowerCase().includes(name.toLowerCase()));
+  const iDate    = col('Reporting starts');
+  const iName    = col('Ad name');
+  const iSpend   = col('Amount spent');
+  const iClicks  = col('Unique clicks');
+
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    // Simple CSV split (handles quoted fields)
+    const cols = [];
+    let cur = '', inQ = false;
+    for (const ch of line) {
+      if (ch === '"') { inQ = !inQ; }
+      else if (ch === ',' && !inQ) { cols.push(cur); cur = ''; }
+      else cur += ch;
+    }
+    cols.push(cur);
+
+    const date   = cols[iDate]?.replace(/"/g,'').trim();
+    const adName = cols[iName]?.replace(/"/g,'').trim();
+    const spend  = parseFloat(cols[iSpend]?.replace(/"/g,'').trim()) || 0;
+    const clicks = parseInt(cols[iClicks]?.replace(/"/g,'').trim()) || 0;
+    const cpc    = clicks > 0 ? Math.round((spend / clicks) * 10000) / 10000 : null;
+
+    if (date && adName) rows.push({ date, adName, spend, clicks, cpc });
+  }
+  // Aggregate by date+adName (same ad can appear in multiple ad sets)
+  const map = new Map();
+  for (const r of rows) {
+    const key = `${r.date}||${r.adName}`;
+    if (!map.has(key)) map.set(key, { date: r.date, adName: r.adName, spend: 0, clicks: 0 });
+    const m = map.get(key);
+    m.spend  += r.spend;
+    m.clicks += r.clicks;
+  }
+  return Array.from(map.values()).map(r => ({
+    ...r,
+    spend: Math.round(r.spend * 100) / 100,
+    cpc:   r.clicks > 0 ? Math.round((r.spend / r.clicks) * 10000) / 10000 : null
+  }));
+}
+
+document.getElementById('csv-file-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => handleCsvText(ev.target.result);
+  reader.readAsText(file, 'utf-8');
+});
+
+const dropZone = document.getElementById('csv-drop-zone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => handleCsvText(ev.target.result);
+  reader.readAsText(file, 'utf-8');
+});
+
+function handleCsvText(text) {
+  csvParsed = parseMetaCsv(text);
+  const tbody = document.getElementById('csv-preview-body');
+  const status = document.getElementById('csv-status');
+  if (!csvParsed.length) {
+    status.textContent = 'Geen geldige rijen gevonden.';
+    status.className = 'csv-status err';
+    return;
+  }
+  tbody.innerHTML = csvParsed.map(r => `<tr>
+    <td>${r.date}</td>
+    <td>${esc(r.adName)}</td>
+    <td class="mono">${fEur2(r.spend)}</td>
+    <td class="mono">${r.clicks}</td>
+    <td class="mono">${r.cpc != null ? fEur2(r.cpc) : '—'}</td>
+  </tr>`).join('');
+  document.getElementById('csv-preview-wrap').hidden = false;
+  document.getElementById('csv-send-btn').hidden = false;
+  status.textContent = `${csvParsed.length} advertenties gevonden`;
+  status.className = 'csv-status';
+}
+
+async function sendCsvToNotion() {
+  const btn    = document.getElementById('csv-send-btn');
+  const status = document.getElementById('csv-status');
+  btn.disabled = true;
+  btn.textContent = 'Bezig…';
+  status.textContent = '';
+  status.className = 'csv-status';
+  try {
+    const res = await fetch(CONFIG.CSV_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rows: csvParsed })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    status.textContent = `✓ ${csvParsed.length} advertenties bijgewerkt in Notion`;
+    status.className = 'csv-status ok';
+    btn.hidden = true;
+  } catch(e) {
+    status.textContent = `Fout: ${e.message}`;
+    status.className = 'csv-status err';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Bijwerken in Notion';
+  }
+}
+
+// Close on overlay click
+document.getElementById('csv-modal-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('csv-modal-overlay')) closeCsvModal();
+});
 
 // ════════════════════════════════════════════════════════════
 //  Boot
