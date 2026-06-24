@@ -867,6 +867,7 @@ const fEur  = v => (v == null || isNaN(v)) ? '—' : _eur.format(v);
 const fEur2 = v => (v == null || isNaN(v)) ? '—' : _eur2.format(v);
 const fNum  = v => (v == null || isNaN(v)) ? '—' : _num.format(Math.round(v));
 const fRoas = v => (v == null || isNaN(v)) ? '—' : `${v.toFixed(2)}×`;
+const eurStatFs = v => { const s = fEur2(v); return s.length > 11 ? '14px' : s.length > 9 ? '17px' : '21px'; };
 const fPct  = v => (v == null || isNaN(v)) ? '—' : `${Math.round(v * 100)}%`;
 const fPct2 = v => (v == null || isNaN(v)) ? '—' : `${(v * 100).toFixed(2)}%`;
 const fMon  = (y, m) => `${MONTHS_SHORT[m]} ${y}`;
@@ -1163,7 +1164,7 @@ function renderSummary(ads) {
   document.getElementById('summary-bar').innerHTML = `
     <div class="stat-card">
       <div class="stat-label">Totaal Uitgaven</div>
-      <div class="stat-value mono">${fEur2(t.spend)}</div>
+      <div class="stat-value mono" style="font-size:${eurStatFs(t.spend)}">${fEur2(t.spend)}</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Clicks</div>
@@ -1898,7 +1899,7 @@ function renderAangepast() {
   const summaryEl = document.getElementById('custom-summary-bar');
   summaryEl.hidden = false;
   summaryEl.innerHTML = `
-    <div class="stat-card"><div class="stat-label">Totaal Uitgaven</div><div class="stat-value mono">${fEur2(t.spend)}</div></div>
+    <div class="stat-card"><div class="stat-label">Totaal Uitgaven</div><div class="stat-value mono" style="font-size:${eurStatFs(t.spend)}">${fEur2(t.spend)}</div></div>
     <div class="stat-card"><div class="stat-label">Clicks</div><div class="stat-value mono">${fNum(t.clicks)}</div></div>
     <div class="stat-card"><div class="stat-label">Leads <span class="ilabel ilabel-amber">${fPct2(optInR)} opt-in</span></div><div class="stat-value mono">${fNum(t.leads)}</div></div>
     <div class="stat-card"><div class="stat-label">CPL</div><div class="stat-value mono">${fEur(cpl)}</div></div>
@@ -2236,7 +2237,7 @@ function renderFunnel() {
   document.getElementById('funnel-costs').innerHTML = `
     <div class="stat-card">
       <div class="stat-label">Totaal uitgaven</div>
-      <div class="stat-value mono">${fEur2(t.spend)}</div>
+      <div class="stat-value mono" style="font-size:${eurStatFs(t.spend)}">${fEur2(t.spend)}</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Kosten per lead (CPL)</div>
