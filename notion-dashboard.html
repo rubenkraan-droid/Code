@@ -1231,7 +1231,7 @@ function renderSummary(ads) {
     </div>
     <div class="stat-card">
       <div class="stat-label">CPL</div>
-      <div class="stat-value mono">${fEur(t.leads > 0 ? t.spend / t.leads : null)}</div>
+      <div class="stat-value mono">${fEur2(t.leads > 0 ? t.spend / t.leads : null)}</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Afspraken <span class="ilabel ilabel-amber">${fPct(afsprR)}</span></div>
@@ -1297,7 +1297,7 @@ function renderMainTable(ads) {
       <td class="mono right muted">${fEur2(ad.cpc)}</td>
       <td class="mono right muted">${fPct2(ad.optInRate)}</td>
       <td class="mono right">${fNum(ad.leads)}</td>
-      <td class="mono right">${fEur(ad.cpl)}</td>
+      <td class="mono right">${fEur2(ad.cpl)}</td>
       <td class="mono right muted">${fPct(ad.afsprRate)}</td>
       <td class="mono right">${fNum(ad.appointments)}</td>
       <td class="mono right">${fEur(ad.cpa)}</td>
@@ -1337,7 +1337,7 @@ function renderMonthlyTable(log) {
       <td class="mono right">${fNum(m.clicks)}</td>
       <td class="mono right muted">${fPct2(m.optInRate)}</td>
       <td class="mono right">${fNum(m.leads)}</td>
-      <td class="mono right">${fEur(m.cpl)}</td>
+      <td class="mono right">${fEur2(m.cpl)}</td>
       <td class="mono right muted">${fPct(m.afsprRate)}</td>
       <td class="mono right">${fNum(m.appointments)}</td>
       <td class="mono right">${fEur(m.cpa)}</td>
@@ -1503,7 +1503,7 @@ function renderAllTimeTable() {
       <td class="mono right muted">${fEur2(ad.cpc)}</td>
       <td class="mono right muted">${fPct2(ad.optInRate)}</td>
       <td class="mono right">${fNum(ad.leads)}</td>
-      <td class="mono right">${fEur(ad.cpl)}</td>
+      <td class="mono right">${fEur2(ad.cpl)}</td>
       <td class="mono right muted">${fPct(ad.afsprRate)}</td>
       <td class="mono right">${fNum(ad.appointments)}</td>
       <td class="mono right">${fEur(ad.cpa)}</td>
@@ -1556,7 +1556,7 @@ function renderBeste(ads) {
       <div class="creative-body">
         <div class="creative-name" title="${esc(ad.adName)}">${esc(ad.adName)}</div>
         <div class="creative-pills">
-          <span class="pill pill-green">CPL ${fEur(ad.cpl)}</span>
+          <span class="pill pill-green">CPL ${fEur2(ad.cpl)}</span>
           <span class="pill pill-blue">CPA ${fEur(ad.cpa)}</span>
           <span class="pill pill-amber">CPS ${fEur(ad.cpsSigned)}</span>
         </div>
@@ -1650,7 +1650,7 @@ function buildPrintPeriod(period, label) {
       <div class="pv-stat"><div class="pv-stat-label">Spend</div><div class="pv-stat-value">${fEur2(t.spend)}</div></div>
       <div class="pv-stat"><div class="pv-stat-label">Clicks</div><div class="pv-stat-value">${fNum(t.clicks)}</div></div>
       <div class="pv-stat"><div class="pv-stat-label">Leads</div><div class="pv-stat-value">${fNum(t.leads)}</div></div>
-      <div class="pv-stat"><div class="pv-stat-label">CPL</div><div class="pv-stat-value">${fEur(cpl)}</div></div>
+      <div class="pv-stat"><div class="pv-stat-label">CPL</div><div class="pv-stat-value">${fEur2(cpl)}</div></div>
       <div class="pv-stat"><div class="pv-stat-label">Afspraken</div><div class="pv-stat-value">${fNum(t.appointments)}</div></div>
       <div class="pv-stat"><div class="pv-stat-label">CPA</div><div class="pv-stat-value">${fEur(cpa)}</div></div>
       <div class="pv-stat"><div class="pv-stat-label">Sales</div><div class="pv-stat-value pv-amber">${fNum(t.signed)}</div></div>
@@ -1668,7 +1668,7 @@ function buildPrintPeriod(period, label) {
       <tbody>${ads.map(ad => `<tr>
         <td>${esc(ad.adName)}</td>
         <td class="r">${fEur2(ad.spend)}</td><td class="r">${fNum(ad.clicks)}</td>
-        <td class="r">${fNum(ad.leads)}</td><td class="r">${fEur(ad.cpl)}</td>
+        <td class="r">${fNum(ad.leads)}</td><td class="r">${fEur2(ad.cpl)}</td>
         <td class="r">${fNum(ad.appointments)}</td><td class="r">${fEur(ad.cpa)}</td>
         <td class="r">${fNum(ad.signed)}</td><td class="r">${fEur(ad.cpsSigned)}</td>
       </tr>`).join('')}</tbody>
@@ -1698,7 +1698,7 @@ function buildPrintMonthly() {
       <tbody>${monthly.map(m => `<tr>
         <td>${fMon(m.year, m.month)}</td>
         <td class="r">${fEur2(m.spend)}</td><td class="r">${fNum(m.clicks)}</td>
-        <td class="r">${fNum(m.leads)}</td><td class="r">${fEur(m.cpl)}</td>
+        <td class="r">${fNum(m.leads)}</td><td class="r">${fEur2(m.cpl)}</td>
         <td class="r">${fPct(m.afsprRate)}</td><td class="r">${fNum(m.appointments)}</td><td class="r">${fEur(m.cpa)}</td>
         <td class="r">${fPct(m.signRate)}</td><td class="r">${fNum(m.signed)}</td><td class="r">${fEur(m.cpsSigned)}</td>
         <td class="r">${fEur(m.omzet||null)}</td><td class="r">${fRoas(m.roas)}</td>
@@ -1706,7 +1706,7 @@ function buildPrintMonthly() {
       <tfoot><tr>
         <td>Totaal</td>
         <td class="r">${fEur2(tot.spend)}</td><td class="r">${fNum(tot.clicks)}</td>
-        <td class="r">${fNum(tot.leads)}</td><td class="r">${fEur(tCpl)}</td>
+        <td class="r">${fNum(tot.leads)}</td><td class="r">${fEur2(tCpl)}</td>
         <td class="r">${fPct(tot.leads>0?tot.appointments/tot.leads:null)}</td>
         <td class="r">${fNum(tot.appointments)}</td><td class="r">${fEur(tCpa)}</td>
         <td class="r">${fPct(tot.appointments>0?tot.signed/tot.appointments:null)}</td>
@@ -1735,7 +1735,7 @@ function buildPrintBeste() {
       <tbody>${beste.map(ad=>`<tr>
         <td>${esc(ad.adName)}</td>
         <td class="r">${fEur2(ad.spend)}</td><td class="r">${fNum(ad.leads)}</td>
-        <td class="r">${fEur(ad.cpl)}</td><td class="r">${fNum(ad.appointments)}</td>
+        <td class="r">${fEur2(ad.cpl)}</td><td class="r">${fNum(ad.appointments)}</td>
         <td class="r">${fEur(ad.cpa)}</td><td class="r">${fNum(ad.signed)}</td>
         <td class="r">${fEur(ad.cpsSigned)}</td><td class="r">${fRoas(ad.roas)}</td>
       </tr>`).join('')}</tbody>
@@ -1957,7 +1957,7 @@ function renderAangepast() {
     <div class="stat-card"><div class="stat-label">Totaal Uitgaven</div><div class="stat-value mono" style="font-size:${eurStatFs(t.spend)}">${fEur2(t.spend)}</div></div>
     <div class="stat-card"><div class="stat-label">Clicks</div><div class="stat-value mono">${fNum(t.clicks)}</div></div>
     <div class="stat-card"><div class="stat-label">Leads <span class="ilabel ilabel-amber">${fPct2(optInR)} opt-in</span></div><div class="stat-value mono">${fNum(t.leads)}</div></div>
-    <div class="stat-card"><div class="stat-label">CPL</div><div class="stat-value mono">${fEur(cpl)}</div></div>
+    <div class="stat-card"><div class="stat-label">CPL</div><div class="stat-value mono">${fEur2(cpl)}</div></div>
     <div class="stat-card"><div class="stat-label">Afspraken <span class="ilabel ilabel-amber">${fPct(afsprR)}</span></div><div class="stat-value mono">${fNum(t.appointments)}</div></div>
     <div class="stat-card"><div class="stat-label">CPA Afspraak</div><div class="stat-value mono">${fEur(cpa)}</div></div>
     <div class="stat-card"><div class="stat-label">Sales <span class="ilabel ilabel-amber">${fPct(signR)}</span></div><div class="stat-value mono amber">${fNum(t.signed)}</div></div>
@@ -1985,7 +1985,7 @@ function renderAangepast() {
       <td class="mono right muted">${fEur2(ad.cpc)}</td>
       <td class="mono right muted">${fPct2(ad.optInRate)}</td>
       <td class="mono right">${fNum(ad.leads)}</td>
-      <td class="mono right">${fEur(ad.cpl)}</td>
+      <td class="mono right">${fEur2(ad.cpl)}</td>
       <td class="mono right muted">${fPct(ad.afsprRate)}</td>
       <td class="mono right">${fNum(ad.appointments)}</td>
       <td class="mono right">${fEur(ad.cpa)}</td>
@@ -2296,7 +2296,7 @@ function renderFunnel() {
     </div>
     <div class="stat-card">
       <div class="stat-label">Kosten per lead (CPL)</div>
-      <div class="stat-value mono">${fEur(cpl)}</div>
+      <div class="stat-value mono">${fEur2(cpl)}</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Kosten per afspraak (CPA)</div>
