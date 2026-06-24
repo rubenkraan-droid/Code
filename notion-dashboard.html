@@ -172,7 +172,7 @@
     }
     .stat-card {
       background: var(--card); border: 1px solid var(--border);
-      border-radius: 10px; padding: 14px 18px; flex: 1; min-width: 130px;
+      border-radius: 10px; padding: 14px 18px; flex: 1; min-width: 140px;
     }
     .stat-card.c-amber { border-color: rgba(245,158,11,.3); }
     .stat-card.c-green { border-color: rgba(16,185,129,.3); }
@@ -867,7 +867,7 @@ const fEur  = v => (v == null || isNaN(v)) ? '—' : _eur.format(v);
 const fEur2 = v => (v == null || isNaN(v)) ? '—' : _eur2.format(v);
 const fNum  = v => (v == null || isNaN(v)) ? '—' : _num.format(Math.round(v));
 const fRoas = v => (v == null || isNaN(v)) ? '—' : `${v.toFixed(2)}×`;
-const eurStatFs = v => { const s = fEur2(v); return s.length > 11 ? '14px' : s.length > 9 ? '17px' : '21px'; };
+const eurStatFs = v => { const s = fEur2(v); return s.length > 10 ? '13px' : s.length > 8 ? '17px' : '21px'; };
 const fPct  = v => (v == null || isNaN(v)) ? '—' : `${Math.round(v * 100)}%`;
 const fPct2 = v => (v == null || isNaN(v)) ? '—' : `${(v * 100).toFixed(2)}%`;
 const fMon  = (y, m) => `${MONTHS_SHORT[m]} ${y}`;
