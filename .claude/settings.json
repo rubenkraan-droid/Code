@@ -1,10 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "mcp__df123de6-b28f-424e-add9-1e878d32aa38__notion-update-page",
-      "mcp__df123de6-b28f-424e-add9-1e878d32aa38__notion-create-pages",
-      "mcp__df123de6-b28f-424e-add9-1e878d32aa38__notion-search",
-      "mcp__df123de6-b28f-424e-add9-1e878d32aa38__notion-fetch"
+      "mcp__df123de6-b28f-424e-add9-1e878d32aa38__*",
+      "mcp__Notion__*"
     ]
   }
 }
