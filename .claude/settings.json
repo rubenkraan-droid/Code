@@ -6,5 +6,18 @@
       "mcp__df123de6-b28f-424e-add9-1e878d32aa38__notion-search",
       "mcp__df123de6-b28f-424e-add9-1e878d32aa38__notion-fetch"
     ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pip install -q 'headroom-ai[mcp]' --ignore-installed pyjwt && headroom mcp install",
+            "async": true
+          }
+        ]
+      }
+    ]
   }
 }
