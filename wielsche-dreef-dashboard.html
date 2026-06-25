@@ -1497,10 +1497,20 @@ async function init() {
     update();
 
   } catch (err) {
+    console.warn('[Dashboard] Webhook fout, demo data geladen:', err.message);
+    state.dailyLog = MOCK.dagelijks;
+    state.allTimeMap = new Map();
+    for (const at of MOCK.allTime) {
+      if (at.adId)   state.allTimeMap.set(at.adId,   at);
+      if (at.adName) state.allTimeMap.set(at.adName, at);
+    }
+    populateMonthPicker();
+    const now = new Date();
+    document.getElementById('last-updated').textContent =
+      `Demo data — ${now.toLocaleDateString('nl-NL')} om ${now.toLocaleTimeString('nl-NL', {hour:'2-digit',minute:'2-digit'})}`;
     document.getElementById('loading-screen').hidden = true;
-    document.getElementById('error-screen').hidden   = false;
-    document.getElementById('error-msg').textContent = err.message;
-    console.error('[Dashboard]', err);
+    document.getElementById('dashboard').hidden      = false;
+    update();
   }
 }
 
@@ -1541,11 +1551,11 @@ document.querySelectorAll('#main-table th[data-sort]').forEach(th => {
 // ── Mock datums — altijd relatief aan vandaag ────────────────
 const _md = (monthsAgo, day = 15) => {
   const d = new Date(); d.setDate(day); d.setMonth(d.getMonth() - monthsAgo);
-  return d.toISOString().slice(0, 10);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 };
 const _dd = (daysAgo) => {
   const d = new Date(); d.setDate(d.getDate() - daysAgo);
-  return d.toISOString().slice(0, 10);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 };
 
 const MOCK = {
