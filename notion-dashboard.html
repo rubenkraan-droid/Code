@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Advertentie Dashboard</title>
+  <title id="page-title">Advertentie Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     :root {
@@ -884,7 +884,7 @@
 <!-- ══════════════════════════════════ PRINT VIEW ══════════════════════════════════ -->
 <div id="print-view">
   <div class="pv-header">
-    <div class="pv-title">Advertentie Dashboard</div>
+    <div class="pv-title" id="pv-title">Advertentie Dashboard</div>
     <div class="pv-date" id="pv-date"></div>
   </div>
   <div id="pv-7d"      class="pv-section"></div>
@@ -898,9 +898,12 @@
 //  CONFIG
 // ════════════════════════════════════════════════════════════
 const CONFIG = {
+  // ─── Pas alleen dit blok aan per project ───────────────────
+  PROJECT_NAME: 'France',
   DAILY_URL:    'https://mabekra.app.n8n.cloud/webhook/notion-daily',
   ALL_TIME_URL: 'https://mabekra.app.n8n.cloud/webhook/notion-alltime',
   CSV_URL:      'https://mabekra.app.n8n.cloud/webhook/notion-csv-import',
+  // ───────────────────────────────────────────────────────────
 };
 
 // ════════════════════════════════════════════════════════════
@@ -1842,6 +1845,9 @@ function setLastUpdated(date, fromCache) {
 //  Init
 // ════════════════════════════════════════════════════════════
 async function init(forceFetch = false) {
+  document.title = `${CONFIG.PROJECT_NAME} — Advertentie Dashboard`;
+  document.getElementById('dash-title').textContent = `${CONFIG.PROJECT_NAME} — Advertenties`;
+  document.getElementById('pv-title').textContent   = `${CONFIG.PROJECT_NAME} — Advertentie Dashboard`;
   document.getElementById('loading-screen').hidden = false;
   document.getElementById('error-screen').hidden   = true;
   document.getElementById('dashboard').hidden      = true;
