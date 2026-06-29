@@ -1375,9 +1375,9 @@ function renderChart(rows, range) {
   const dm = new Map();
   for (const r of rows) {
     if (!r.date) continue;
-    if (!dm.has(r.date)) dm.set(r.date, {spend:0, leads:0, signed:0});
+    if (!dm.has(r.date)) dm.set(r.date, {spend:0, leads:0, appointments:0, signed:0});
     const d = dm.get(r.date);
-    d.spend += r.spend; d.leads += r.leads; d.signed += r.signed;
+    d.spend += r.spend; d.leads += r.leads; d.appointments += (r.appointments||0); d.signed += r.signed;
   }
 
   const dates = [];
@@ -1392,6 +1392,8 @@ function renderChart(rows, range) {
   const spendData  = dates.map(d => dm.get(d)?.spend || 0);
   const cplData    = dates.map(d => { const v = dm.get(d); return v && v.leads > 0 ? v.spend / v.leads : null; });
   const leadsData  = dates.map(d => dm.get(d)?.leads || 0);
+  const afspData   = dates.map(d => dm.get(d)?.appointments || 0);
+  const salesData  = dates.map(d => dm.get(d)?.signed || 0);
 
   if (state.chart) { state.chart.destroy(); state.chart = null; }
 
@@ -1421,6 +1423,24 @@ function renderChart(rows, range) {
           borderColor: '#10B981', borderDash: [6,3],
           tension: 0.3, spanGaps: true, yAxisID: 'y1',
           pointRadius: 3, pointHoverRadius: 5
+        },
+        {
+          label: 'Afspraken',
+          data: afspData,
+          borderColor: '#A78BFA', backgroundColor: 'rgba(167,139,250,0.55)',
+          showLine: false, yAxisID: 'y2',
+          pointStyle: 'circle',
+          pointRadius: ctx => { const v = ctx.parsed?.y||0; return v > 0 ? Math.min(4 + v*3, 20) : 0; },
+          pointHoverRadius: ctx => { const v = ctx.parsed?.y||0; return v > 0 ? Math.min(6 + v*3, 22) : 0; }
+        },
+        {
+          label: 'Sales',
+          data: salesData,
+          borderColor: '#34D399', backgroundColor: 'rgba(52,211,153,0.6)',
+          showLine: false, yAxisID: 'y2',
+          pointStyle: 'circle',
+          pointRadius: ctx => { const v = ctx.parsed?.y||0; return v > 0 ? Math.min(5 + v*4, 24) : 0; },
+          pointHoverRadius: ctx => { const v = ctx.parsed?.y||0; return v > 0 ? Math.min(7 + v*4, 26) : 0; }
         }
       ]
     },
@@ -1437,8 +1457,12 @@ function renderChart(rows, range) {
           callbacks: {
             label: ctx => {
               if (ctx.parsed.y == null) return null;
-              if (ctx.dataset.label === 'Leads') return `Leads: ${ctx.parsed.y}`;
-              return `${ctx.dataset.label}: ${fEur(ctx.parsed.y)}`;
+              const v = ctx.parsed.y;
+              const lbl = ctx.dataset.label;
+              if (lbl === 'Leads')     return v > 0 ? `Leads: ${v}` : null;
+              if (lbl === 'Afspraken') return v > 0 ? `Afspraken: ${v}` : null;
+              if (lbl === 'Sales')     return v > 0 ? `Sales: ${v}` : null;
+              return `${lbl}: ${fEur(v)}`;
             }
           }
         }
