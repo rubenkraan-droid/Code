@@ -895,16 +895,25 @@
 
 <script>
 // ════════════════════════════════════════════════════════════
-//  CONFIG
+//  CONFIG — nieuw project = nieuw blok in PROJECTS toevoegen
 // ════════════════════════════════════════════════════════════
-const CONFIG = {
-  // ─── Pas alleen dit blok aan per project ───────────────────
-  PROJECT_NAME: 'France',
-  DAILY_URL:    'https://mabekra.app.n8n.cloud/webhook/notion-daily',
-  ALL_TIME_URL: 'https://mabekra.app.n8n.cloud/webhook/notion-alltime',
-  CSV_URL:      'https://mabekra.app.n8n.cloud/webhook/notion-csv-import',
-  // ───────────────────────────────────────────────────────────
+const PROJECTS = {
+  'france': {
+    PROJECT_NAME: 'France',
+    DAILY_URL:    'https://mabekra.app.n8n.cloud/webhook/notion-daily',
+    ALL_TIME_URL: 'https://mabekra.app.n8n.cloud/webhook/notion-alltime',
+    CSV_URL:      'https://mabekra.app.n8n.cloud/webhook/notion-csv-import',
+  },
+  'golden-bricks': {
+    PROJECT_NAME: 'Golden Bricks',
+    DAILY_URL:    'https://mabekra.app.n8n.cloud/webhook/gb-daily',
+    ALL_TIME_URL: 'https://mabekra.app.n8n.cloud/webhook/gb-alltime',
+    CSV_URL:      'https://mabekra.app.n8n.cloud/webhook/gb-csv-import',
+  },
 };
+
+const _project = new URLSearchParams(location.search).get('project') || 'france';
+const CONFIG = PROJECTS[_project] || PROJECTS['france'];
 
 // ════════════════════════════════════════════════════════════
 //  Dutch locale helpers
