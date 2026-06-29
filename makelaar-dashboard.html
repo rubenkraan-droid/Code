@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recravas Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+    :root {
+      --bg:      #0F172A;
+      --card:    #1E293B;
+      --border:  #334155;
+      --text:    #F1F5F9;
+      --muted:   #94A3B8;
+      --blue:    #3B82F6;
+      --green:   #10B981;
+      --amber:   #F59E0B;
+      --purple:  #A78BFA;
+      --red:     #F87171;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; min-height: 100vh; }
+
+    /* ── Login ── */
+    #login-screen {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh;
+    }
+    .login-box {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; padding: 40px; width: 100%; max-width: 400px;
+    }
+    .login-logo { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+    .login-sub  { color: var(--muted); margin-bottom: 28px; font-size: 13px; }
+    .login-label { display: block; color: var(--muted); font-size: 12px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .05em; }
+    .login-input {
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 14px; color: var(--text); font-size: 14px;
+      outline: none; transition: border .15s;
+    }
+    .login-input:focus { border-color: var(--blue); }
+    .login-btn {
+      width: 100%; margin-top: 16px; padding: 11px; background: var(--blue);
+      border: none; border-radius: 8px; color: #fff; font-size: 14px; font-weight: 600;
+      cursor: pointer; transition: opacity .15s;
+    }
+    .login-btn:hover { opacity: .88; }
+    .login-btn:disabled { opacity: .5; cursor: not-allowed; }
+    .login-hint { margin-top: 12px; font-size: 12px; color: var(--muted); text-align: center; }
+    .login-error { margin-top: 12px; font-size: 12px; color: var(--red); text-align: center; }
+    .login-back  { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 12px; margin-top: 10px; width: 100%; text-align: center; }
+    .login-back:hover { color: var(--text); }
+
+    /* ── Loading ── */
+    #loading-screen {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; color: var(--muted); font-size: 13px;
+    }
+
+    /* ── Dashboard ── */
+    #dashboard { display: none; }
+    .top-bar {
+      background: var(--card); border-bottom: 1px solid var(--border);
+      padding: 14px 24px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .top-bar-left { display: flex; align-items: center; gap: 12px; }
+    .top-bar-logo { font-size: 16px; font-weight: 700; }
+    .role-badge {
+      font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px;
+      background: rgba(59,130,246,.15); color: var(--blue); border: 1px solid rgba(59,130,246,.3);
+    }
+    .role-badge.owner  { background: rgba(16,185,129,.15); color: var(--green); border-color: rgba(16,185,129,.3); }
+    .role-badge.admin  { background: rgba(167,139,250,.15); color: var(--purple); border-color: rgba(167,139,250,.3); }
+    .top-bar-right { display: flex; align-items: center; gap: 14px; }
+    .user-name { color: var(--muted); font-size: 13px; }
+    .logout-btn { background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); cursor: pointer; font-size: 12px; padding: 5px 12px; }
+    .logout-btn:hover { color: var(--text); border-color: var(--text); }
+
+    .main { max-width: 1200px; margin: 0 auto; padding: 28px 24px; }
+
+    /* ── Period picker ── */
+    .period-bar { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; align-items: center; }
+    .period-btn {
+      background: var(--card); border: 1px solid var(--border); border-radius: 6px;
+      color: var(--muted); cursor: pointer; font-size: 12px; padding: 6px 14px;
+    }
+    .period-btn.active, .period-btn:hover { border-color: var(--blue); color: var(--blue); background: rgba(59,130,246,.08); }
+    .period-label { color: var(--muted); font-size: 12px; margin-left: auto; }
+
+    /* ── Section title ── */
+    .section-title { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 14px; margin-top: 28px; }
+
+    /* ── KPI cards ── */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; }
+    .kpi-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 18px 20px;
+    }
+    .kpi-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; }
+    .kpi-value { font-size: 26px; font-weight: 700; }
+    .kpi-sub   { font-size: 11px; color: var(--muted); margin-top: 4px; }
+    .kpi-up    { color: var(--green); }
+    .kpi-down  { color: var(--red); }
+
+    /* ── Table ── */
+    .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-top: 14px; }
+    table { width: 100%; border-collapse: collapse; }
+    thead th { padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid var(--border); }
+    tbody td { padding: 11px 16px; border-bottom: 1px solid rgba(51,65,85,.5); font-size: 13px; }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: rgba(255,255,255,.02); }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+    /* ── Benchmark bar ── */
+    .bench-row { display: flex; align-items: center; gap: 10px; }
+    .bench-bar-wrap { flex: 1; background: var(--border); border-radius: 4px; height: 6px; overflow: hidden; }
+    .bench-bar { height: 100%; border-radius: 4px; background: var(--blue); }
+    .bench-bar.above { background: var(--green); }
+    .bench-bar.below { background: var(--amber); }
+    .bench-pct { font-size: 12px; font-weight: 600; min-width: 50px; text-align: right; }
+    .bench-pct.above { color: var(--green); }
+    .bench-pct.below { color: var(--amber); }
+
+    /* ── Park cards ── */
+    .park-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-top: 14px; }
+    .park-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+    .park-card-name { font-size: 15px; font-weight: 600; margin-bottom: 14px; }
+    .park-stat-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
+    .park-stat-label { color: var(--muted); font-size: 12px; }
+    .park-stat-val { font-size: 13px; font-weight: 600; }
+
+    .empty { color: var(--muted); font-size: 13px; padding: 24px; text-align: center; }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">Recravas</div>
+    <div class="login-sub">Log in met je e-mailadres</div>
+
+    <!-- Step 1: email -->
+    <div id="step-email">
+      <label class="login-label">E-mailadres</label>
+      <input id="email-input" class="login-input" type="email" placeholder="jij@recravas.nl" autocomplete="email">
+      <button class="login-btn" onclick="sendOTP()">Stuur inlogcode</button>
+      <div id="login-error" class="login-error" style="display:none"></div>
+    </div>
+
+    <!-- Step 2: OTP code -->
+    <div id="step-otp" style="display:none">
+      <div class="login-hint" style="margin-bottom:16px">Code verstuurd naar <strong id="otp-email-shown"></strong></div>
+      <label class="login-label">6-cijferige code</label>
+      <input id="otp-input" class="login-input" type="text" inputmode="numeric" maxlength="6" placeholder="123456" autocomplete="one-time-code">
+      <button class="login-btn" onclick="verifyOTP()">Inloggen</button>
+      <div id="otp-error" class="login-error" style="display:none"></div>
+      <button class="login-back" onclick="backToEmail()">← Ander e-mailadres</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div id="loading-screen" style="display:none">Laden…</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+  <div class="top-bar">
+    <div class="top-bar-left">
+      <div class="top-bar-logo">Recravas</div>
+      <span class="role-badge" id="role-badge">—</span>
+    </div>
+    <div class="top-bar-right">
+      <span class="user-name" id="user-name-label"></span>
+      <button class="logout-btn" onclick="logout()">Uitloggen</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- Period picker -->
+    <div class="period-bar">
+      <button class="period-btn active" data-days="7">7 dagen</button>
+      <button class="period-btn" data-days="30">30 dagen</button>
+      <button class="period-btn" data-days="90">Kwartaal</button>
+      <button class="period-btn" data-days="365">Jaar</button>
+      <span class="period-label" id="period-label-text"></span>
+    </div>
+
+    <!-- ADMIN VIEW -->
+    <div id="view-admin" style="display:none">
+      <div class="section-title">Overzicht alle parken</div>
+      <div class="kpi-grid" id="admin-kpis"></div>
+      <div class="section-title">Per makelaar</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Makelaar</th>
+            <th class="num">Leads</th>
+            <th class="num">Afspraken</th>
+            <th class="num">Sales</th>
+            <th class="num">Omzet</th>
+            <th class="num">Sluitratio</th>
+          </tr></thead>
+          <tbody id="admin-agent-tbody"></tbody>
+        </table>
+      </div>
+      <div class="section-title">Per park × makelaar</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Park</th><th>Makelaar</th>
+            <th class="num">Afspraken</th>
+            <th class="num">Sales</th>
+            <th class="num">Omzet</th>
+          </tr></thead>
+          <tbody id="admin-park-agent-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PARK OWNER VIEW -->
+    <div id="view-owner" style="display:none">
+      <div class="section-title" id="owner-park-title">Mijn park</div>
+      <div class="kpi-grid" id="owner-kpis"></div>
+    </div>
+
+    <!-- MAKELAAR VIEW -->
+    <div id="view-agent" style="display:none">
+      <!-- Personal KPIs -->
+      <div class="section-title">Mijn prestaties</div>
+      <div class="kpi-grid" id="agent-kpis"></div>
+
+      <!-- Benchmark -->
+      <div class="section-title">Jij vs gemiddelde</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Metric</th>
+            <th class="num">Jij</th>
+            <th class="num">Gemiddelde</th>
+            <th style="width:160px">Verhouding</th>
+          </tr></thead>
+          <tbody id="bench-tbody"></tbody>
+        </table>
+      </div>
+
+      <!-- Park totals (no spend) -->
+      <div class="section-title">Parken</div>
+      <div class="park-grid" id="agent-parks"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://ooqkpazyvohsrdvxfnug.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_fkVuhCNu_Q0Ze9x5VPee1g_jtzClD0O';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentEmail = '';
+let state = { days: 7, profile: null, membership: null };
+
+// ── Helpers ────────────────────────────────────────────────
+const fEur  = v => v == null ? '—' : '€' + Math.round(v).toLocaleString('nl-NL');
+const fNum  = v => v == null ? '—' : Number(v).toLocaleString('nl-NL');
+const fPct  = v => v == null ? '—' : Math.round(v) + '%';
+
+function dateRange(days) {
+  const to   = new Date();
+  const from = new Date();
+  from.setDate(from.getDate() - days + 1);
+  const fmt = d => d.toISOString().slice(0, 10);
+  return { from: fmt(from), to: fmt(to) };
+}
+
+function show(id)  { document.getElementById(id).style.display = ''; }
+function hide(id)  { document.getElementById(id).style.display = 'none'; }
+function text(id, v) { document.getElementById(id).textContent = v; }
+
+// ── Auth ───────────────────────────────────────────────────
+async function sendOTP() {
+  const email = document.getElementById('email-input').value.trim();
+  if (!email) return;
+  currentEmail = email;
+  hide('login-error');
+  const btn = document.querySelector('#step-email .login-btn');
+  btn.disabled = true; btn.textContent = 'Versturen…';
+  const { error } = await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
+  btn.disabled = false; btn.textContent = 'Stuur inlogcode';
+  if (error) { showErr('login-error', 'E-mailadres niet gevonden of geen toegang.'); return; }
+  text('otp-email-shown', email);
+  hide('step-email'); show('step-otp');
+}
+
+async function verifyOTP() {
+  const token = document.getElementById('otp-input').value.trim();
+  hide('otp-error');
+  const btn = document.querySelector('#step-otp .login-btn');
+  btn.disabled = true; btn.textContent = 'Inloggen…';
+  const { error } = await sb.auth.verifyOtp({ email: currentEmail, token, type: 'email' });
+  btn.disabled = false; btn.textContent = 'Inloggen';
+  if (error) { showErr('otp-error', 'Ongeldige of verlopen code.'); return; }
+  await loadDashboard();
+}
+
+function backToEmail() {
+  hide('step-otp'); show('step-email');
+  document.getElementById('otp-input').value = '';
+}
+
+function showErr(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg; el.style.display = '';
+}
+
+async function logout() {
+  await sb.auth.signOut();
+  location.reload();
+}
+
+// ── Load dashboard ─────────────────────────────────────────
+async function loadDashboard() {
+  hide('login-screen'); show('loading-screen');
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) { location.reload(); return; }
+
+  const { data: profile } = await sb.from('profiles')
+    .select('full_name, is_owner').eq('user_id', user.id).single();
+
+  if (!profile) { showErr('login-error', 'Geen toegangsprofiel gevonden.'); show('login-screen'); hide('loading-screen'); return; }
+
+  state.profile = profile;
+
+  text('user-name-label', profile.full_name || user.email);
+
+  hide('loading-screen');
+  show('dashboard');
+
+  // Role badge
+  const badge = document.getElementById('role-badge');
+  if (profile.is_owner === true && !profile.full_name?.includes('admin')) {
+    badge.textContent = 'Park eigenaar'; badge.className = 'role-badge owner';
+  } else if (profile.is_owner === true) {
+    badge.textContent = 'Admin'; badge.className = 'role-badge admin';
+  } else {
+    badge.textContent = 'Makelaar'; badge.className = 'role-badge';
+  }
+
+  // Determine if admin (is_owner with all parks) or park owner (is_owner with specific park)
+  if (profile.is_owner) {
+    // Check if they have specific park membership (park owner) or none (admin)
+    const { data: mem } = await sb.from('park_members').select('park_id').eq('user_id', user.id);
+    state.membership = mem || [];
+    if (state.membership.length === 0) {
+      // Admin: sees everything
+      badge.textContent = 'Admin'; badge.className = 'role-badge admin';
+      show('view-admin');
+    } else {
+      // Park owner: sees their park(s) including spend
+      show('view-owner');
+    }
+  } else {
+    // Makelaar
+    const { data: mem } = await sb.from('park_members').select('park_id, agent_id').eq('user_id', user.id);
+    state.membership = mem || [];
+    show('view-agent');
+  }
+
+  await loadData();
+}
+
+// ── Load data ──────────────────────────────────────────────
+async function loadData() {
+  const { from, to } = dateRange(state.days);
+  updatePeriodLabel(from, to);
+  const p = state.profile;
+
+  if (p.is_owner && state.membership.length === 0) {
+    await loadAdminData(from, to);
+  } else if (p.is_owner) {
+    await loadOwnerData(from, to);
+  } else {
+    await loadAgentData(from, to);
+  }
+}
+
+// ── Admin view ─────────────────────────────────────────────
+async function loadAdminData(from, to) {
+  const [agentRes, parkAgentRes] = await Promise.all([
+    sb.rpc('owner_agent_performance', { p_from: from, p_to: to }),
+    sb.rpc('owner_park_agent', { p_from: from, p_to: to }),
+  ]);
+
+  const agents = agentRes.data || [];
+  const totalLeads = agents.reduce((s, a) => s + (a.leads || 0), 0);
+  const totalAppt  = agents.reduce((s, a) => s + (a.appointments || 0), 0);
+  const totalSales = agents.reduce((s, a) => s + (a.sales || 0), 0);
+  const totalRev   = agents.reduce((s, a) => s + (a.revenue || 0), 0);
+
+  document.getElementById('admin-kpis').innerHTML = [
+    kpiCard('Leads', fNum(totalLeads), '', '#F59E0B'),
+    kpiCard('Afspraken', fNum(totalAppt), '', '#3B82F6'),
+    kpiCard('Sales', fNum(totalSales), '', '#10B981'),
+    kpiCard('Omzet', fEur(totalRev), '', '#A78BFA'),
+  ].join('');
+
+  document.getElementById('admin-agent-tbody').innerHTML = agents.length
+    ? agents.map(a => `<tr>
+        <td>${esc(a.agent)}</td>
+        <td class="num">${fNum(a.leads)}</td>
+        <td class="num">${fNum(a.appointments)}</td>
+        <td class="num">${fNum(a.sales)}</td>
+        <td class="num">${fEur(a.revenue)}</td>
+        <td class="num">${a.appointments > 0 ? fPct(a.sales / a.appointments * 100) : '—'}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="6" class="empty">Geen data</td></tr>';
+
+  document.getElementById('admin-park-agent-tbody').innerHTML = (parkAgentRes.data || []).length
+    ? (parkAgentRes.data || []).map(r => `<tr>
+        <td>${esc(r.park)}</td><td>${esc(r.agent)}</td>
+        <td class="num">${fNum(r.appointments)}</td>
+        <td class="num">${fNum(r.sales)}</td>
+        <td class="num">${fEur(r.revenue)}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="5" class="empty">Geen data</td></tr>';
+}
+
+// ── Park owner view ────────────────────────────────────────
+async function loadOwnerData(from, to) {
+  const parkIds = state.membership.map(m => m.park_id);
+  const results = await Promise.all(parkIds.map(pid =>
+    sb.rpc('client_park_funnel', { p_park_id: pid, p_from: from, p_to: to })
+  ));
+
+  let totalSpend = 0, totalLeads = 0, totalAppt = 0, totalSales = 0, totalRev = 0;
+  const parks = [];
+  for (const r of results) {
+    const d = r.data?.[0];
+    if (!d) continue;
+    totalSpend += d.spend || 0;
+    totalLeads += Number(d.leads) || 0;
+    totalAppt  += Number(d.appointments) || 0;
+    totalSales += Number(d.sales) || 0;
+    totalRev   += d.revenue || 0;
+    parks.push(d);
+  }
+
+  text('owner-park-title', parks.length === 1 ? parks[0].park : 'Mijn parken');
+
+  document.getElementById('owner-kpis').innerHTML = [
+    kpiCard('Ad spend', fEur(totalSpend), '', '#3B82F6'),
+    kpiCard('Leads', fNum(totalLeads), '', '#F59E0B'),
+    kpiCard('Afspraken', fNum(totalAppt), '', '#3B82F6'),
+    kpiCard('Sales', fNum(totalSales), '', '#10B981'),
+    kpiCard('Omzet', fEur(totalRev), '', '#A78BFA'),
+    kpiCard('CPL', totalLeads > 0 ? fEur(totalSpend / totalLeads) : '—', '', '#94A3B8'),
+  ].join('');
+}
+
+// ── Makelaar view ──────────────────────────────────────────
+async function loadAgentData(from, to) {
+  const agentId = state.membership?.[0]?.agent_id;
+  const parkIds = state.membership.map(m => m.park_id);
+
+  const [agentRes, ...parkResults] = await Promise.all([
+    sb.rpc('agent_funnel', { p_from: from, p_to: to }),
+    ...parkIds.map(pid => sb.rpc('client_park_funnel', { p_park_id: pid, p_from: from, p_to: to }))
+  ]);
+
+  const me = agentRes.data?.[0] || {};
+  const myLeads = Number(me.leads) || 0;
+  const myAppt  = Number(me.appointments) || 0;
+  const mySales = Number(me.sales) || 0;
+  const myRev   = me.revenue || 0;
+
+  document.getElementById('agent-kpis').innerHTML = [
+    kpiCard('Mijn leads', fNum(myLeads), '', '#F59E0B'),
+    kpiCard('Mijn afspraken', fNum(myAppt), '', '#3B82F6'),
+    kpiCard('Mijn sales', fNum(mySales), '', '#10B981'),
+    kpiCard('Mijn omzet', fEur(myRev), '', '#A78BFA'),
+    kpiCard('Sluitratio', myAppt > 0 ? fPct(mySales / myAppt * 100) : '—', '', '#94A3B8'),
+  ].join('');
+
+  // Benchmark against park average
+  const parkData = parkResults.map(r => r.data?.[0]).filter(Boolean);
+  const numAgents = state.membership.length > 0 ? await getActiveAgentCount(parkIds[0]) : 1;
+
+  const avgLeads = parkData.reduce((s, p) => s + Number(p.leads), 0) / Math.max(numAgents, 1);
+  const avgAppt  = parkData.reduce((s, p) => s + Number(p.appointments), 0) / Math.max(numAgents, 1);
+  const avgSales = parkData.reduce((s, p) => s + Number(p.sales), 0) / Math.max(numAgents, 1);
+
+  document.getElementById('bench-tbody').innerHTML = [
+    benchRow('Leads',      myLeads, avgLeads),
+    benchRow('Afspraken',  myAppt,  avgAppt),
+    benchRow('Sales',      mySales, avgSales),
+  ].join('');
+
+  // Park cards (no spend)
+  document.getElementById('agent-parks').innerHTML = parkData.map(p => `
+    <div class="park-card">
+      <div class="park-card-name">${esc(p.park)}</div>
+      <div class="park-stat-row"><span class="park-stat-label">Leads</span><span class="park-stat-val">${fNum(p.leads)}</span></div>
+      <div class="park-stat-row"><span class="park-stat-label">Afspraken</span><span class="park-stat-val">${fNum(p.appointments)}</span></div>
+      <div class="park-stat-row"><span class="park-stat-label">Sales</span><span class="park-stat-val">${fNum(p.sales)}</span></div>
+      <div class="park-stat-row"><span class="park-stat-label">Omzet</span><span class="park-stat-val">${fEur(p.revenue)}</span></div>
+    </div>
+  `).join('') || '<div class="empty">Geen parkdata beschikbaar</div>';
+}
+
+async function getActiveAgentCount(parkId) {
+  // Count active agents in this park via park_members
+  const { count } = await sb.from('park_members')
+    .select('*', { count: 'exact', head: true })
+    .eq('park_id', parkId)
+    .not('agent_id', 'is', null);
+  return count || 1;
+}
+
+// ── UI helpers ─────────────────────────────────────────────
+function kpiCard(label, value, sub, color) {
+  return `<div class="kpi-card">
+    <div class="kpi-label">${label}</div>
+    <div class="kpi-value" style="color:${color}">${value}</div>
+    ${sub ? `<div class="kpi-sub">${sub}</div>` : ''}
+  </div>`;
+}
+
+function benchRow(label, mine, avg) {
+  const ratio = avg > 0 ? mine / avg : (mine > 0 ? 2 : 1);
+  const pct   = Math.min(ratio * 100, 200);
+  const above = mine >= avg;
+  const diff  = avg > 0 ? Math.round((mine - avg) / avg * 100) : 0;
+  const barW  = Math.min(pct / 2, 100);
+  const cls   = above ? 'above' : 'below';
+  const sign  = diff > 0 ? '+' : '';
+  return `<tr>
+    <td>${label}</td>
+    <td class="num">${fNum(mine)}</td>
+    <td class="num">${avg > 0 ? Math.round(avg * 10) / 10 : '—'}</td>
+    <td>
+      <div class="bench-row">
+        <div class="bench-bar-wrap"><div class="bench-bar ${cls}" style="width:${barW}%"></div></div>
+        <span class="bench-pct ${cls}">${avg > 0 ? sign + diff + '%' : '—'}</span>
+      </div>
+    </td>
+  </tr>`;
+}
+
+function updatePeriodLabel(from, to) {
+  const fmt = d => new Date(d).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' });
+  text('period-label-text', `${fmt(from)} – ${fmt(to)}`);
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Period buttons ─────────────────────────────────────────
+document.querySelectorAll('.period-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.days = parseInt(btn.dataset.days);
+    loadData();
+  });
+});
+
+// ── Enter key on inputs ────────────────────────────────────
+document.getElementById('email-input').addEventListener('keydown', e => { if (e.key === 'Enter') sendOTP(); });
+document.getElementById('otp-input').addEventListener('keydown',   e => { if (e.key === 'Enter') verifyOTP(); });
+
+// ── Init: check existing session ──────────────────────────
+(async () => {
+  hide('login-screen'); show('loading-screen');
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    await loadDashboard();
+  } else {
+    hide('loading-screen'); show('login-screen');
+  }
+})();
+</script>
+</body>
+</html>
