@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Recravas Dashboard</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
     :root {
       --bg:      #0F172A;
@@ -201,9 +200,6 @@
 </div>
 
 <script>
-const SUPABASE_URL = 'https://ooqkpazyvohsrdvxfnug.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_fkVuhCNu_Q0Ze9x5VPee1g_jtzClD0O';
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let state = { days: 7, role: 'admin' };
 
