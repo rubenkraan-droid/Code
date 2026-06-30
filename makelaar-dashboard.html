@@ -21,41 +21,15 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; min-height: 100vh; }
 
-    /* ── Login ── */
-    #login-screen {
-      display: flex; align-items: center; justify-content: center;
-      min-height: 100vh;
+    /* ── Role switcher ── */
+    .role-switch { display: flex; gap: 6px; }
+    .role-switch-btn {
+      background: none; border: 1px solid var(--border); border-radius: 6px;
+      color: var(--muted); cursor: pointer; font-size: 12px; padding: 5px 14px;
+      transition: all .15s;
     }
-    .login-box {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 16px; padding: 40px; width: 100%; max-width: 400px;
-    }
-    .login-logo { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
-    .login-sub  { color: var(--muted); margin-bottom: 28px; font-size: 13px; }
-    .login-label { display: block; color: var(--muted); font-size: 12px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .05em; }
-    .login-input {
-      width: 100%; background: var(--bg); border: 1px solid var(--border);
-      border-radius: 8px; padding: 10px 14px; color: var(--text); font-size: 14px;
-      outline: none; transition: border .15s;
-    }
-    .login-input:focus { border-color: var(--blue); }
-    .login-btn {
-      width: 100%; margin-top: 16px; padding: 11px; background: var(--blue);
-      border: none; border-radius: 8px; color: #fff; font-size: 14px; font-weight: 600;
-      cursor: pointer; transition: opacity .15s;
-    }
-    .login-btn:hover { opacity: .88; }
-    .login-btn:disabled { opacity: .5; cursor: not-allowed; }
-    .login-hint { margin-top: 12px; font-size: 12px; color: var(--muted); text-align: center; }
-    .login-error { margin-top: 12px; font-size: 12px; color: var(--red); text-align: center; }
-    .login-back  { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 12px; margin-top: 10px; width: 100%; text-align: center; }
-    .login-back:hover { color: var(--text); }
-
-    /* ── Loading ── */
-    #loading-screen {
-      display: flex; align-items: center; justify-content: center;
-      min-height: 100vh; color: var(--muted); font-size: 13px;
-    }
+    .role-switch-btn:hover { border-color: var(--blue); color: var(--blue); }
+    .role-switch-btn.active { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 600; }
 
     /* ── Dashboard ── */
     #dashboard { display: none; }
@@ -134,35 +108,6 @@
 </head>
 <body>
 
-<!-- LOGIN -->
-<div id="login-screen">
-  <div class="login-box">
-    <div class="login-logo">Recravas</div>
-    <div class="login-sub">Log in met je e-mailadres</div>
-
-    <!-- Step 1: email -->
-    <div id="step-email">
-      <label class="login-label">E-mailadres</label>
-      <input id="email-input" class="login-input" type="email" placeholder="jij@recravas.nl" autocomplete="email">
-      <button class="login-btn" onclick="sendOTP()">Stuur inlogcode</button>
-      <div id="login-error" class="login-error" style="display:none"></div>
-    </div>
-
-    <!-- Step 2: OTP code -->
-    <div id="step-otp" style="display:none">
-      <div class="login-hint" style="margin-bottom:16px">Code verstuurd naar <strong id="otp-email-shown"></strong></div>
-      <label class="login-label">6-cijferige code</label>
-      <input id="otp-input" class="login-input" type="text" inputmode="numeric" maxlength="6" placeholder="123456" autocomplete="one-time-code">
-      <button class="login-btn" onclick="verifyOTP()">Inloggen</button>
-      <div id="otp-error" class="login-error" style="display:none"></div>
-      <button class="login-back" onclick="backToEmail()">← Ander e-mailadres</button>
-    </div>
-  </div>
-</div>
-
-<!-- LOADING -->
-<div id="loading-screen" style="display:none">Laden…</div>
-
 <!-- DASHBOARD -->
 <div id="dashboard">
   <div class="top-bar">
@@ -171,8 +116,11 @@
       <span class="role-badge" id="role-badge">—</span>
     </div>
     <div class="top-bar-right">
-      <span class="user-name" id="user-name-label"></span>
-      <button class="logout-btn" onclick="logout()">Uitloggen</button>
+      <div class="role-switch">
+        <button class="role-switch-btn active" onclick="switchRole('admin')">Admin</button>
+        <button class="role-switch-btn" onclick="switchRole('owner')">Park eigenaar</button>
+        <button class="role-switch-btn" onclick="switchRole('agent')">Makelaar</button>
+      </div>
     </div>
   </div>
 
@@ -257,8 +205,7 @@ const SUPABASE_URL = 'https://ooqkpazyvohsrdvxfnug.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_fkVuhCNu_Q0Ze9x5VPee1g_jtzClD0O';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-let currentEmail = '';
-let state = { days: 7, profile: null, membership: null };
+let state = { days: 7, role: 'admin' };
 
 // ── Helpers ────────────────────────────────────────────────
 const fEur  = v => v == null ? '—' : '€' + Math.round(v).toLocaleString('nl-NL');
@@ -277,125 +224,68 @@ function show(id)  { document.getElementById(id).style.display = ''; }
 function hide(id)  { document.getElementById(id).style.display = 'none'; }
 function text(id, v) { document.getElementById(id).textContent = v; }
 
-// ── Auth ───────────────────────────────────────────────────
-async function sendOTP() {
-  const email = document.getElementById('email-input').value.trim();
-  if (!email) return;
-  currentEmail = email;
-  hide('login-error');
-  const btn = document.querySelector('#step-email .login-btn');
-  btn.disabled = true; btn.textContent = 'Versturen…';
-  const { error } = await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
-  btn.disabled = false; btn.textContent = 'Stuur inlogcode';
-  if (error) { showErr('login-error', error.message); return; }
-  text('otp-email-shown', email);
-  hide('step-email'); show('step-otp');
-}
+// ── Demo data ──────────────────────────────────────────────
+const DEMO = {
+  agents: [
+    { agent: 'Willem de Boer',  leads: 18, appointments: 6, sales: 2, revenue: 98000 },
+    { agent: 'André Visser',    leads: 12, appointments: 4, sales: 1, revenue: 52000 },
+    { agent: 'Walter Smits',    leads: 21, appointments: 7, sales: 3, revenue: 147000 },
+    { agent: 'Sem Jansen',      leads:  9, appointments: 2, sales: 0, revenue: 0      },
+  ],
+  parkAgent: [
+    { park: 'Park Zonnedael',  agent: 'Willem de Boer', appointments: 4, sales: 1, revenue: 52000 },
+    { park: 'Park Zonnedael',  agent: 'André Visser',   appointments: 4, sales: 1, revenue: 52000 },
+    { park: 'Park Maasduinen', agent: 'Walter Smits',   appointments: 7, sales: 3, revenue: 147000 },
+    { park: 'Park Bosrijk',    agent: 'Willem de Boer', appointments: 2, sales: 1, revenue: 46000 },
+    { park: 'Park Bosrijk',    agent: 'Sem Jansen',     appointments: 2, sales: 0, revenue: 0     },
+  ],
+  parks: [
+    { park: 'Park Zonnedael',  spend: 3200, leads: 18, appointments: 8, sales: 2, revenue: 104000 },
+    { park: 'Park Maasduinen', spend: 2800, leads: 14, appointments: 7, sales: 3, revenue: 147000 },
+    { park: 'Park Bosrijk',    spend: 1900, leads: 11, appointments: 5, sales: 1, revenue: 46000  },
+  ],
+  me: { leads: 18, appointments: 6, sales: 2, revenue: 98000 },
+  parkAvg: { leads: 10.3, appointments: 3.5, sales: 1.0 },
+};
 
-async function verifyOTP() {
-  const token = document.getElementById('otp-input').value.trim();
-  hide('otp-error');
-  const btn = document.querySelector('#step-otp .login-btn');
-  btn.disabled = true; btn.textContent = 'Inloggen…';
-  const { error } = await sb.auth.verifyOtp({ email: currentEmail, token, type: 'email' });
-  btn.disabled = false; btn.textContent = 'Inloggen';
-  if (error) { showErr('otp-error', 'Ongeldige of verlopen code.'); return; }
-  await loadDashboard();
-}
+// ── Role switcher ──────────────────────────────────────────
+function switchRole(role) {
+  state.role = role;
+  document.querySelectorAll('.role-switch-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
 
-function backToEmail() {
-  hide('step-otp'); show('step-email');
-  document.getElementById('otp-input').value = '';
-}
-
-function showErr(id, msg) {
-  const el = document.getElementById(id);
-  el.textContent = msg; el.style.display = '';
-}
-
-async function logout() {
-  await sb.auth.signOut();
-  location.reload();
-}
-
-// ── Load dashboard ─────────────────────────────────────────
-async function loadDashboard() {
-  hide('login-screen'); show('loading-screen');
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user) { location.reload(); return; }
-
-  const { data: profile } = await sb.from('profiles')
-    .select('full_name, is_owner').eq('user_id', user.id).single();
-
-  if (!profile) { showErr('login-error', 'Geen toegangsprofiel gevonden.'); show('login-screen'); hide('loading-screen'); return; }
-
-  state.profile = profile;
-
-  text('user-name-label', profile.full_name || user.email);
-
-  hide('loading-screen');
-  show('dashboard');
-
-  // Role badge
   const badge = document.getElementById('role-badge');
-  if (profile.is_owner === true && !profile.full_name?.includes('admin')) {
-    badge.textContent = 'Park eigenaar'; badge.className = 'role-badge owner';
-  } else if (profile.is_owner === true) {
+  hide('view-admin'); hide('view-owner'); hide('view-agent');
+
+  if (role === 'admin') {
     badge.textContent = 'Admin'; badge.className = 'role-badge admin';
+    show('view-admin');
+  } else if (role === 'owner') {
+    badge.textContent = 'Park eigenaar'; badge.className = 'role-badge owner';
+    show('view-owner');
   } else {
     badge.textContent = 'Makelaar'; badge.className = 'role-badge';
-  }
-
-  // Determine if admin (is_owner with all parks) or park owner (is_owner with specific park)
-  if (profile.is_owner) {
-    // Check if they have specific park membership (park owner) or none (admin)
-    const { data: mem } = await sb.from('park_members').select('park_id').eq('user_id', user.id);
-    state.membership = mem || [];
-    if (state.membership.length === 0) {
-      // Admin: sees everything
-      badge.textContent = 'Admin'; badge.className = 'role-badge admin';
-      show('view-admin');
-    } else {
-      // Park owner: sees their park(s) including spend
-      show('view-owner');
-    }
-  } else {
-    // Makelaar
-    const { data: mem } = await sb.from('park_members').select('park_id, agent_id').eq('user_id', user.id);
-    state.membership = mem || [];
     show('view-agent');
   }
-
-  await loadData();
+  loadData();
 }
 
 // ── Load data ──────────────────────────────────────────────
-async function loadData() {
+function loadData() {
   const { from, to } = dateRange(state.days);
   updatePeriodLabel(from, to);
-  const p = state.profile;
-
-  if (p.is_owner && state.membership.length === 0) {
-    await loadAdminData(from, to);
-  } else if (p.is_owner) {
-    await loadOwnerData(from, to);
-  } else {
-    await loadAgentData(from, to);
-  }
+  if (state.role === 'admin')  loadAdminData();
+  if (state.role === 'owner')  loadOwnerData();
+  if (state.role === 'agent')  loadAgentData();
 }
 
 // ── Admin view ─────────────────────────────────────────────
-async function loadAdminData(from, to) {
-  const [agentRes, parkAgentRes] = await Promise.all([
-    sb.rpc('owner_agent_performance', { p_from: from, p_to: to }),
-    sb.rpc('owner_park_agent', { p_from: from, p_to: to }),
-  ]);
-
-  const agents = agentRes.data || [];
-  const totalLeads = agents.reduce((s, a) => s + (a.leads || 0), 0);
-  const totalAppt  = agents.reduce((s, a) => s + (a.appointments || 0), 0);
-  const totalSales = agents.reduce((s, a) => s + (a.sales || 0), 0);
-  const totalRev   = agents.reduce((s, a) => s + (a.revenue || 0), 0);
+function loadAdminData() {
+  const agents = DEMO.agents;
+  const totalLeads = agents.reduce((s, a) => s + a.leads, 0);
+  const totalAppt  = agents.reduce((s, a) => s + a.appointments, 0);
+  const totalSales = agents.reduce((s, a) => s + a.sales, 0);
+  const totalRev   = agents.reduce((s, a) => s + a.revenue, 0);
 
   document.getElementById('admin-kpis').innerHTML = [
     kpiCard('Leads', fNum(totalLeads), '', '#F59E0B'),
@@ -404,49 +294,33 @@ async function loadAdminData(from, to) {
     kpiCard('Omzet', fEur(totalRev), '', '#A78BFA'),
   ].join('');
 
-  document.getElementById('admin-agent-tbody').innerHTML = agents.length
-    ? agents.map(a => `<tr>
-        <td>${esc(a.agent)}</td>
-        <td class="num">${fNum(a.leads)}</td>
-        <td class="num">${fNum(a.appointments)}</td>
-        <td class="num">${fNum(a.sales)}</td>
-        <td class="num">${fEur(a.revenue)}</td>
-        <td class="num">${a.appointments > 0 ? fPct(a.sales / a.appointments * 100) : '—'}</td>
-      </tr>`).join('')
-    : '<tr><td colspan="6" class="empty">Geen data</td></tr>';
+  document.getElementById('admin-agent-tbody').innerHTML = agents.map(a => `<tr>
+    <td>${esc(a.agent)}</td>
+    <td class="num">${fNum(a.leads)}</td>
+    <td class="num">${fNum(a.appointments)}</td>
+    <td class="num">${fNum(a.sales)}</td>
+    <td class="num">${fEur(a.revenue)}</td>
+    <td class="num">${a.appointments > 0 ? fPct(a.sales / a.appointments * 100) : '—'}</td>
+  </tr>`).join('');
 
-  document.getElementById('admin-park-agent-tbody').innerHTML = (parkAgentRes.data || []).length
-    ? (parkAgentRes.data || []).map(r => `<tr>
-        <td>${esc(r.park)}</td><td>${esc(r.agent)}</td>
-        <td class="num">${fNum(r.appointments)}</td>
-        <td class="num">${fNum(r.sales)}</td>
-        <td class="num">${fEur(r.revenue)}</td>
-      </tr>`).join('')
-    : '<tr><td colspan="5" class="empty">Geen data</td></tr>';
+  document.getElementById('admin-park-agent-tbody').innerHTML = DEMO.parkAgent.map(r => `<tr>
+    <td>${esc(r.park)}</td><td>${esc(r.agent)}</td>
+    <td class="num">${fNum(r.appointments)}</td>
+    <td class="num">${fNum(r.sales)}</td>
+    <td class="num">${fEur(r.revenue)}</td>
+  </tr>`).join('');
 }
 
 // ── Park owner view ────────────────────────────────────────
-async function loadOwnerData(from, to) {
-  const parkIds = state.membership.map(m => m.park_id);
-  const results = await Promise.all(parkIds.map(pid =>
-    sb.rpc('client_park_funnel', { p_park_id: pid, p_from: from, p_to: to })
-  ));
+function loadOwnerData() {
+  const parks = DEMO.parks;
+  const totalSpend = parks.reduce((s, p) => s + p.spend, 0);
+  const totalLeads = parks.reduce((s, p) => s + p.leads, 0);
+  const totalAppt  = parks.reduce((s, p) => s + p.appointments, 0);
+  const totalSales = parks.reduce((s, p) => s + p.sales, 0);
+  const totalRev   = parks.reduce((s, p) => s + p.revenue, 0);
 
-  let totalSpend = 0, totalLeads = 0, totalAppt = 0, totalSales = 0, totalRev = 0;
-  const parks = [];
-  for (const r of results) {
-    const d = r.data?.[0];
-    if (!d) continue;
-    totalSpend += d.spend || 0;
-    totalLeads += Number(d.leads) || 0;
-    totalAppt  += Number(d.appointments) || 0;
-    totalSales += Number(d.sales) || 0;
-    totalRev   += d.revenue || 0;
-    parks.push(d);
-  }
-
-  text('owner-park-title', parks.length === 1 ? parks[0].park : 'Mijn parken');
-
+  text('owner-park-title', 'Mijn parken');
   document.getElementById('owner-kpis').innerHTML = [
     kpiCard('Ad spend', fEur(totalSpend), '', '#3B82F6'),
     kpiCard('Leads', fNum(totalLeads), '', '#F59E0B'),
@@ -458,45 +332,25 @@ async function loadOwnerData(from, to) {
 }
 
 // ── Makelaar view ──────────────────────────────────────────
-async function loadAgentData(from, to) {
-  const agentId = state.membership?.[0]?.agent_id;
-  const parkIds = state.membership.map(m => m.park_id);
-
-  const [agentRes, ...parkResults] = await Promise.all([
-    sb.rpc('agent_funnel', { p_from: from, p_to: to }),
-    ...parkIds.map(pid => sb.rpc('client_park_funnel', { p_park_id: pid, p_from: from, p_to: to }))
-  ]);
-
-  const me = agentRes.data?.[0] || {};
-  const myLeads = Number(me.leads) || 0;
-  const myAppt  = Number(me.appointments) || 0;
-  const mySales = Number(me.sales) || 0;
-  const myRev   = me.revenue || 0;
+function loadAgentData() {
+  const me = DEMO.me;
+  const avg = DEMO.parkAvg;
 
   document.getElementById('agent-kpis').innerHTML = [
-    kpiCard('Mijn leads', fNum(myLeads), '', '#F59E0B'),
-    kpiCard('Mijn afspraken', fNum(myAppt), '', '#3B82F6'),
-    kpiCard('Mijn sales', fNum(mySales), '', '#10B981'),
-    kpiCard('Mijn omzet', fEur(myRev), '', '#A78BFA'),
-    kpiCard('Sluitratio', myAppt > 0 ? fPct(mySales / myAppt * 100) : '—', '', '#94A3B8'),
+    kpiCard('Mijn leads', fNum(me.leads), '', '#F59E0B'),
+    kpiCard('Mijn afspraken', fNum(me.appointments), '', '#3B82F6'),
+    kpiCard('Mijn sales', fNum(me.sales), '', '#10B981'),
+    kpiCard('Mijn omzet', fEur(me.revenue), '', '#A78BFA'),
+    kpiCard('Sluitratio', me.appointments > 0 ? fPct(me.sales / me.appointments * 100) : '—', '', '#94A3B8'),
   ].join('');
-
-  // Benchmark against park average
-  const parkData = parkResults.map(r => r.data?.[0]).filter(Boolean);
-  const numAgents = state.membership.length > 0 ? await getActiveAgentCount(parkIds[0]) : 1;
-
-  const avgLeads = parkData.reduce((s, p) => s + Number(p.leads), 0) / Math.max(numAgents, 1);
-  const avgAppt  = parkData.reduce((s, p) => s + Number(p.appointments), 0) / Math.max(numAgents, 1);
-  const avgSales = parkData.reduce((s, p) => s + Number(p.sales), 0) / Math.max(numAgents, 1);
 
   document.getElementById('bench-tbody').innerHTML = [
-    benchRow('Leads',      myLeads, avgLeads),
-    benchRow('Afspraken',  myAppt,  avgAppt),
-    benchRow('Sales',      mySales, avgSales),
+    benchRow('Leads',     me.leads,        avg.leads),
+    benchRow('Afspraken', me.appointments, avg.appointments),
+    benchRow('Sales',     me.sales,        avg.sales),
   ].join('');
 
-  // Park cards (no spend)
-  document.getElementById('agent-parks').innerHTML = parkData.map(p => `
+  document.getElementById('agent-parks').innerHTML = DEMO.parks.map(p => `
     <div class="park-card">
       <div class="park-card-name">${esc(p.park)}</div>
       <div class="park-stat-row"><span class="park-stat-label">Leads</span><span class="park-stat-val">${fNum(p.leads)}</span></div>
@@ -504,16 +358,7 @@ async function loadAgentData(from, to) {
       <div class="park-stat-row"><span class="park-stat-label">Sales</span><span class="park-stat-val">${fNum(p.sales)}</span></div>
       <div class="park-stat-row"><span class="park-stat-label">Omzet</span><span class="park-stat-val">${fEur(p.revenue)}</span></div>
     </div>
-  `).join('') || '<div class="empty">Geen parkdata beschikbaar</div>';
-}
-
-async function getActiveAgentCount(parkId) {
-  // Count active agents in this park via park_members
-  const { count } = await sb.from('park_members')
-    .select('*', { count: 'exact', head: true })
-    .eq('park_id', parkId)
-    .not('agent_id', 'is', null);
-  return count || 1;
+  `).join('');
 }
 
 // ── UI helpers ─────────────────────────────────────────────
@@ -565,20 +410,12 @@ document.querySelectorAll('.period-btn').forEach(btn => {
   });
 });
 
-// ── Enter key on inputs ────────────────────────────────────
-document.getElementById('email-input').addEventListener('keydown', e => { if (e.key === 'Enter') sendOTP(); });
-document.getElementById('otp-input').addEventListener('keydown',   e => { if (e.key === 'Enter') verifyOTP(); });
-
-// ── Init: check existing session ──────────────────────────
-(async () => {
-  hide('login-screen'); show('loading-screen');
-  const { data: { session } } = await sb.auth.getSession();
-  if (session) {
-    await loadDashboard();
-  } else {
-    hide('loading-screen'); show('login-screen');
-  }
-})();
+// ── Init ───────────────────────────────────────────────────
+show('dashboard');
+const badge = document.getElementById('role-badge');
+badge.textContent = 'Admin'; badge.className = 'role-badge admin';
+show('view-admin');
+loadData();
 </script>
 </body>
 </html>
