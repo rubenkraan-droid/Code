@@ -285,9 +285,9 @@ async function sendOTP() {
   hide('login-error');
   const btn = document.querySelector('#step-email .login-btn');
   btn.disabled = true; btn.textContent = 'Versturen…';
-  const { error } = await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
+  const { error } = await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
   btn.disabled = false; btn.textContent = 'Stuur inlogcode';
-  if (error) { showErr('login-error', 'E-mailadres niet gevonden of geen toegang.'); return; }
+  if (error) { showErr('login-error', error.message); return; }
   text('otp-email-shown', email);
   hide('step-email'); show('step-otp');
 }
