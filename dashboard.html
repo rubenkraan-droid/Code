@@ -130,6 +130,11 @@
     <div class="chartbox" style="margin-bottom:26px"><div class="inv" id="invBoxP"></div><p class="foot" id="invFootP"></p></div>
   </div>
 
+  <div id="monthSec" class="hidden">
+    <div class="sec">Per maand</div>
+    <div class="panel"><table id="monthTable"></table></div>
+  </div>
+
   <div id="apptSec" class="hidden">
     <div class="sec" id="apptTitle">Afspraken</div>
     <div class="panel"><div class="scroll"><table id="apptTable"></table></div></div>
@@ -213,6 +218,7 @@ async function applyRole(){
   $("ownerOnly").classList.toggle("hidden", !owner);
   $("agentOnly").classList.toggle("hidden", !agentV);
   $("parkOnly").classList.toggle("hidden", !parkV);
+  $("monthSec").classList.remove("hidden");
   $("apptSec").classList.toggle("hidden", parkV);
   $("fPark").classList.toggle("hidden", !owner);
   $("fAgent").classList.toggle("hidden", !owner);
@@ -246,6 +252,24 @@ $("fPeriod").addEventListener("change", e=>{
 });
 let refresh = ()=>{};
 ["fFrom","fTo","fPark","fAgent"].forEach(id=>$(id).addEventListener("change", ()=>refresh()));
+
+/* ---------- monthly overview (all roles) ---------- */
+function renderMonths(rows, opts){
+  const mfmt = d => { const s = new Date(d).toLocaleDateString("nl-NL",{month:"long",year:"numeric"});
+    return s.charAt(0).toUpperCase()+s.slice(1); };
+  $("monthTable").innerHTML =
+    `<thead><tr><th>Maand</th>${opts.spend?"<th>Uitgaven</th>":""}${opts.leads?"<th>Leads</th>":""}
+      <th>Afspraken</th><th>Sales</th><th>Omzet</th><th>Omzet per afspraak</th><th>Closing %</th></tr></thead>
+     <tbody>${rows.map(x=>{
+       const per = x.appointments ? Math.round(x.revenue/x.appointments) : 0;
+       const cl  = x.appointments ? Math.round(x.sales/x.appointments*100) : 0;
+       return `<tr><td>${mfmt(x.maand)}</td>
+         ${opts.spend?`<td>${x.spend==null?"—":eur(x.spend)}</td>`:""}
+         ${opts.leads?`<td>${x.leads}</td>`:""}
+         <td>${x.appointments}</td><td>${x.sales}</td>
+         <td style="font-weight:600">${eur(x.revenue)}</td><td>${eur(per)}</td><td>${cl}%</td></tr>`;
+     }).join("")}</tbody>`;
+}
 
 /* ---------- appointments table (owner + makelaar) ---------- */
 function renderAppts(rows, showAgent){
@@ -312,6 +336,11 @@ async function renderOwner(){
   }
   renderInv("invBox","invFoot",sold,res,av);
 
+  const mo = await rpc("monthly_overview", {
+    p_agent_id: agentVal==="all"?null:Number(agentVal),
+    p_park_id:  parkVal==="all"?null:Number(parkVal) }) || [];
+  renderMonths(mo, {spend:agentVal==="all", leads:true});
+
   const det = await rpc("appointments_detail", { ...r,
     p_agent_id: agentVal==="all"?null:Number(agentVal),
     p_park_id:  parkVal==="all"?null:Number(parkVal) }) || [];
@@ -332,6 +361,7 @@ async function renderAgent(agentId){
     metricT("Closing %",(s.team_closing_rate_pct||0)+"%") +
     metricT("Afspraken per makelaar",s.team_avg_appointments||0) +
     metricT("Omzet per makelaar",eur(s.team_avg_revenue));
+  renderMonths(await rpc("monthly_overview", {p_agent_id:agentId}) || [], {spend:false, leads:false});
   const det = await rpc("appointments_detail", {...r, p_agent_id:agentId}) || [];
   $("apptTitle").textContent = `Mijn afspraken (${det.length})`;
   renderAppts(det, false);
@@ -347,6 +377,7 @@ async function renderPark(parkId){
     metric("Sales",f.sales||0) + metric("Omzet",eur(f.revenue)) +
     metric("Omzet per afspraak (gem.)",eur(perAppt)) +
     metric("Closing %",(f.appointments?Math.round(f.sales/f.appointments*100):0)+"%");
+  renderMonths(await rpc("monthly_overview", {p_park_id:parkId}) || [], {spend:false, leads:true});
   const inv = (await rpc("client_park_inventory",{p_park_id:parkId}))?.[0];
   renderInv("invBoxP","invFootP", inv?Number(inv.sold):0, inv?Number(inv.reserved):0, inv?Number(inv.available):0);
 }
