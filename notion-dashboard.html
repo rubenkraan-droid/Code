@@ -953,7 +953,7 @@ const esc   = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').re
 const state = {
   dailyLog:      [],       // parsed daily log rows
   allTimeMap:    new Map(),// Ad ID → allTime record
-  period:        '30d',
+  period:        'alltime',
   sortCol:       'cpa',
   sortDir:       -1,       // -1 desc, 1 asc
   chart:         null,
@@ -1647,9 +1647,10 @@ function update() {
   const isSpecial   = isAllTime || isAangepast;
 
   // Show/hide normal sections vs special sections
-  ['section-main-table','section-monthly','section-beste'].forEach(id => {
+  ['section-main-table','section-monthly'].forEach(id => {
     document.getElementById(id).hidden = isSpecial;
   });
+  document.getElementById('section-beste').hidden = isAangepast;
   document.getElementById('section-trend').hidden  = isAangepast;
   document.getElementById('summary-bar').hidden    = isAangepast;
   document.getElementById('section-alltime').hidden   = !isAllTime;
@@ -1662,9 +1663,11 @@ function update() {
     const range = dates.length
       ? { start: new Date(dates[0] + 'T00:00:00'), end: new Date(dates[dates.length - 1] + 'T00:00:00') }
       : null;
-    renderSummary(aggAds(log));
+    const allAds = aggAds(log);
+    renderSummary(allAds);
     if (range) renderChart(log, range);
     renderAllTimeTable();
+    renderBeste(allAds);
   } else if (!isAangepast) {
     const log   = getActiveLog();
     const range = getRange(state.period);
