@@ -307,16 +307,18 @@ async function renderOwner(){
     metric("Afspraken",f.appointments||0) + metric("Sales",f.sales||0) +
     metric("Omzet",eur(f.revenue)) + metric("Omzet per afspraak",eur(perAppt)) +
     metric("CPL",eur(f.cost_per_lead)) + metric("ROAS",Number(f.roas||0).toFixed(2)) +
-    metric("Closing %",(closing||0)+"%");
+    metric("Closing %",(closing||0)+"%") + metric("Afval %",(f.afval_pct||0)+"%");
 
   let agents = await rpc("owner_agent_performance", r) || [];
   if(agentVal!=="all") agents = agents.filter(a=>String(a.agent_id)===agentVal);
   $("agentTable").innerHTML =
-    `<thead><tr><th>Agent</th><th>Afspraken</th><th>Closing %</th><th>Omzet per afspraak</th><th>Omzet</th></tr></thead>
+    `<thead><tr><th>Agent</th><th>Afspraken</th><th>Closing %</th><th>Afval %</th><th>Omzet per afspraak</th><th>Omzet</th></tr></thead>
      <tbody>${agents.map(a=>{
        const cls = a.closing_rate_pct>=40?"good":a.closing_rate_pct<30?"bad":"";
+       const acls = a.afval_pct>=25?"bad":a.afval_pct<15?"good":"";
        return `<tr><td><span class="av"><span class="dot">${initials(a.agent)}</span>${a.agent}</span></td>
          <td>${a.appointments}</td><td class="${cls}">${a.closing_rate_pct}%</td>
+         <td class="${acls}">${a.afval_pct}%</td>
          <td>${eur(a.revenue_per_appt)}</td><td style="font-weight:600">${eur(a.revenue)}</td></tr>`;
      }).join("")}</tbody>`;
 
@@ -361,10 +363,11 @@ async function renderAgent(agentId){
   $("cardsTop").innerHTML =
     metric("Mijn afspraken",s.appointments||0) + metric("Mijn sales",s.sales||0) +
     metric("Mijn omzet",eur(s.revenue)) + metric("Omzet per afspraak",eur(s.revenue_per_appt)) +
-    metric("Closing %",(s.closing_rate_pct||0)+"%");
+    metric("Closing %",(s.closing_rate_pct||0)+"%") + metric("Afval %",(s.afval_pct||0)+"%");
   $("cardsTeam").innerHTML =
     metricT("Omzet per afspraak",eur(s.team_revenue_per_appt)) +
     metricT("Closing %",(s.team_closing_rate_pct||0)+"%") +
+    metricT("Afval %",(s.team_afval_pct||0)+"%") +
     metricT("Afspraken per makelaar",s.team_avg_appointments||0) +
     metricT("Omzet per makelaar",eur(s.team_avg_revenue));
   renderMonths(await rpc("monthly_overview", {p_agent_id:agentId, p_park_id:pp}) || [], {spend:false, leads:false});
