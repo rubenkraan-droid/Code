@@ -105,7 +105,7 @@
   <div class="cards" id="cardsTop"></div>
 
   <div id="agentOnly" class="hidden">
-    <div class="sec">Teamgemiddelde (alle makelaars, zonder namen)</div>
+    <div class="sec" id="teamTitle">Teamgemiddelde (alle makelaars, zonder namen)</div>
     <div class="cards" id="cardsTeam"></div>
   </div>
 
@@ -220,7 +220,7 @@ async function applyRole(){
   $("parkOnly").classList.toggle("hidden", !parkV);
   $("monthSec").classList.remove("hidden");
   $("apptSec").classList.toggle("hidden", parkV);
-  $("fPark").classList.toggle("hidden", !owner);
+  $("fPark").classList.toggle("hidden", parkV);
   $("fAgent").classList.toggle("hidden", !owner);
   if(owner){
     $("title").textContent = "Master dashboard";
@@ -231,6 +231,7 @@ async function applyRole(){
   } else if(agentV){
     $("title").textContent = "Mijn resultaten";
     $("subtitle").textContent = "Makelaarweergave · " + ((AGENTS.find(a=>a.id===v.id)||{}).name||"");
+    fillSelect($("fPark"), PARKS.map(p=>({value:p.id,label:p.name})), "Alle parken");
     refresh = () => renderAgent(v.id);
   } else {
     $("title").textContent = "Park dashboard";
@@ -351,7 +352,11 @@ async function renderOwner(){
 /* ---------- MAKELAAR: eigen cijfers + teamgemiddelde, geen collega's ---------- */
 async function renderAgent(agentId){
   const r = periodRange();
-  const s = (await rpc("agent_stats", {p_agent_id:agentId, ...r}))?.[0] || {};
+  const parkVal = $("fPark").value;
+  const pp = parkVal==="all" ? null : Number(parkVal);
+  $("teamTitle").textContent = "Teamgemiddelde (alle makelaars, zonder namen"
+    + (pp ? " · " + ((PARKS.find(p=>p.id===pp)||{}).name||"") : "") + ")";
+  const s = (await rpc("agent_stats", {p_agent_id:agentId, p_park_id:pp, ...r}))?.[0] || {};
   $("cardsTop").innerHTML =
     metric("Mijn afspraken",s.appointments||0) + metric("Mijn sales",s.sales||0) +
     metric("Mijn omzet",eur(s.revenue)) + metric("Omzet per afspraak",eur(s.revenue_per_appt)) +
@@ -361,8 +366,8 @@ async function renderAgent(agentId){
     metricT("Closing %",(s.team_closing_rate_pct||0)+"%") +
     metricT("Afspraken per makelaar",s.team_avg_appointments||0) +
     metricT("Omzet per makelaar",eur(s.team_avg_revenue));
-  renderMonths(await rpc("monthly_overview", {p_agent_id:agentId}) || [], {spend:false, leads:false});
-  const det = await rpc("appointments_detail", {...r, p_agent_id:agentId}) || [];
+  renderMonths(await rpc("monthly_overview", {p_agent_id:agentId, p_park_id:pp}) || [], {spend:false, leads:false});
+  const det = await rpc("appointments_detail", {...r, p_agent_id:agentId, p_park_id:pp}) || [];
   $("apptTitle").textContent = `Mijn afspraken (${det.length})`;
   renderAppts(det, false);
 }
