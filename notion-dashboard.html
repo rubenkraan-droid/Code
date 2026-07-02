@@ -705,14 +705,21 @@
         <div class="tbl-wrap">
           <table id="alltime-table">
             <thead><tr>
-              <th>Advertentie</th><th>Status</th>
-              <th class="right">Uitgaven</th><th class="right">Clicks</th>
-              <th class="right muted">CPC</th><th class="right muted">Opt-In%</th>
-              <th class="right">Leads</th><th class="right">CPL</th>
-              <th class="right muted">Afspr%</th><th class="right">Afspraken</th>
-              <th class="right">CPA</th><th class="right muted">Sales%</th>
-              <th class="right">Sales</th><th class="right">CPS</th>
-              <th class="right">Omzet</th><th class="right">ROAS</th>
+              <th data-sort="adName">Advertentie</th><th data-sort="status">Status</th>
+              <th data-sort="spend"        class="right">Uitgaven</th>
+              <th data-sort="clicks"       class="right">Clicks</th>
+              <th data-sort="cpc"          class="right muted">CPC</th>
+              <th data-sort="optInRate"    class="right muted">Opt-In%</th>
+              <th data-sort="leads"        class="right">Leads</th>
+              <th data-sort="cpl"          class="right">CPL</th>
+              <th data-sort="afsprRate"    class="right muted">Afspr%</th>
+              <th data-sort="appointments" class="right">Afspraken</th>
+              <th data-sort="cpa"          class="right">CPA</th>
+              <th data-sort="signRate"     class="right muted">Sales%</th>
+              <th data-sort="signed"       class="right">Sales</th>
+              <th data-sort="cpsSigned"    class="right">CPS</th>
+              <th data-sort="omzet"        class="right">Omzet</th>
+              <th data-sort="roas"         class="right">ROAS</th>
             </tr></thead>
             <tbody id="alltime-tbody"></tbody>
           </table>
@@ -1519,7 +1526,22 @@ function renderAllTimeTable() {
     ads = ads.filter(a => a.status && a.status !== 'Active' && a.status !== 'Actief');
   }
 
-  ads.sort((a, b) => (a.cpl ?? 999) - (b.cpl ?? 999));
+  const { sortCol, sortDir } = state;
+  const isActiveAd = a => a.status === 'Active' || a.status === 'Actief';
+  ads.sort((a, b) => {
+    if (sortCol === 'status') {
+      const key = x => isActiveAd(x) ? 0 : 1;
+      return (key(a) - key(b)) * sortDir;
+    }
+    let va = a[sortCol] ?? (sortDir === -1 ? -Infinity : Infinity);
+    let vb = b[sortCol] ?? (sortDir === -1 ? -Infinity : Infinity);
+    return (typeof va === 'string' ? va.localeCompare(vb) : va - vb) * sortDir;
+  });
+
+  document.querySelectorAll('#alltime-table th[data-sort]').forEach(th => {
+    th.classList.remove('sort-asc', 'sort-desc');
+    if (th.dataset.sort === sortCol) th.classList.add(sortDir === 1 ? 'sort-asc' : 'sort-desc');
+  });
 
   document.getElementById('alltime-tbody').innerHTML = ads.map(ad => {
     const isActive = ad.status === 'Active' || ad.status === 'Actief';
@@ -1629,7 +1651,7 @@ function update() {
     document.getElementById(id).hidden = isSpecial;
   });
   document.getElementById('section-trend').hidden  = isAangepast;
-  document.getElementById('summary-bar').hidden    = isSpecial;
+  document.getElementById('summary-bar').hidden    = isAangepast;
   document.getElementById('section-alltime').hidden   = !isAllTime;
   document.getElementById('section-aangepast').hidden = !isAangepast;
   document.getElementById('main-status-filter').style.display = isSpecial ? 'none' : 'flex';
@@ -1640,6 +1662,7 @@ function update() {
     const range = dates.length
       ? { start: new Date(dates[0] + 'T00:00:00'), end: new Date(dates[dates.length - 1] + 'T00:00:00') }
       : null;
+    renderSummary(aggAds(log));
     if (range) renderChart(log, range);
     renderAllTimeTable();
   } else if (!isAangepast) {
@@ -2053,6 +2076,19 @@ document.querySelectorAll('#main-table th[data-sort]').forEach(th => {
     const range = getRange(state.period);
     if (!range) return;
     renderMainTable(aggAds(filterRows(state.dailyLog, range)));
+  });
+});
+
+// Sortable headers on all-time table
+document.querySelectorAll('#alltime-table th[data-sort]').forEach(th => {
+  th.addEventListener('click', () => {
+    if (state.sortCol === th.dataset.sort) {
+      state.sortDir *= -1;
+    } else {
+      state.sortCol = th.dataset.sort;
+      state.sortDir = -1;
+    }
+    renderAllTimeTable();
   });
 });
 
