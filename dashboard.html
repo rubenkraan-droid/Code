@@ -186,8 +186,8 @@ $("fPeriod").addEventListener("change", e=>{
   $("fFrom").classList.toggle("hidden",!show); $("fTo").classList.toggle("hidden",!show);
   refresh();
 });
-["fFrom","fTo","fPark","fAgent"].forEach(id=>$(id).addEventListener("change", refresh));
 let refresh = ()=>{};
+["fFrom","fTo","fPark","fAgent"].forEach(id=>$(id).addEventListener("change", ()=>refresh()));
 
 /* ---------- OWNER ---------- */
 async function initOwner(){
