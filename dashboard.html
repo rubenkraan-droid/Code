@@ -155,26 +155,14 @@ $("sendLink").addEventListener("click", async () => {
 });
 $("logout").addEventListener("click", async () => { await sb.auth.signOut(); location.reload(); });
 
+/* TEMP: login uitgeschakeld — iedereen met deze URL ziet de eigenaarweergave. */
 async function boot(){
-  const { data:{ session } } = await sb.auth.getSession();
-  if(!session){ $("gate").classList.remove("hidden"); return; }
-  $("whoami").textContent = session.user.email;
-
-  const acc = await rpc("my_access");
-  if(!acc || acc.length===0){
-    $("gate").classList.add("hidden"); $("app").classList.remove("hidden");
-    $("title").textContent = "Geen toegang";
-    $("subtitle").textContent = "Je login is bekend maar nog niet gekoppeld. Neem contact op met Ruben.";
-    return;
-  }
-  ACCESS = acc[0].is_owner
-    ? { isOwner:true, parks:[] }
-    : { isOwner:false, parks: acc.map(r=>({id:r.park_id, name:r.park_name})) };
-
-  $("gate").classList.add("hidden"); $("app").classList.remove("hidden");
-  ACCESS.isOwner ? await initOwner() : await initClient();
+  $("whoami").textContent = "Preview zonder login";
+  $("logout").classList.add("hidden");
+  ACCESS = { isOwner:true, parks:[] };
+  $("app").classList.remove("hidden");
+  await initOwner();
 }
-sb.auth.onAuthStateChange((_e,s)=>{ if(s && $("app").classList.contains("hidden")) boot(); });
 
 /* ---------- filters wiring ---------- */
 function fillSelect(el, opts, allLabel){
