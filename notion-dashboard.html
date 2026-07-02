@@ -685,12 +685,6 @@
       </div>
     </div>
 
-    <!-- Beste Advertenties -->
-    <div class="card" id="section-beste">
-      <div class="card-title">Beste Advertenties</div>
-      <div class="creative-grid" id="creative-grid"></div>
-    </div>
-
     <!-- All-time section (shown when period = alltime) -->
     <div id="section-alltime" hidden>
       <div class="card">
@@ -726,6 +720,12 @@
         </div>
       </div>
     </div><!-- /#section-alltime -->
+
+    <!-- Beste Advertenties -->
+    <div class="card" id="section-beste">
+      <div class="card-title">Beste Advertenties</div>
+      <div class="creative-grid" id="creative-grid"></div>
+    </div>
 
     <!-- Aangepast section (shown when period = aangepast) -->
     <div id="section-aangepast" hidden>
@@ -1612,6 +1612,13 @@ function renderBeste(ads) {
           <span class="pill pill-green">CPL ${fEur2(ad.cpl)}</span>
           <span class="pill pill-blue">CPA ${fEur(ad.cpa)}</span>
           <span class="pill pill-amber">CPS ${fEur(ad.cpsSigned)}</span>
+        </div>
+        <div style="display:flex;gap:12px;margin-top:6px;font-size:12px;color:var(--muted)">
+          <span>💸 ${fEur2(ad.spend)}</span>
+          <span>👆 ${fNum(ad.clicks)}</span>
+          <span>🎯 ${fNum(ad.leads)} leads</span>
+          ${ad.appointments > 0 ? `<span>📅 ${fNum(ad.appointments)} afspr.</span>` : ''}
+          ${ad.signed > 0 ? `<span>✅ ${fNum(ad.signed)} sales</span>` : ''}
         </div>
       </div>
     </div>`;
