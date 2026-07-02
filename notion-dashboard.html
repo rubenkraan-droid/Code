@@ -1625,15 +1625,22 @@ function update() {
   const isSpecial   = isAllTime || isAangepast;
 
   // Show/hide normal sections vs special sections
-  ['section-trend','section-main-table','section-monthly','section-beste'].forEach(id => {
+  ['section-main-table','section-monthly','section-beste'].forEach(id => {
     document.getElementById(id).hidden = isSpecial;
   });
-  document.getElementById('summary-bar').hidden       = isSpecial;
+  document.getElementById('section-trend').hidden  = isAangepast;
+  document.getElementById('summary-bar').hidden    = isSpecial;
   document.getElementById('section-alltime').hidden   = !isAllTime;
   document.getElementById('section-aangepast').hidden = !isAangepast;
   document.getElementById('main-status-filter').style.display = isSpecial ? 'none' : 'flex';
 
   if (isAllTime) {
+    const log = getActiveLog();
+    const dates = [...new Set(log.map(r => r.date).filter(Boolean))].sort();
+    const range = dates.length
+      ? { start: new Date(dates[0] + 'T00:00:00'), end: new Date(dates[dates.length - 1] + 'T00:00:00') }
+      : null;
+    if (range) renderChart(log, range);
     renderAllTimeTable();
   } else if (!isAangepast) {
     const log   = getActiveLog();
