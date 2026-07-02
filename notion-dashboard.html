@@ -7,18 +7,18 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     :root {
-      --bg:        #0F172A;
-      --card:      #1E293B;
-      --blue:      #3B82F6;
-      --green:     #10B981;
-      --amber:     #F59E0B;
-      --red:       #EF4444;
-      --grey:      #6B7280;
-      --row-hl:    #1D3461;
-      --text:      #F1F5F9;
-      --muted:     #94A3B8;
-      --border:    #334155;
-      --hover:     rgba(255,255,255,0.035);
+      --bg:        #f6f6f4;
+      --card:      #ffffff;
+      --blue:      #185fa5;
+      --green:     #0f6e56;
+      --amber:     #b45309;
+      --red:       #a32d2d;
+      --grey:      #6b6b66;
+      --row-hl:    #e6f1fb;
+      --text:      #1d1d1b;
+      --muted:     #6b6b66;
+      --border:    #e6e6e1;
+      --hover:     rgba(0,0,0,0.03);
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -155,12 +155,12 @@
     }
     .demo-btn:hover { border-color: var(--amber); color: var(--amber); }
     .demo-btn.active {
-      background: rgba(245,158,11,.15); border-color: var(--amber);
+      background: rgba(180,83,9,.15); border-color: var(--amber);
       color: var(--amber); font-weight: 600;
     }
     .demo-banner {
       display: flex; align-items: center; gap: 10px;
-      background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.3);
+      background: rgba(180,83,9,.1); border: 1px solid rgba(180,83,9,.3);
       border-radius: 8px; padding: 10px 16px; margin-bottom: 18px;
       font-size: 13px; color: var(--amber);
     }
@@ -174,8 +174,8 @@
       background: var(--card); border: 1px solid var(--border);
       border-radius: 10px; padding: 14px 18px; flex: 1; min-width: 140px;
     }
-    .stat-card.c-amber { border-color: rgba(245,158,11,.3); }
-    .stat-card.c-green { border-color: rgba(16,185,129,.3); }
+    .stat-card.c-amber { border-color: rgba(180,83,9,.3); }
+    .stat-card.c-green { border-color: rgba(15,110,86,.3); }
     .stat-label {
       font-size: 10px; color: var(--muted);
       text-transform: uppercase; letter-spacing: .6px;
@@ -185,8 +185,8 @@
     .ilabel {
       font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: 600;
     }
-    .ilabel-amber { background: rgba(245,158,11,.15); color: var(--amber); }
-    .ilabel-green { background: rgba(16,185,129,.15); color: var(--green); }
+    .ilabel-amber { background: rgba(180,83,9,.15); color: var(--amber); }
+    .ilabel-green { background: rgba(15,110,86,.15); color: var(--green); }
 
     /* ── Tables (shared) ── */
     .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
@@ -207,7 +207,7 @@
     th.sort-asc::after  { content: ' ↑'; color: var(--blue); }
     td {
       padding: 9px 12px;
-      border-bottom: 1px solid rgba(51,65,85,.45);
+      border-bottom: 1px solid rgba(0,0,0,.05);
       white-space: nowrap;
     }
     tbody tr:last-child td { border-bottom: none; }
@@ -237,16 +237,16 @@
       padding: 2px 8px; border-radius: 999px;
       font-size: 11px; font-weight: 600;
     }
-    .badge-green { background: rgba(16,185,129,.15); color: var(--green); }
-    .badge-grey  { background: rgba(107,114,128,.15); color: var(--grey); }
-    .badge-blue  { background: rgba(59,130,246,.15);  color: var(--blue); }
-    .badge-amber { background: rgba(245,158,11,.15);  color: var(--amber); }
+    .badge-green { background: rgba(15,110,86,.15); color: var(--green); }
+    .badge-grey  { background: rgba(107,107,102,.15); color: var(--grey); }
+    .badge-blue  { background: rgba(24,95,165,.15);  color: var(--blue); }
+    .badge-amber { background: rgba(180,83,9,.15);  color: var(--amber); }
 
     .sm-badge {
       font-size: 10px; padding: 1px 6px; border-radius: 4px; font-weight: 600;
     }
-    .sm-blue  { background: rgba(59,130,246,.15);  color: var(--blue); }
-    .sm-amber { background: rgba(245,158,11,.15);  color: var(--amber); cursor: default; }
+    .sm-blue  { background: rgba(24,95,165,.15);  color: var(--blue); }
+    .sm-amber { background: rgba(180,83,9,.15);  color: var(--amber); cursor: default; }
 
     /* ── Chart ── */
     .chart-wrap { position: relative; height: 290px; }
@@ -298,9 +298,9 @@
       font-family: 'SF Mono','Fira Code','Cascadia Code','Consolas',monospace;
       padding: 3px 9px; border-radius: 4px; font-weight: 600; width: fit-content;
     }
-    .pill-blue  { background: rgba(59,130,246,.15);  color: var(--blue); }
-    .pill-amber { background: rgba(245,158,11,.15);  color: var(--amber); }
-    .pill-green { background: rgba(16,185,129,.15);  color: var(--green); }
+    .pill-blue  { background: rgba(24,95,165,.15);  color: var(--blue); }
+    .pill-amber { background: rgba(180,83,9,.15);  color: var(--amber); }
+    .pill-green { background: rgba(15,110,86,.15);  color: var(--green); }
 
     /* ── Divider ── */
     .section-divider {
@@ -335,16 +335,16 @@
       padding: 36px; text-align: center; cursor: pointer; color: var(--muted);
       transition: border-color .2s, background .2s;
     }
-    .csv-drop-zone:hover, .csv-drop-zone.drag { border-color: #3B82F6; background: rgba(59,130,246,.05); }
+    .csv-drop-zone:hover, .csv-drop-zone.drag { border-color: #185fa5; background: rgba(24,95,165,.05); }
     .csv-drop-zone input { display: none; }
     .csv-preview-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 16px; }
     .csv-preview-table th { text-align: left; padding: 6px 8px; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border); font-size: 10px; text-transform: uppercase; }
-    .csv-preview-table td { padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,.05); }
+    .csv-preview-table td { padding: 6px 8px; border-bottom: 1px solid rgba(0,0,0,.04); }
     .csv-preview-table tr:last-child td { border-bottom: none; }
     .csv-modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
     .csv-status { font-size: 12px; color: var(--muted); margin-top: 10px; min-height: 18px; }
-    .csv-status.ok { color: #10B981; }
-    .csv-status.err { color: #EF4444; }
+    .csv-status.ok { color: #0f6e56; }
+    .csv-status.err { color: #a32d2d; }
 
     @media print {
       * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
@@ -426,9 +426,9 @@
       font-size: 10px; font-weight: 700; cursor: default; transition: transform .1s;
     }
     .unit-sq:hover { transform: scale(1.12); }
-    .unit-sq.verkocht     { background: rgba(16,185,129,.2);  color: var(--green); border: 1px solid rgba(16,185,129,.4); }
-    .unit-sq.gereserveerd { background: rgba(245,158,11,.2);  color: var(--amber); border: 1px solid rgba(245,158,11,.4); }
-    .unit-sq.beschikbaar  { background: rgba(107,114,128,.12); color: var(--muted); border: 1px solid rgba(107,114,128,.3); }
+    .unit-sq.verkocht     { background: rgba(15,110,86,.2);  color: var(--green); border: 1px solid rgba(15,110,86,.4); }
+    .unit-sq.gereserveerd { background: rgba(180,83,9,.2);  color: var(--amber); border: 1px solid rgba(180,83,9,.4); }
+    .unit-sq.beschikbaar  { background: rgba(107,107,102,.12); color: var(--muted); border: 1px solid rgba(107,107,102,.3); }
     .legend-row { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 14px; }
     .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
     .legend-dot { width: 12px; height: 12px; border-radius: 3px; }
@@ -502,7 +502,7 @@
     .history-list { display: flex; flex-direction: column; gap: 0; }
     .history-item {
       display: flex; gap: 14px; padding: 12px 0;
-      border-bottom: 1px solid rgba(51,65,85,.45); cursor: pointer;
+      border-bottom: 1px solid rgba(0,0,0,.05); cursor: pointer;
     }
     .history-item:last-child { border-bottom: none; }
     .history-item:hover .history-preview { color: var(--blue); }
@@ -574,6 +574,7 @@
       <button onclick="forceRefresh()" title="Vernieuwen" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px;padding:2px 4px;margin-top:2px;">&#8635;</button>
     </div>
     <div style="display:flex;gap:8px;align-items:center">
+      <a href="dashboard.html" class="period-btn" style="font-size:12px;text-decoration:none;color:var(--text)">&#8598; Resultaten</a>
       <button class="period-btn" onclick="openCsvModal()" style="font-size:12px">&#128196; CSV importeren</button>
       <button class="print-btn" onclick="printDashboard()">&#128438; Print rapport</button>
     </div>
@@ -769,9 +770,9 @@
       <div id="inv-stat-bar" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;"></div>
       <div class="unit-grid" id="unit-grid"></div>
       <div class="legend-row">
-        <div class="legend-item"><div class="legend-dot" style="background:rgba(16,185,129,.4)"></div>Verkocht</div>
-        <div class="legend-item"><div class="legend-dot" style="background:rgba(245,158,11,.4)"></div>Gereserveerd</div>
-        <div class="legend-item"><div class="legend-dot" style="background:rgba(107,114,128,.3)"></div>Beschikbaar</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(15,110,86,.4)"></div>Verkocht</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(180,83,9,.4)"></div>Gereserveerd</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(107,107,102,.3)"></div>Beschikbaar</div>
       </div>
     </div>
     <div class="card">
@@ -1424,14 +1425,14 @@ function renderChart(rows, range) {
         {
           label: 'Uitgaven',
           data: spendData,
-          borderColor: '#3B82F6', backgroundColor: 'rgba(59,130,246,.07)',
+          borderColor: '#185fa5', backgroundColor: 'rgba(24,95,165,.07)',
           fill: true, tension: 0.3, yAxisID: 'y',
           pointRadius: 3, pointHoverRadius: 5
         },
         {
           label: 'Leads',
           data: leadsData,
-          borderColor: '#F59E0B', backgroundColor: 'rgba(245,158,11,.07)',
+          borderColor: '#b45309', backgroundColor: 'rgba(180,83,9,.07)',
           fill: false, tension: 0.3, yAxisID: 'y2',
           pointRadius: 4, pointHoverRadius: 6,
           borderWidth: 2
@@ -1439,7 +1440,7 @@ function renderChart(rows, range) {
         {
           label: 'CPL',
           data: cplData,
-          borderColor: '#10B981', borderDash: [6,3],
+          borderColor: '#0f6e56', borderDash: [6,3],
           tension: 0.3, spanGaps: true, yAxisID: 'y1',
           pointRadius: 3, pointHoverRadius: 5
         },
@@ -1455,7 +1456,7 @@ function renderChart(rows, range) {
         {
           label: 'Sales',
           data: salesData,
-          borderColor: '#34D399', backgroundColor: 'rgba(52,211,153,0.6)',
+          borderColor: '#34D399', backgroundColor: 'rgba(15,110,86,0.6)',
           showLine: false, yAxisID: 'y2',
           pointStyle: 'circle',
           pointRadius: ctx => { const v = ctx.parsed?.y||0; return v > 0 ? Math.min(5 + v*4, 24) : 0; },
@@ -1468,11 +1469,11 @@ function renderChart(rows, range) {
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: {
-          labels: { color: '#94A3B8', font: { size: 12 }, usePointStyle: true }
+          labels: { color: '#6b6b66', font: { size: 12 }, usePointStyle: true }
         },
         tooltip: {
-          backgroundColor: '#1E293B', borderColor: '#334155', borderWidth: 1,
-          titleColor: '#F1F5F9', bodyColor: '#94A3B8',
+          backgroundColor: '#ffffff', borderColor: '#e6e6e1', borderWidth: 1,
+          titleColor: '#1d1d1b', bodyColor: '#6b6b66',
           callbacks: {
             label: ctx => {
               if (ctx.parsed.y == null) return null;
@@ -1488,23 +1489,23 @@ function renderChart(rows, range) {
       },
       scales: {
         x: {
-          ticks: { color: '#94A3B8', maxRotation: 45, autoSkip: true, maxTicksLimit: 20 },
-          grid: { color: 'rgba(51,65,85,.4)' }
+          ticks: { color: '#6b6b66', maxRotation: 45, autoSkip: true, maxTicksLimit: 20 },
+          grid: { color: 'rgba(0,0,0,.04)' }
         },
         y: {
           position: 'left',
-          ticks: { color: '#3B82F6', callback: v => fEur(v) },
-          grid: { color: 'rgba(51,65,85,.4)' }
+          ticks: { color: '#185fa5', callback: v => fEur(v) },
+          grid: { color: 'rgba(0,0,0,.04)' }
         },
         y1: {
           position: 'right',
-          ticks: { color: '#10B981', callback: v => fEur(v) },
+          ticks: { color: '#0f6e56', callback: v => fEur(v) },
           grid: { drawOnChartArea: false }
         },
         y2: {
           position: 'right',
           offset: true,
-          ticks: { color: '#F59E0B', stepSize: 1, callback: v => Number.isInteger(v) ? v : null },
+          ticks: { color: '#b45309', stepSize: 1, callback: v => Number.isInteger(v) ? v : null },
           grid: { drawOnChartArea: false }
         }
       }
@@ -2202,13 +2203,13 @@ function renderInventaris() {
         {
           label: 'Cumulatief verkocht',
           data: cumData,
-          borderColor: '#10B981', backgroundColor: 'rgba(16,185,129,.08)',
+          borderColor: '#0f6e56', backgroundColor: 'rgba(15,110,86,.08)',
           fill: true, tension: 0.3, pointRadius: 4, yAxisID: 'y'
         },
         {
           label: 'Resterende voorraad',
           data: restData,
-          borderColor: '#3B82F6', borderDash: [6, 3],
+          borderColor: '#185fa5', borderDash: [6, 3],
           tension: 0.3, pointRadius: 4, yAxisID: 'y'
         }
       ]
@@ -2216,12 +2217,12 @@ function renderInventaris() {
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
-        legend: { labels: { color: '#94A3B8', font: { size: 12 }, usePointStyle: true } },
-        tooltip: { backgroundColor: '#1E293B', borderColor: '#334155', borderWidth: 1, titleColor: '#F1F5F9', bodyColor: '#94A3B8' }
+        legend: { labels: { color: '#6b6b66', font: { size: 12 }, usePointStyle: true } },
+        tooltip: { backgroundColor: '#ffffff', borderColor: '#e6e6e1', borderWidth: 1, titleColor: '#1d1d1b', bodyColor: '#6b6b66' }
       },
       scales: {
-        x: { ticks: { color: '#94A3B8' }, grid: { color: 'rgba(51,65,85,.4)' } },
-        y: { ticks: { color: '#94A3B8', stepSize: 1 }, grid: { color: 'rgba(51,65,85,.4)' }, min: 0 }
+        x: { ticks: { color: '#6b6b66' }, grid: { color: 'rgba(0,0,0,.04)' } },
+        y: { ticks: { color: '#6b6b66', stepSize: 1 }, grid: { color: 'rgba(0,0,0,.04)' }, min: 0 }
       }
     }
   });
@@ -2341,10 +2342,10 @@ function renderFunnel() {
   const f = useMock ? MOCK.funnel : { clicks: t.clicks, leads: t.leads, afspraken: t.appointments, verkopen: t.signed };
 
   const stages = [
-    { naam: 'Clicks',    vol: f.clicks,    kleur: '#3B82F6' },
+    { naam: 'Clicks',    vol: f.clicks,    kleur: '#185fa5' },
     { naam: 'Leads',     vol: f.leads,     kleur: '#06B6D4' },
-    { naam: 'Afspraken', vol: f.afspraken, kleur: '#10B981' },
-    { naam: 'Verkopen',  vol: f.verkopen,     kleur: '#F59E0B' },
+    { naam: 'Afspraken', vol: f.afspraken, kleur: '#0f6e56' },
+    { naam: 'Verkopen',  vol: f.verkopen,     kleur: '#b45309' },
   ];
 
   function convRate(from, to) {
