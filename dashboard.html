@@ -17,6 +17,7 @@
   .who{font-size:13px;color:var(--muted)}
   .who button{margin-left:10px;border:1px solid var(--line);background:#fff;border-radius:7px;
     padding:6px 11px;font:inherit;font-size:13px;cursor:pointer}
+  .who select{margin-left:10px;min-width:0}
   .filters{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:22px}
   select,input{font:inherit;font-size:14px;padding:9px 10px;border:1px solid var(--line);
     border-radius:8px;background:#fff;color:var(--ink);min-width:150px}
@@ -24,20 +25,27 @@
   .banner.hide{color:var(--bad)}
   .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:26px}
   .metric{background:#efefe9;border-radius:10px;padding:14px 16px}
+  .metric.team{background:#e6f1fb}
   .metric .l{font-size:13px;color:var(--muted);margin-bottom:6px}
   .metric .v{font-size:23px;font-weight:600}
   .sec{font-size:14px;font-weight:600;margin:0 0 10px}
   .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:26px}
+  .panel .scroll{max-height:420px;overflow-y:auto}
   table{width:100%;border-collapse:collapse;font-size:13px}
-  th,td{padding:11px 12px;text-align:right}
+  th,td{padding:11px 12px;text-align:right;white-space:nowrap}
   th:first-child,td:first-child{text-align:left}
   thead tr{background:#faf9f6}
+  thead th{position:sticky;top:0;background:#faf9f6}
   th{font-weight:600;color:var(--muted)}
   tbody tr{border-top:1px solid var(--line)}
   .av{display:inline-flex;align-items:center;gap:8px}
   .dot{width:26px;height:26px;border-radius:50%;background:#e6f1fb;color:#185fa5;display:inline-flex;
     align-items:center;justify-content:center;font-size:11px;font-weight:600}
   .good{color:var(--good)}.bad{color:var(--bad)}
+  .badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600}
+  .badge.sale{background:#e2f3ec;color:var(--good)}
+  .badge.held{background:#efefe9;color:var(--muted)}
+  td a{color:var(--accent);text-decoration:none;font-weight:600}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
   @media(max-width:720px){.grid2{grid-template-columns:1fr}}
   .chartbox{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
@@ -72,7 +80,11 @@
       <h1 id="title">Dashboard</h1>
       <p class="sub" id="subtitle"></p>
     </div>
-    <div class="who"><span id="whoami"></span><button id="logout">Uitloggen</button></div>
+    <div class="who">
+      <span id="whoami"></span>
+      <select id="viewAs"></select>
+      <button id="logout">Uitloggen</button>
+    </div>
   </div>
 
   <div class="filters">
@@ -90,11 +102,15 @@
     <select id="fAgent"></select>
   </div>
 
-  <div class="banner" id="bannerTop"></div>
   <div class="cards" id="cardsTop"></div>
 
+  <div id="agentOnly" class="hidden">
+    <div class="sec">Teamgemiddelde (alle makelaars, zonder namen)</div>
+    <div class="cards" id="cardsTeam"></div>
+  </div>
+
   <div id="ownerOnly" class="hidden">
-    <div class="banner hide"><span>●</span><span>Alleen voor eigenaar · nooit zichtbaar voor klant</span></div>
+    <div class="banner hide"><span>●</span><span>Alleen voor eigenaar · nooit zichtbaar voor makelaar of ontwikkelaar</span></div>
     <div class="sec">Per agent</div>
     <div class="panel"><table id="agentTable"></table></div>
     <div class="grid2">
@@ -107,6 +123,17 @@
         <div class="chartbox"><div class="inv" id="invBox"></div><p class="foot" id="invFoot"></p></div>
       </div>
     </div>
+  </div>
+
+  <div id="parkOnly" class="hidden">
+    <div class="sec">Inventaris</div>
+    <div class="chartbox" style="margin-bottom:26px"><div class="inv" id="invBoxP"></div><p class="foot" id="invFootP"></p></div>
+  </div>
+
+  <div id="apptSec" class="hidden">
+    <div class="sec" id="apptTitle">Afspraken</div>
+    <div class="panel"><div class="scroll"><table id="apptTable"></table></div></div>
+    <p class="foot">Deal openen in Pipedrive via de link per regel. Pipedrive is de bron; het dashboard toont datum, verkoop, notaris en omzet.</p>
   </div>
 </div>
 
@@ -122,7 +149,8 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const $ = id => document.getElementById(id);
 const eur = n => "€"+Math.round(n||0).toLocaleString("nl-NL");
 const initials = n => n.slice(0,2).toUpperCase();
-let ACCESS = null;            // { isOwner, parks:[{id,name}] }
+const dt = d => new Date(d).toLocaleDateString("nl-NL",{day:"2-digit",month:"short",year:"2-digit"});
+let PARKS = [], AGENTS = [];
 
 function periodRange(){
   const v = $("fPeriod").value, today = new Date();
@@ -137,11 +165,12 @@ function periodRange(){
   const iso = d => d.toISOString().slice(0,10);
   return { p_from: iso(from), p_to: iso(to) };
 }
-const metric = (l,v) => `<div class="metric"><div class="l">${l}</div><div class="v">${v}</div></div>`;
+const metric  = (l,v) => `<div class="metric"><div class="l">${l}</div><div class="v">${v}</div></div>`;
+const metricT = (l,v) => `<div class="metric team"><div class="l">${l}</div><div class="v">${v}</div></div>`;
 async function rpc(fn, args){ const {data,error} = await sb.rpc(fn, args||{});
   if(error){ console.error(fn, error); return null; } return data; }
 
-/* ---------- auth ---------- */
+/* ---------- auth (dormant while preview mode is on) ---------- */
 $("sendLink").addEventListener("click", async () => {
   const email = $("email").value.trim();
   if(!email){ $("gateMsg").textContent = "Vul je e-mailadres in."; return; }
@@ -155,13 +184,54 @@ $("sendLink").addEventListener("click", async () => {
 });
 $("logout").addEventListener("click", async () => { await sb.auth.signOut(); location.reload(); });
 
-/* TEMP: login uitgeschakeld — iedereen met deze URL ziet de eigenaarweergave. */
+/* TEMP: login uitgeschakeld — de rolkeuze hieronder is een preview.
+   Bij het aanzetten van login bepaalt de server de rol en verdwijnt de keuze. */
 async function boot(){
-  $("whoami").textContent = "Preview zonder login";
+  $("whoami").textContent = "Bekijk als:";
   $("logout").classList.add("hidden");
-  ACCESS = { isOwner:true, parks:[] };
+  PARKS  = await rpc("owner_parks")  || [];
+  AGENTS = await rpc("owner_agents") || [];
+  $("viewAs").innerHTML =
+    `<option value="owner">Eigenaar (alles)</option>`
+    + `<optgroup label="Makelaar">${AGENTS.map(a=>`<option value="agent:${a.id}">${a.name}</option>`).join("")}</optgroup>`
+    + `<optgroup label="Recreatieontwikkelaar">${PARKS.map(p=>`<option value="park:${p.id}">${p.name}</option>`).join("")}</optgroup>`;
+  $("viewAs").addEventListener("change", applyRole);
   $("app").classList.remove("hidden");
-  await initOwner();
+  await applyRole();
+}
+
+function currentView(){
+  const v = $("viewAs").value;
+  if(v==="owner") return { role:"owner" };
+  const [role,id] = v.split(":");
+  return { role, id:Number(id) };
+}
+
+async function applyRole(){
+  const v = currentView();
+  const owner = v.role==="owner", agentV = v.role==="agent", parkV = v.role==="park";
+  $("ownerOnly").classList.toggle("hidden", !owner);
+  $("agentOnly").classList.toggle("hidden", !agentV);
+  $("parkOnly").classList.toggle("hidden", !parkV);
+  $("apptSec").classList.toggle("hidden", parkV);
+  $("fPark").classList.toggle("hidden", !owner);
+  $("fAgent").classList.toggle("hidden", !owner);
+  if(owner){
+    $("title").textContent = "Master dashboard";
+    $("subtitle").textContent = "Eigenaarweergave";
+    fillSelect($("fPark"), PARKS.map(p=>({value:p.id,label:p.name})), "Alle parken");
+    fillSelect($("fAgent"), AGENTS.map(a=>({value:a.id,label:a.name})), "Alle agents");
+    refresh = renderOwner;
+  } else if(agentV){
+    $("title").textContent = "Mijn resultaten";
+    $("subtitle").textContent = "Makelaarweergave · " + ((AGENTS.find(a=>a.id===v.id)||{}).name||"");
+    refresh = () => renderAgent(v.id);
+  } else {
+    $("title").textContent = "Park dashboard";
+    $("subtitle").textContent = "Parkweergave · " + ((PARKS.find(p=>p.id===v.id)||{}).name||"");
+    refresh = () => renderPark(v.id);
+  }
+  await refresh();
 }
 
 /* ---------- filters wiring ---------- */
@@ -177,44 +247,46 @@ $("fPeriod").addEventListener("change", e=>{
 let refresh = ()=>{};
 ["fFrom","fTo","fPark","fAgent"].forEach(id=>$(id).addEventListener("change", ()=>refresh()));
 
-/* ---------- OWNER ---------- */
-async function initOwner(){
-  $("title").textContent = "Master dashboard";
-  $("subtitle").textContent = "Eigenaarweergave";
-  $("bannerTop").innerHTML = "";
-  $("ownerOnly").classList.remove("hidden");
-  $("fAgent").classList.remove("hidden");
-
-  const parks = await rpc("owner_parks") || [];
-  const agents = await rpc("owner_agents") || [];
-  fillSelect($("fPark"), parks.map(p=>({value:p.id,label:p.name})), "Alle parken");
-  fillSelect($("fAgent"), agents.map(a=>({value:a.id,label:a.name})), "Alle agents");
-
-  refresh = renderOwner;
-  await renderOwner();
+/* ---------- appointments table (owner + makelaar) ---------- */
+function renderAppts(rows, showAgent){
+  $("apptTable").innerHTML =
+    `<thead><tr><th>Datum</th>${showAgent?"<th>Makelaar</th>":""}<th>Park</th><th>Status</th>
+      <th>Verkocht op</th><th>Notaris</th><th>Omzet</th><th></th></tr></thead>
+     <tbody>${rows.map(x=>{
+       const sold = x.outcome==="sale";
+       return `<tr><td>${dt(x.scheduled_at)}</td>
+         ${showAgent?`<td style="text-align:left">${x.agent}</td>`:""}
+         <td style="text-align:left">${x.park.replace("Park ","")}</td>
+         <td style="text-align:left"><span class="badge ${sold?"sale":"held"}">${sold?"Verkocht":"Gehouden"}</span></td>
+         <td>${x.sale_date?dt(x.sale_date):"—"}</td>
+         <td>${x.notary_date?dt(x.notary_date):"—"}</td>
+         <td style="font-weight:600">${x.sale_amount?eur(x.sale_amount):"—"}</td>
+         <td><a href="${x.pipedrive_url}" target="_blank" rel="noopener">Pipedrive ↗</a></td></tr>`;
+     }).join("")}</tbody>`;
 }
 
+/* ---------- EIGENAAR ---------- */
 async function renderOwner(){
   const r = periodRange();
   const parkVal = $("fPark").value, agentVal = $("fAgent").value;
 
-  // top cards: agency total, or one park if selected
   let f;
   if(parkVal==="all") f = (await rpc("owner_total_funnel", r))?.[0];
   else f = (await rpc("client_park_funnel", {p_park_id:Number(parkVal), ...r}))?.[0];
   f = f || {};
   const closing = f.closing_rate_pct ?? (f.appointments ? Math.round(f.sales/f.appointments*100) : 0);
+  const perAppt = f.appointments ? Math.round(f.revenue/f.appointments) : 0;
   $("cardsTop").innerHTML =
     metric("Uitgaven",eur(f.spend)) + metric("Leads",f.leads||0) +
     metric("Afspraken",f.appointments||0) + metric("Sales",f.sales||0) +
-    metric("Omzet",eur(f.revenue)) + metric("CPL",eur(f.cost_per_lead)) +
-    metric("ROAS",Number(f.roas||0).toFixed(2)) + metric("Closing %",(closing||0)+"%");
+    metric("Omzet",eur(f.revenue)) + metric("Omzet per afspraak",eur(perAppt)) +
+    metric("CPL",eur(f.cost_per_lead)) + metric("ROAS",Number(f.roas||0).toFixed(2)) +
+    metric("Closing %",(closing||0)+"%");
 
-  // per agent
   let agents = await rpc("owner_agent_performance", r) || [];
   if(agentVal!=="all") agents = agents.filter(a=>String(a.agent_id)===agentVal);
   $("agentTable").innerHTML =
-    `<thead><tr><th>Agent</th><th>Afspraken</th><th>Closing %</th><th>€/afspraak</th><th>Omzet</th></tr></thead>
+    `<thead><tr><th>Agent</th><th>Afspraken</th><th>Closing %</th><th>Omzet per afspraak</th><th>Omzet</th></tr></thead>
      <tbody>${agents.map(a=>{
        const cls = a.closing_rate_pct>=40?"good":a.closing_rate_pct<30?"bad":"";
        return `<tr><td><span class="av"><span class="dot">${initials(a.agent)}</span>${a.agent}</span></td>
@@ -222,7 +294,6 @@ async function renderOwner(){
          <td>${eur(a.revenue_per_appt)}</td><td style="font-weight:600">${eur(a.revenue)}</td></tr>`;
      }).join("")}</tbody>`;
 
-  // chart: revenue per park by agent
   const pa = await rpc("owner_park_agent", r) || [];
   const parkNames = [...new Set(pa.map(x=>x.park))];
   const agentNames = [...new Set(pa.map(x=>x.agent))];
@@ -233,40 +304,51 @@ async function renderOwner(){
   }));
   drawChart(parkNames.map(n=>n.replace("Park ","")), datasets);
 
-  // inventory (selected park or sum of all)
-  const invParks = parkVal==="all" ? (await rpc("owner_parks")||[]).map(p=>p.id) : [Number(parkVal)];
+  const invParks = parkVal==="all" ? PARKS.map(p=>p.id) : [Number(parkVal)];
   let sold=0,res=0,av=0;
   for(const pid of invParks){
     const inv = (await rpc("client_park_inventory",{p_park_id:pid}))?.[0];
     if(inv){ sold+=Number(inv.sold); res+=Number(inv.reserved); av+=Number(inv.available); }
   }
-  renderInv(sold,res,av);
+  renderInv("invBox","invFoot",sold,res,av);
+
+  const det = await rpc("appointments_detail", { ...r,
+    p_agent_id: agentVal==="all"?null:Number(agentVal),
+    p_park_id:  parkVal==="all"?null:Number(parkVal) }) || [];
+  $("apptTitle").textContent = `Alle afspraken (${det.length})`;
+  renderAppts(det, true);
 }
 
-/* ---------- CLIENT ---------- */
-async function initClient(){
-  $("ownerOnly").classList.add("hidden");
-  $("fAgent").classList.add("hidden");
-  $("title").textContent = "Park dashboard";
-  $("subtitle").textContent = "Klantweergave";
-  $("bannerTop").innerHTML = "";
-  fillSelect($("fPark"), ACCESS.parks.map(p=>({value:p.id,label:p.name})), null);
-  $("fPark").disabled = ACCESS.parks.length<=1;
-  refresh = renderClient;
-  await renderClient();
-}
-
-async function renderClient(){
+/* ---------- MAKELAAR: eigen cijfers + teamgemiddelde, geen collega's ---------- */
+async function renderAgent(agentId){
   const r = periodRange();
-  const pid = Number($("fPark").value);
-  const f = (await rpc("client_park_funnel", {p_park_id:pid, ...r}))?.[0] || {};
-  $("subtitle").textContent = "Klantweergave · "+(f.park||"");
+  const s = (await rpc("agent_stats", {p_agent_id:agentId, ...r}))?.[0] || {};
   $("cardsTop").innerHTML =
-    metric("Uitgaven",eur(f.spend)) + metric("Leads",f.leads||0) +
-    metric("Afspraken",f.appointments||0) + metric("Sales",f.sales||0) +
-    metric("Omzet",eur(f.revenue)) + metric("CPL",eur(f.cost_per_lead)) +
-    metric("ROAS",Number(f.roas||0).toFixed(2)) +
+    metric("Mijn afspraken",s.appointments||0) + metric("Mijn sales",s.sales||0) +
+    metric("Mijn omzet",eur(s.revenue)) + metric("Omzet per afspraak",eur(s.revenue_per_appt)) +
+    metric("Closing %",(s.closing_rate_pct||0)+"%");
+  $("cardsTeam").innerHTML =
+    metricT("Omzet per afspraak",eur(s.team_revenue_per_appt)) +
+    metricT("Closing %",(s.team_closing_rate_pct||0)+"%") +
+    metricT("Afspraken per makelaar",s.team_avg_appointments||0) +
+    metricT("Omzet per makelaar",eur(s.team_avg_revenue));
+  const det = await rpc("appointments_detail", {...r, p_agent_id:agentId}) || [];
+  $("apptTitle").textContent = `Mijn afspraken (${det.length})`;
+  renderAppts(det, false);
+}
+
+/* ---------- RECREATIEONTWIKKELAAR: alleen parkgemiddelden ---------- */
+async function renderPark(parkId){
+  const r = periodRange();
+  const f = (await rpc("client_park_funnel", {p_park_id:parkId, ...r}))?.[0] || {};
+  const perAppt = f.appointments ? Math.round(f.revenue/f.appointments) : 0;
+  $("cardsTop").innerHTML =
+    metric("Leads",f.leads||0) + metric("Afspraken",f.appointments||0) +
+    metric("Sales",f.sales||0) + metric("Omzet",eur(f.revenue)) +
+    metric("Omzet per afspraak (gem.)",eur(perAppt)) +
     metric("Closing %",(f.appointments?Math.round(f.sales/f.appointments*100):0)+"%");
+  const inv = (await rpc("client_park_inventory",{p_park_id:parkId}))?.[0];
+  renderInv("invBoxP","invFootP", inv?Number(inv.sold):0, inv?Number(inv.reserved):0, inv?Number(inv.available):0);
 }
 
 /* ---------- shared render bits ---------- */
@@ -281,13 +363,13 @@ function drawChart(labels, datasets){
               y:{stacked:true,ticks:{callback:v=>"€"+(v/1000)+"k"}}}}
   });
 }
-function renderInv(sold,res,av){
-  $("invBox").innerHTML =
+function renderInv(boxId,footId,sold,res,av){
+  $(boxId).innerHTML =
     `<div><div class="v">${sold}</div><div class="l">Verkocht</div></div>
      <div><div class="v">${res}</div><div class="l">Gereserveerd</div></div>
      <div><div class="v">${av}</div><div class="l">Beschikbaar</div></div>`;
   const t = sold+res+av;
-  $("invFoot").textContent = t ? Math.round(sold/t*100)+"% verkocht" : "";
+  $(footId).textContent = t ? Math.round(sold/t*100)+"% verkocht" : "";
 }
 
 boot();
