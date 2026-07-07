@@ -1357,7 +1357,7 @@ function renderMainTable(ads) {
     const statusBadge = ad.status
       ? (isActive ? '<span class="badge badge-green">Actief</span>' : '<span class="badge badge-grey">Gepauzeerd</span>')
       : '<span class="muted">—</span>';
-    return `<tr class="clickable-row" onclick="openAdDetail(${JSON.stringify(ad.adName)})">
+    return `<tr class="clickable-row" data-adname="${esc(ad.adName)}" onclick="openAdDetail(this.dataset.adname)">
       <td class="ad-name-cell" title="${esc(ad.adName)}">${esc(ad.adName)}</td>
       <td>${statusBadge}</td>
       <td class="mono right">${fEur2(ad.spend)}</td>
@@ -1602,7 +1602,7 @@ function renderAllTimeTable() {
     const statusBadge = ad.status
       ? (isActive ? '<span class="badge badge-green">Actief</span>' : '<span class="badge badge-grey">Gestopt</span>')
       : '<span class="muted">—</span>';
-    return `<tr class="clickable-row" onclick="openAdDetail(${JSON.stringify(ad.adName)})">
+    return `<tr class="clickable-row" data-adname="${esc(ad.adName)}" onclick="openAdDetail(this.dataset.adname)">
       <td class="ad-name-cell" title="${esc(ad.adName)}">${esc(ad.adName)}</td>
       <td>${statusBadge}</td>
       <td class="mono right">${fEur2(ad.spend)}</td>
@@ -2219,7 +2219,7 @@ function renderAangepast() {
     const statusBadge = ad.status
       ? (isActive ? '<span class="badge badge-green">Actief</span>' : '<span class="badge badge-grey">Gestopt</span>')
       : '<span class="muted">—</span>';
-    return `<tr class="clickable-row" onclick="openAdDetail(${JSON.stringify(ad.adName)})">
+    return `<tr class="clickable-row" data-adname="${esc(ad.adName)}" onclick="openAdDetail(this.dataset.adname)">
       <td class="ad-name-cell" title="${esc(ad.adName)}">${esc(ad.adName)}</td>
       <td>${statusBadge}</td>
       <td class="mono right">${fEur2(ad.spend)}</td>
