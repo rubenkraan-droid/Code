@@ -519,6 +519,32 @@
     }
     .modal-title { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
     .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
+
+    /* Ad detail modal */
+    #ad-detail-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.72); z-index: 300;
+      display: flex; align-items: center; justify-content: center; padding: 16px;
+    }
+    #ad-detail-overlay[hidden] { display: none; }
+    #ad-detail-modal {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 24px 26px;
+      width: 760px; max-width: 96vw; max-height: 88vh;
+      display: flex; flex-direction: column; gap: 16px; overflow: hidden;
+    }
+    #ad-detail-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    #ad-detail-title { font-size: 16px; font-weight: 700; }
+    #ad-detail-close {
+      background: none; border: none; cursor: pointer; font-size: 20px;
+      color: var(--muted); padding: 2px 6px; border-radius: 6px; line-height: 1;
+    }
+    #ad-detail-close:hover { color: var(--text); background: var(--border); }
+    #ad-detail-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+    #ad-detail-chart-wrap { height: 200px; flex-shrink: 0; }
+    #ad-detail-table-wrap { overflow-y: auto; flex: 1; }
+    #ad-detail-table-wrap table { width: 100%; }
+    tr.clickable-row { cursor: pointer; }
+    tr.clickable-row:hover td { background: rgba(255,255,255,.04); }
   </style>
 </head>
 <body>
@@ -864,6 +890,33 @@
     <div class="card">
       <div class="card-title">Briefinghistorie</div>
       <div id="brief-history-list" class="history-list"></div>
+    </div>
+  </div>
+
+  <!-- Ad detail modal -->
+  <div id="ad-detail-overlay" hidden onclick="closeAdDetail(event)">
+    <div id="ad-detail-modal" onclick="event.stopPropagation()">
+      <div id="ad-detail-header">
+        <div id="ad-detail-title"></div>
+        <button id="ad-detail-close" onclick="closeAdDetail()">&#x2715;</button>
+      </div>
+      <div id="ad-detail-pills"></div>
+      <div id="ad-detail-chart-wrap">
+        <canvas id="ad-detail-chart"></canvas>
+      </div>
+      <div id="ad-detail-table-wrap">
+        <table>
+          <thead><tr>
+            <th>Datum</th>
+            <th class="right">Spend</th>
+            <th class="right">Clicks</th>
+            <th class="right muted">CPC</th>
+            <th class="right">Leads</th>
+            <th class="right">CPL</th>
+          </tr></thead>
+          <tbody id="ad-detail-tbody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -1304,7 +1357,7 @@ function renderMainTable(ads) {
     const statusBadge = ad.status
       ? (isActive ? '<span class="badge badge-green">Actief</span>' : '<span class="badge badge-grey">Gepauzeerd</span>')
       : '<span class="muted">—</span>';
-    return `<tr>
+    return `<tr class="clickable-row" onclick="openAdDetail(${JSON.stringify(ad.adName)})">
       <td class="ad-name-cell" title="${esc(ad.adName)}">${esc(ad.adName)}</td>
       <td>${statusBadge}</td>
       <td class="mono right">${fEur2(ad.spend)}</td>
@@ -1549,7 +1602,7 @@ function renderAllTimeTable() {
     const statusBadge = ad.status
       ? (isActive ? '<span class="badge badge-green">Actief</span>' : '<span class="badge badge-grey">Gestopt</span>')
       : '<span class="muted">—</span>';
-    return `<tr>
+    return `<tr class="clickable-row" onclick="openAdDetail(${JSON.stringify(ad.adName)})">
       <td class="ad-name-cell" title="${esc(ad.adName)}">${esc(ad.adName)}</td>
       <td>${statusBadge}</td>
       <td class="mono right">${fEur2(ad.spend)}</td>
@@ -1894,6 +1947,120 @@ function setLastUpdated(date, fromCache) {
 // ════════════════════════════════════════════════════════════
 //  Init
 // ════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════
+//  Ad detail modal
+// ════════════════════════════════════════════════════════════
+let adDetailChart = null;
+
+function openAdDetail(adName) {
+  const log = getActiveLog();
+  const rows = log.filter(r => (r.adName === adName || r.adId === adName) && r.date)
+                  .sort((a, b) => a.date.localeCompare(b.date));
+
+  if (!rows.length) return;
+
+  const totSpend = rows.reduce((s, r) => s + r.spend, 0);
+  const totClicks = rows.reduce((s, r) => s + r.clicks, 0);
+  const totLeads  = rows.reduce((s, r) => s + r.leads, 0);
+  const totAfspr  = rows.reduce((s, r) => s + (r.appointments || 0), 0);
+  const totSales  = rows.reduce((s, r) => s + (r.signed || 0), 0);
+  const cpl = totLeads > 0 ? totSpend / totLeads : null;
+  const cpa = totAfspr > 0 ? totSpend / totAfspr : null;
+  const cps = totSales > 0 ? totSpend / totSales : null;
+
+  // Look up status from allTimeMap
+  const at = state.allTimeMap.get(adName) || {};
+  const isActive = at.status === 'Active' || at.status === 'Actief';
+  const badge = at.status
+    ? (isActive ? '<span class="badge badge-green">Actief</span>' : '<span class="badge badge-grey">Gestopt</span>')
+    : '';
+
+  document.getElementById('ad-detail-title').innerHTML = `${esc(adName)} ${badge}`;
+  document.getElementById('ad-detail-pills').innerHTML = `
+    <span class="pill pill-green">CPL ${fEur2(cpl)}</span>
+    <span class="pill pill-blue">CPA ${fEur(cpa)}</span>
+    <span class="pill pill-amber">CPS ${fEur(cps)}</span>
+    <span class="pill" style="background:rgba(255,255,255,.07)">💸 ${fEur2(totSpend)}</span>
+    <span class="pill" style="background:rgba(255,255,255,.07)">🎯 ${fNum(totLeads)} leads</span>
+    ${totAfspr > 0 ? `<span class="pill" style="background:rgba(255,255,255,.07)">📅 ${fNum(totAfspr)} afspr.</span>` : ''}
+    ${totSales > 0 ? `<span class="pill" style="background:rgba(255,255,255,.07)">✅ ${fNum(totSales)} sales</span>` : ''}
+  `;
+
+  // Table
+  document.getElementById('ad-detail-tbody').innerHTML = rows.map(r => {
+    const cpcRow = r.clicks > 0 ? r.spend / r.clicks : null;
+    const cplRow = r.leads  > 0 ? r.spend / r.leads  : null;
+    return `<tr>
+      <td class="mono">${r.date}</td>
+      <td class="mono right">${fEur2(r.spend)}</td>
+      <td class="mono right">${fNum(r.clicks)}</td>
+      <td class="mono right muted">${fEur2(cpcRow)}</td>
+      <td class="mono right">${fNum(r.leads)}</td>
+      <td class="mono right">${fEur2(cplRow)}</td>
+    </tr>`;
+  }).join('');
+
+  // Chart
+  if (adDetailChart) { adDetailChart.destroy(); adDetailChart = null; }
+  const labels    = rows.map(r => { const d = new Date(r.date+'T00:00:00'); return `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}`; });
+  const spendData = rows.map(r => r.spend);
+  const leadsData = rows.map(r => r.leads);
+
+  adDetailChart = new Chart(document.getElementById('ad-detail-chart').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Spend', data: spendData,
+          borderColor: '#3B82F6', backgroundColor: 'rgba(59,130,246,.1)',
+          fill: true, tension: 0.3, yAxisID: 'y',
+          pointRadius: 3, pointHoverRadius: 5
+        },
+        {
+          label: 'Leads', data: leadsData,
+          borderColor: '#F59E0B', backgroundColor: 'rgba(245,158,11,.1)',
+          fill: false, tension: 0.3, yAxisID: 'y2',
+          pointRadius: 4, pointHoverRadius: 6, borderWidth: 2
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { labels: { color: '#94A3B8', font: { size: 11 }, usePointStyle: true } },
+        tooltip: {
+          callbacks: {
+            label: ctx => ctx.dataset.label === 'Spend'
+              ? ` ${fEur2(ctx.parsed.y)}`
+              : ` ${ctx.parsed.y} leads`
+          }
+        }
+      },
+      scales: {
+        x:  { ticks: { color: '#64748B', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,.05)' } },
+        y:  { position: 'left',  ticks: { color: '#3B82F6', callback: v => '€'+v }, grid: { color: 'rgba(255,255,255,.05)' } },
+        y2: { position: 'right', ticks: { color: '#F59E0B', stepSize: 1 }, grid: { drawOnChartArea: false } }
+      }
+    }
+  });
+
+  document.getElementById('ad-detail-overlay').hidden = false;
+  document.body.style.overflow = 'hidden';
+}
+
+function closeAdDetail(e) {
+  if (e && e.target !== document.getElementById('ad-detail-overlay')) return;
+  document.getElementById('ad-detail-overlay').hidden = true;
+  document.body.style.overflow = '';
+  if (adDetailChart) { adDetailChart.destroy(); adDetailChart = null; }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeAdDetail();
+});
+
 async function init(forceFetch = false) {
   document.title = `${CONFIG.PROJECT_NAME} — Advertentie Dashboard`;
   document.getElementById('dash-title').textContent = `${CONFIG.PROJECT_NAME} — Advertenties`;
@@ -2052,7 +2219,7 @@ function renderAangepast() {
     const statusBadge = ad.status
       ? (isActive ? '<span class="badge badge-green">Actief</span>' : '<span class="badge badge-grey">Gestopt</span>')
       : '<span class="muted">—</span>';
-    return `<tr>
+    return `<tr class="clickable-row" onclick="openAdDetail(${JSON.stringify(ad.adName)})">
       <td class="ad-name-cell" title="${esc(ad.adName)}">${esc(ad.adName)}</td>
       <td>${statusBadge}</td>
       <td class="mono right">${fEur2(ad.spend)}</td>
