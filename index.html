@@ -124,22 +124,22 @@
     <div class="banner hide"><span>●</span><span>Alleen voor eigenaar · nooit zichtbaar voor makelaar of ontwikkelaar</span></div>
     <div class="sec">Per agent</div>
     <div class="panel"><table id="agentTable"></table></div>
+    <div class="sec">Omzet per park</div>
+    <div class="chartbox" style="margin-bottom:26px"><canvas id="parkChart" height="200"></canvas></div>
+    <div class="sec">Waarom leads afvallen · verloren redenen uit Pipedrive</div>
     <div class="grid2">
       <div>
-        <div class="sec">Omzet per park</div>
-        <div class="chartbox"><canvas id="parkChart" height="200"></canvas></div>
+        <div class="sec" style="font-size:13px;color:var(--muted)">Voor de afspraak · wilde niet komen</div>
+        <div class="panel"><table id="reasonsBefore"></table></div>
       </div>
       <div>
-        <div class="sec">Inventaris</div>
-        <div class="chartbox"><div class="inv" id="invBox"></div><p class="foot" id="invFoot"></p></div>
+        <div class="sec" style="font-size:13px;color:var(--muted)">Na de afspraak · wilde niet kopen</div>
+        <div class="panel"><table id="reasonsAfter"></table></div>
       </div>
     </div>
   </div>
 
-  <div id="parkOnly" class="hidden">
-    <div class="sec">Inventaris</div>
-    <div class="chartbox" style="margin-bottom:26px"><div class="inv" id="invBoxP"></div><p class="foot" id="invFootP"></p></div>
-  </div>
+  <div id="parkOnly" class="hidden"></div>
 
   <div id="monthSec" class="hidden">
     <div class="sec">Per maand</div>
@@ -383,13 +383,7 @@ async function renderOwner(){
   }));
   drawChart(parkNames.map(n=>n.replace("Park ","")), datasets);
 
-  const invParks = parkVal==="all" ? PARKS.map(p=>p.id) : [Number(parkVal)];
-  let sold=0,res=0,av=0;
-  for(const pid of invParks){
-    const inv = (await rpc("client_park_inventory",{p_park_id:pid}))?.[0];
-    if(inv){ sold+=Number(inv.sold); res+=Number(inv.reserved); av+=Number(inv.available); }
-  }
-  renderInv("invBox","invFoot",sold,res,av);
+  renderReasons(r);
 
   const mo = await rpc("monthly_overview", {
     p_agent_id: agentVal==="all"?null:Number(agentVal),
@@ -440,8 +434,6 @@ async function renderPark(parkId){
     metric("Omzet per afspraak (gem.)",eur(perAppt)) +
     metric("Closing %",(f.appointments?Math.round(f.sales/f.appointments*100):0)+"%");
   renderMonths(await rpc("monthly_overview", {p_park_id:parkId}) || [], {spend:false, leads:true});
-  const inv = (await rpc("client_park_inventory",{p_park_id:parkId}))?.[0];
-  renderInv("invBoxP","invFootP", inv?Number(inv.sold):0, inv?Number(inv.reserved):0, inv?Number(inv.available):0);
 }
 
 /* ---------- shared render bits ---------- */
@@ -456,13 +448,20 @@ function drawChart(labels, datasets){
               y:{stacked:true,ticks:{callback:v=>"€"+(v/1000)+"k"}}}}
   });
 }
-function renderInv(boxId,footId,sold,res,av){
-  $(boxId).innerHTML =
-    `<div><div class="v">${sold}</div><div class="l">Verkocht</div></div>
-     <div><div class="v">${res}</div><div class="l">Gereserveerd</div></div>
-     <div><div class="v">${av}</div><div class="l">Beschikbaar</div></div>`;
-  const t = sold+res+av;
-  $(footId).textContent = t ? Math.round(sold/t*100)+"% verkocht" : "";
+async function renderReasons(r){
+  const parkVal = $("fPark").value;
+  const markt = parkVal==="all" ? null : (Number(parkVal)===3 ? "Wielsche Dreef" : "France");
+  const rows = await rpc("lost_reasons", { ...r, p_market: markt }) || [];
+  const tabel = (fase) => {
+    const rs = rows.filter(x=>x.fase===fase);
+    const tot = rs.reduce((s,x)=>s+Number(x.aantal),0);
+    if(!tot) return `<tbody><tr><td style="color:var(--muted);padding:14px">Nog geen verloren deals in deze periode</td></tr></tbody>`;
+    return `<thead><tr><th>Reden</th><th>Aantal</th><th>Aandeel</th></tr></thead><tbody>`
+      + rs.map(x=>`<tr><td style="text-align:left">${x.reden}</td><td>${x.aantal}</td>
+          <td>${Math.round(x.aantal/tot*100)}%</td></tr>`).join("") + `</tbody>`;
+  };
+  $("reasonsBefore").innerHTML = tabel("Voor afspraak (wilde niet komen)");
+  $("reasonsAfter").innerHTML  = tabel("Na afspraak (wilde niet kopen)");
 }
 
 boot();
