@@ -179,7 +179,7 @@ function setBranding(parkId){
     $("parkLogo").src = p.logo_url;
     $("parkLogo").alt = p.name;
     $("parkLogo").classList.remove("hidden");
-    setFavicon(p.logo_url);
+    setFavicon(p.favicon_url || p.logo_url);
   } else {
     $("parkLogo").classList.add("hidden");
     setFavicon(DEFAULT_FAVICON);
