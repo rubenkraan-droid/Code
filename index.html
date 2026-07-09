@@ -99,6 +99,7 @@
   <div id="tabs" class="tabs">
     <button class="tab active" data-tab="resultaten">Resultaten</button>
     <button class="tab" data-tab="advertenties">Advertenties</button>
+    <button class="tab" data-tab="prognose">Prognose</button>
   </div>
 
   <div class="filters">
@@ -178,6 +179,21 @@
     </div>
     <p class="foot" id="adFoot"></p>
   </div>
+
+  <div id="tabPrognose" class="hidden">
+    <div class="sec">Prognose: wat levert meer advertentiebudget op?
+      <span class="info" tabindex="0">i<span class="tip">Gebaseerd op de laatste maand met advertentie-uitgaven én verkopen. De prognose rekent lineair: in werkelijkheid stijgen de kosten per verkoop meestal licht naarmate je budget groeit.</span></span>
+    </div>
+    <div class="cards" id="progBasis"></div>
+    <div class="chartbox" style="margin-bottom:14px;padding:20px 22px">
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:6px">
+        <span>Advertentiebudget per maand</span><span id="progSpendLabel" style="font-weight:700;font-size:16px;color:var(--ink)"></span>
+      </div>
+      <input type="range" id="progSlider" min="0" max="100" step="1" style="width:100%;accent-color:var(--accent)" />
+    </div>
+    <div class="cards" id="progOut"></div>
+    <p class="foot">De prognose is een rekenvoorbeeld op basis van je huidige kosten per verkoop, geen garantie.</p>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -201,6 +217,7 @@ function setFavicon(href){
   l.href = href;
 }
 const DEFAULT_ACCENT = "#185fa5";
+const accent = () => (getComputedStyle(document.documentElement).getPropertyValue('--accent')||DEFAULT_ACCENT).trim();
 function setBranding(parkId){
   const p = (typeof PARKS!=="undefined" ? PARKS : []).find(x=>x.id===parkId);
   document.documentElement.style.setProperty('--accent', (p && p.accent_color) || DEFAULT_ACCENT);
@@ -293,6 +310,7 @@ async function applyRole(){
   document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active", x.dataset.tab==="resultaten"));
   $("tabResultaten").classList.remove("hidden");
   $("tabAdvertenties").classList.add("hidden");
+  $("tabPrognose").classList.add("hidden");
   if(owner){
     $("title").textContent = "Master dashboard";
     $("subtitle").textContent = "Eigenaarweergave";
@@ -332,9 +350,52 @@ document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () =>
   document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active", x===t));
   $("tabResultaten").classList.toggle("hidden", activeTab!=="resultaten");
   $("tabAdvertenties").classList.toggle("hidden", activeTab!=="advertenties");
-  $("fAgent").classList.toggle("hidden", activeTab==="advertenties" || !currentView || currentView().role!=="owner");
+  $("tabPrognose").classList.toggle("hidden", activeTab!=="prognose");
+  $("fAgent").classList.toggle("hidden", activeTab!=="resultaten" || !currentView || currentView().role!=="owner");
   if(activeTab==="advertenties") renderAds();
+  if(activeTab==="prognose") renderPrognose();
 }));
+
+/* ---------- PROGNOSE ---------- */
+let PROG = null;
+async function renderPrognose(){
+  const v = currentView();
+  const pp = v.role==="park" ? v.id : ($("fPark").value==="all" ? null : Number($("fPark").value));
+  const mo = await rpc("monthly_overview", { p_park_id: pp }) || [];
+  // basis = laatste maand met uitgaven én verkopen
+  const basis = [...mo].reverse().find(m => Number(m.spend)>0 && Number(m.sales)>0);
+  if(!basis){
+    $("progBasis").innerHTML = `<div class="metric"><div class="l">Nog niet genoeg data: er is een maand met zowel advertentie-uitgaven als verkopen nodig om te kunnen rekenen.</div></div>`;
+    $("progOut").innerHTML = ""; $("progSpendLabel").textContent = ""; return;
+  }
+  const spend = Number(basis.spend), sales = Number(basis.sales), rev = Number(basis.revenue);
+  PROG = { cpa: spend/sales, dealwaarde: rev/sales, basisSpend: spend };
+  const mfmt = d => new Date(d).toLocaleDateString("nl-NL",{month:"long",year:"numeric"});
+  $("progBasis").innerHTML =
+    metric("Basismaand", mfmt(basis.maand)) +
+    metric("Uitgaven toen", eur(spend)) +
+    metric("Verkopen toen", sales) +
+    metric("Kosten per verkoop", eur(PROG.cpa)) +
+    metric("Gem. verkoopprijs", eur(PROG.dealwaarde));
+  const sl = $("progSlider");
+  sl.min = 0; sl.max = Math.max(Math.round(spend*3), 1000); sl.step = Math.max(Math.round(spend/40/50)*50, 50);
+  sl.value = Math.round(spend);
+  sl.oninput = updatePrognose;
+  updatePrognose();
+}
+function updatePrognose(){
+  if(!PROG) return;
+  const budget = Number($("progSlider").value);
+  $("progSpendLabel").textContent = eur(budget);
+  const verkopen = budget / PROG.cpa;
+  const omzet = verkopen * PROG.dealwaarde;
+  const roas = budget>0 ? (omzet/budget).toFixed(2) : "0";
+  $("progOut").innerHTML =
+    `<div class="metric team"><div class="l">Verwachte verkopen</div><div class="v">${verkopen.toFixed(1)}</div></div>` +
+    `<div class="metric team"><div class="l">Verwachte omzet</div><div class="v">${eur(omzet)}</div></div>` +
+    `<div class="metric team"><div class="l">Verwachte ROAS</div><div class="v">${roas}</div></div>` +
+    `<div class="metric"><div class="l">Extra t.o.v. basismaand</div><div class="v">${eur(omzet - (PROG.basisSpend/PROG.cpa)*PROG.dealwaarde)}</div></div>`;
+}
 
 /* ---------- ADVERTENTIES ---------- */
 let adChart;
@@ -353,7 +414,7 @@ async function renderAds(){
   if(adChart) adChart.destroy();
   adChart = new Chart(el, {
     data:{ labels: mo.map(x=>mfmt(x.maand)), datasets:[
-      { type:"bar", label:"Uitgaven", data:mo.map(x=>Number(x.spend)||0), backgroundColor:"#185fa5", yAxisID:"y", order:2 },
+      { type:"bar", label:"Uitgaven", data:mo.map(x=>Number(x.spend)||0), backgroundColor:accent(), yAxisID:"y", order:2 },
       { type:"line", label:"Leads", data:mo.map(x=>Number(x.leads)||0), borderColor:"#b45309", backgroundColor:"#b45309", borderWidth:2, tension:0.3, yAxisID:"y1", order:1 } ]},
     options:{ responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{ position:"bottom", labels:{ boxWidth:10, font:{size:11} } } },
@@ -397,7 +458,7 @@ function drawSalesChart(labels, omzet, aantal){
   if(salesChart) salesChart.destroy();
   salesChart = new Chart(el, {
     data:{ labels, datasets:[
-      { type:"bar", label:"Omzet", data:omzet, backgroundColor:"#185fa5", yAxisID:"y", order:2 },
+      { type:"bar", label:"Omzet", data:omzet, backgroundColor:accent(), yAxisID:"y", order:2 },
       { type:"line", label:"Aantal verkopen", data:aantal, borderColor:"#0f6e56", backgroundColor:"#0f6e56",
         borderWidth:2, tension:0.3, yAxisID:"y1", order:1 }
     ]},
@@ -534,11 +595,17 @@ async function renderPark(parkId){
   setBranding(parkId);
   const f = (await rpc("client_park_funnel", {p_park_id:parkId, ...r}))?.[0] || {};
   const perAppt = f.appointments ? Math.round(f.revenue/f.appointments) : 0;
+  const cps = f.sales ? Math.round(f.spend/f.sales) : 0;
   $("cardsTop").innerHTML =
+    `<div class="metric"><div class="l">Advertentiekosten
+       <span class="info" tabindex="0">i<span class="tip">Advertentiekosten van deze periode. Let op: een lead van nu leidt vaak pas weken tot maanden later tot een verkoop, dus deze kosten horen niet één-op-één bij de omzet van dezelfde periode.</span></span>
+     </div><div class="v">${eur(f.spend)}</div></div>` +
     metric("Leads",f.leads||0) + metric("Afspraken",f.appointments||0) +
     metric("Sales",f.sales||0) + metric("Omzet",eur(f.revenue)) +
     metric("Omzet per afspraak (gem.)",eur(perAppt)) +
-    metric("Closing %",(f.appointments?Math.round(f.sales/f.appointments*100):0)+"%");
+    metric("Closing %",(f.appointments?Math.round(f.sales/f.appointments*100):0)+"%") +
+    metric("Kosten per verkoop",eur(cps)) +
+    metric("ROAS",Number(f.roas||0).toFixed(2));
   renderMonths(await rpc("monthly_overview", {p_park_id:parkId}) || [], {spend:false, leads:true});
 }
 
