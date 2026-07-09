@@ -223,37 +223,28 @@ $("sendLink").addEventListener("click", async () => {
 });
 $("logout").addEventListener("click", async () => { await sb.auth.signOut(); location.reload(); });
 
-/* Echte login: de server bepaalt de rol via my_access(). */
-let ACCESS = null;
+/* TEMP: login uitgeschakeld (preview) — de rolkeuze simuleert de rollen.
+   Bij heractivering: eigen SMTP instellen in Supabase Auth i.v.m. e-maillimiet. */
 async function boot(){
-  const { data:{ session } } = await sb.auth.getSession();
-  if(!session){ $("gate").classList.remove("hidden"); return; }
-  $("whoami").textContent = session.user.email;
-  $("viewAs").classList.add("hidden");
-  const acc = await rpc("my_access");
-  if(!acc || acc.length===0){
-    $("app").classList.remove("hidden");
-    $("title").textContent = "Geen toegang";
-    $("subtitle").textContent = "Je login is bekend, maar nog niet gekoppeld aan een rol. Neem contact op met Ruben.";
-    return;
-  }
-  ACCESS = acc[0].is_owner
-    ? { isOwner:true }
-    : { isOwner:false, parks: acc.map(r=>({id:r.park_id, name:r.park_name})) };
-  if(ACCESS.isOwner){
-    PARKS  = await rpc("owner_parks")  || [];
-    AGENTS = await rpc("owner_agents") || [];
-  } else {
-    PARKS = ACCESS.parks;
-  }
+  $("whoami").textContent = "Bekijk als:";
+  $("logout").classList.add("hidden");
+  PARKS  = await rpc("owner_parks")  || [];
+  AGENTS = await rpc("owner_agents") || [];
+  $("viewAs").innerHTML =
+    `<option value="owner">Eigenaar (alles)</option>`
+    + `<optgroup label="Makelaar">${AGENTS.map(a=>`<option value="agent:${a.id}">${a.name}</option>`).join("")}</optgroup>`
+    + `<optgroup label="Recreatieontwikkelaar">${PARKS.map(p=>`<option value="park:${p.id}">${p.name}</option>`).join("")}</optgroup>`;
+  $("viewAs").classList.remove("hidden");
+  $("viewAs").addEventListener("change", applyRole);
   $("app").classList.remove("hidden");
   await applyRole();
 }
-sb.auth.onAuthStateChange((_e,s)=>{ if(s && $("app").classList.contains("hidden")) boot(); });
 
 function currentView(){
-  if(ACCESS.isOwner) return { role:"owner" };
-  return { role:"park", id: ACCESS.parks[0].id };
+  const v = $("viewAs").value;
+  if(v==="owner") return { role:"owner" };
+  const [role,id] = v.split(":");
+  return { role, id:Number(id) };
 }
 
 async function applyRole(){
