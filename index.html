@@ -83,7 +83,7 @@
       <p class="sub" id="subtitle"></p>
     </div>
     <div class="who">
-      <a href="notion-dashboard.html" style="color:var(--accent);text-decoration:none;font-weight:600">Advertenties &#8599;</a>
+      <a id="adLink" href="notion-dashboard.html" class="hidden" style="color:var(--accent);text-decoration:none;font-weight:600">Advertenties &#8599;</a>
       <span id="whoami" style="margin-left:12px"></span>
       <select id="viewAs"></select>
       <button id="logout">Uitloggen</button>
@@ -222,27 +222,37 @@ $("sendLink").addEventListener("click", async () => {
 });
 $("logout").addEventListener("click", async () => { await sb.auth.signOut(); location.reload(); });
 
-/* TEMP: login uitgeschakeld — de rolkeuze hieronder is een preview.
-   Bij het aanzetten van login bepaalt de server de rol en verdwijnt de keuze. */
+/* Echte login: de server bepaalt de rol via my_access(). */
+let ACCESS = null;
 async function boot(){
-  $("whoami").textContent = "Bekijk als:";
-  $("logout").classList.add("hidden");
-  PARKS  = await rpc("owner_parks")  || [];
-  AGENTS = await rpc("owner_agents") || [];
-  $("viewAs").innerHTML =
-    `<option value="owner">Eigenaar (alles)</option>`
-    + `<optgroup label="Makelaar">${AGENTS.map(a=>`<option value="agent:${a.id}">${a.name}</option>`).join("")}</optgroup>`
-    + `<optgroup label="Recreatieontwikkelaar">${PARKS.map(p=>`<option value="park:${p.id}">${p.name}</option>`).join("")}</optgroup>`;
-  $("viewAs").addEventListener("change", applyRole);
+  const { data:{ session } } = await sb.auth.getSession();
+  if(!session){ $("gate").classList.remove("hidden"); return; }
+  $("whoami").textContent = session.user.email;
+  $("viewAs").classList.add("hidden");
+  const acc = await rpc("my_access");
+  if(!acc || acc.length===0){
+    $("app").classList.remove("hidden");
+    $("title").textContent = "Geen toegang";
+    $("subtitle").textContent = "Je login is bekend, maar nog niet gekoppeld aan een rol. Neem contact op met Ruben.";
+    return;
+  }
+  ACCESS = acc[0].is_owner
+    ? { isOwner:true }
+    : { isOwner:false, parks: acc.map(r=>({id:r.park_id, name:r.park_name})) };
+  if(ACCESS.isOwner){
+    PARKS  = await rpc("owner_parks")  || [];
+    AGENTS = await rpc("owner_agents") || [];
+  } else {
+    PARKS = ACCESS.parks;
+  }
   $("app").classList.remove("hidden");
   await applyRole();
 }
+sb.auth.onAuthStateChange((_e,s)=>{ if(s && $("app").classList.contains("hidden")) boot(); });
 
 function currentView(){
-  const v = $("viewAs").value;
-  if(v==="owner") return { role:"owner" };
-  const [role,id] = v.split(":");
-  return { role, id:Number(id) };
+  if(ACCESS.isOwner) return { role:"owner" };
+  return { role:"park", id: ACCESS.parks[0].id };
 }
 
 async function applyRole(){
@@ -253,6 +263,7 @@ async function applyRole(){
   $("parkOnly").classList.toggle("hidden", !parkV);
   $("liveSec").classList.toggle("hidden", !owner);
   $("demoBanner").classList.toggle("hidden", !owner);
+  $("adLink").classList.toggle("hidden", !owner);
   $("monthSec").classList.remove("hidden");
   $("apptSec").classList.toggle("hidden", parkV);
   $("fPark").classList.toggle("hidden", parkV);
