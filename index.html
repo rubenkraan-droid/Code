@@ -143,6 +143,7 @@
 
   <div id="monthSec" class="hidden">
     <div class="sec">Per maand</div>
+    <div class="chartbox" style="margin-bottom:14px"><canvas id="salesChart" height="220"></canvas></div>
     <div class="panel"><table id="monthTable"></table></div>
   </div>
 
@@ -316,6 +317,26 @@ function renderMonths(rows, opts){
          <td>${x.appointments}</td><td>${x.sales}</td>
          <td style="font-weight:600">${eur(x.revenue)}</td><td>${eur(per)}</td><td>${cl}%</td></tr>`;
      }).join("")}</tbody>`;
+  drawSalesChart(rows.map(x=>mfmt(x.maand)), rows.map(x=>Number(x.revenue)||0), rows.map(x=>Number(x.sales)||0));
+}
+let salesChart;
+function drawSalesChart(labels, omzet, aantal){
+  const el = $("salesChart"); if(!el) return;
+  if(salesChart) salesChart.destroy();
+  salesChart = new Chart(el, {
+    data:{ labels, datasets:[
+      { type:"bar", label:"Omzet", data:omzet, backgroundColor:"#185fa5", yAxisID:"y", order:2 },
+      { type:"line", label:"Aantal verkopen", data:aantal, borderColor:"#0f6e56", backgroundColor:"#0f6e56",
+        borderWidth:2, tension:0.3, yAxisID:"y1", order:1 }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:"bottom", labels:{ boxWidth:10, font:{size:11} } } },
+      scales:{
+        y:{ position:"left", ticks:{ callback:v=>"€"+(v/1000)+"k" }, grid:{ display:false } },
+        y1:{ position:"right", beginAtZero:true, ticks:{ precision:0 }, grid:{ display:false }, title:{ display:true, text:"verkopen", font:{size:10} } },
+        x:{ grid:{ display:false } }
+      } }
+  });
 }
 
 /* ---------- appointments table (owner + makelaar) ---------- */
