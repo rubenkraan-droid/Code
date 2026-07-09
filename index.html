@@ -353,7 +353,7 @@ async function renderAds(){
   if(adChart) adChart.destroy();
   adChart = new Chart(el, {
     data:{ labels: mo.map(x=>mfmt(x.maand)), datasets:[
-      { type:"bar", label:"Uitgaven", data:mo.map(x=>Number(x.spend)||0), backgroundColor:"var(--accent)", yAxisID:"y", order:2 },
+      { type:"bar", label:"Uitgaven", data:mo.map(x=>Number(x.spend)||0), backgroundColor:"#185fa5", yAxisID:"y", order:2 },
       { type:"line", label:"Leads", data:mo.map(x=>Number(x.leads)||0), borderColor:"#b45309", backgroundColor:"#b45309", borderWidth:2, tension:0.3, yAxisID:"y1", order:1 } ]},
     options:{ responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{ position:"bottom", labels:{ boxWidth:10, font:{size:11} } } },
