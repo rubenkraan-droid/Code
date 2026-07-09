@@ -103,6 +103,14 @@
     <select id="fAgent"></select>
   </div>
 
+  <div id="liveSec" class="hidden">
+    <div class="banner"><span style="color:var(--good)">●</span><span>Live uit Pipedrive · echte leads</span></div>
+    <div class="cards" id="liveCards"></div>
+    <div class="sec">Leads per maand uit Pipedrive</div>
+    <div class="panel"><table id="liveMonths"></table></div>
+  </div>
+
+  <div id="demoBanner" class="banner hidden" style="color:var(--muted)"><span>●</span><span>Voorbeeldcijfers hieronder · afspraken, verkopen en omzet zijn nog demodata tot Pipedrive de verkoopvelden vult</span></div>
   <div class="cards" id="cardsTop"></div>
 
   <div id="agentOnly" class="hidden">
@@ -219,6 +227,8 @@ async function applyRole(){
   $("ownerOnly").classList.toggle("hidden", !owner);
   $("agentOnly").classList.toggle("hidden", !agentV);
   $("parkOnly").classList.toggle("hidden", !parkV);
+  $("liveSec").classList.toggle("hidden", !owner);
+  $("demoBanner").classList.toggle("hidden", !owner);
   $("monthSec").classList.remove("hidden");
   $("apptSec").classList.toggle("hidden", parkV);
   $("fPark").classList.toggle("hidden", parkV);
@@ -291,9 +301,27 @@ function renderAppts(rows, showAgent){
      }).join("")}</tbody>`;
 }
 
+/* ---------- LIVE PIPEDRIVE (echte leads) ---------- */
+async function renderLive(r){
+  const stats = await rpc("live_lead_stats", r) || [];
+  const kleur = {Frankrijk:"#185fa5","Wielsche Dreef":"#0f6e56",Overig:"#6b6b66"};
+  $("liveCards").innerHTML = stats.map(s=>
+    `<div class="metric" style="border-left:3px solid ${kleur[s.markt]||'#6b6b66'}">
+       <div class="l">${s.markt}</div><div class="v">${s.leads}</div>
+       <div class="l" style="margin-top:6px">${s.open_deals} open · ${s.verloren} verloren${s.gekoppeld_ad>0?` · ${s.gekoppeld_ad} via ad`:""}</div>
+     </div>`).join("") || `<div class="metric"><div class="l">Geen leads in deze periode</div></div>`;
+  const mo = await rpc("live_lead_months", {}) || [];
+  const mfmt = d => { const s=new Date(d).toLocaleDateString("nl-NL",{month:"long",year:"numeric"}); return s.charAt(0).toUpperCase()+s.slice(1); };
+  $("liveMonths").innerHTML =
+    `<thead><tr><th>Maand</th><th>Frankrijk</th><th>Wielsche Dreef</th><th>Overig</th><th>Totaal</th></tr></thead>
+     <tbody>${mo.map(m=>`<tr><td>${mfmt(m.maand)}</td><td>${m.frankrijk}</td><td>${m.wielsche_dreef}</td>
+       <td>${m.overig}</td><td style="font-weight:600">${m.frankrijk+m.wielsche_dreef+m.overig}</td></tr>`).join("")}</tbody>`;
+}
+
 /* ---------- EIGENAAR ---------- */
 async function renderOwner(){
   const r = periodRange();
+  renderLive(r);
   const parkVal = $("fPark").value, agentVal = $("fAgent").value;
 
   let f;
