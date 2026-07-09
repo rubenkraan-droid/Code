@@ -78,6 +78,7 @@
 <div id="app" class="wrap hidden">
   <div class="top">
     <div>
+      <img id="parkLogo" class="hidden" alt="" style="height:40px;margin-bottom:8px;display:block" />
       <h1 id="title">Dashboard</h1>
       <p class="sub" id="subtitle"></p>
     </div>
@@ -164,6 +165,26 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const $ = id => document.getElementById(id);
 const eur = n => "€"+Math.round(n||0).toLocaleString("nl-NL");
 const initials = n => n.slice(0,2).toUpperCase();
+
+/* ---------- branding per park (logo + favicon) ---------- */
+const DEFAULT_FAVICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23185fa5'/%3E%3Ctext x='50' y='72' font-size='62' text-anchor='middle' fill='white' font-family='system-ui,sans-serif' font-weight='700'%3ER%3C/text%3E%3C/svg%3E";
+function setFavicon(href){
+  let l = document.querySelector('link[rel="icon"]');
+  if(!l){ l = document.createElement('link'); l.rel = 'icon'; document.head.appendChild(l); }
+  l.href = href;
+}
+function setBranding(parkId){
+  const p = (typeof PARKS!=="undefined" ? PARKS : []).find(x=>x.id===parkId);
+  if(p && p.logo_url){
+    $("parkLogo").src = p.logo_url;
+    $("parkLogo").alt = p.name;
+    $("parkLogo").classList.remove("hidden");
+    setFavicon(p.logo_url);
+  } else {
+    $("parkLogo").classList.add("hidden");
+    setFavicon(DEFAULT_FAVICON);
+  }
+}
 const dt = d => new Date(d).toLocaleDateString("nl-NL",{day:"2-digit",month:"short",year:"2-digit"});
 let PARKS = [], AGENTS = [];
 
@@ -324,6 +345,7 @@ async function renderOwner(){
   const r = periodRange();
   renderLive(r);
   const parkVal = $("fPark").value, agentVal = $("fAgent").value;
+  setBranding(parkVal==="all"?null:Number(parkVal));
 
   let f;
   if(parkVal==="all") f = (await rpc("owner_total_funnel", r))?.[0];
@@ -386,6 +408,7 @@ async function renderAgent(agentId){
   const r = periodRange();
   const parkVal = $("fPark").value;
   const pp = parkVal==="all" ? null : Number(parkVal);
+  setBranding(pp);
   $("teamTitle").textContent = "Teamgemiddelde (alle makelaars, zonder namen"
     + (pp ? " · " + ((PARKS.find(p=>p.id===pp)||{}).name||"") : "") + ")";
   const s = (await rpc("agent_stats", {p_agent_id:agentId, p_park_id:pp, ...r}))?.[0] || {};
@@ -408,6 +431,7 @@ async function renderAgent(agentId){
 /* ---------- RECREATIEONTWIKKELAAR: alleen parkgemiddelden ---------- */
 async function renderPark(parkId){
   const r = periodRange();
+  setBranding(parkId);
   const f = (await rpc("client_park_funnel", {p_park_id:parkId, ...r}))?.[0] || {};
   const perAppt = f.appointments ? Math.round(f.revenue/f.appointments) : 0;
   $("cardsTop").innerHTML =
