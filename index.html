@@ -173,8 +173,10 @@ function setFavicon(href){
   if(!l){ l = document.createElement('link'); l.rel = 'icon'; document.head.appendChild(l); }
   l.href = href;
 }
+const DEFAULT_ACCENT = "#185fa5";
 function setBranding(parkId){
   const p = (typeof PARKS!=="undefined" ? PARKS : []).find(x=>x.id===parkId);
+  document.documentElement.style.setProperty('--accent', (p && p.accent_color) || DEFAULT_ACCENT);
   if(p && p.logo_url){
     $("parkLogo").src = p.logo_url;
     $("parkLogo").alt = p.name;
