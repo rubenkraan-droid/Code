@@ -606,7 +606,7 @@ async function renderAdDetail(adId, naam){
 const ADCOLS = [
   ["advertentie","Advertentie"], ["status","Status"], ["spend","Uitgaven"], ["clicks","Clicks"],
   ["cpc","CPC"], ["leads","Leads"], ["cpl","CPL"], ["afspraken","Afspraken"], ["cpa","CPA"],
-  ["sales","Sales"], ["omzet","Omzet"], ["roas","ROAS"],
+  ["no_show_pct","No-show %"], ["sales","Sales"], ["omzet","Omzet"], ["roas","ROAS"],
 ];
 function drawAdTable(){
   const s = ADSORT;
@@ -625,6 +625,7 @@ function drawAdTable(){
          <td>${a.cpc ? "€"+Number(a.cpc).toLocaleString("nl-NL",{minimumFractionDigits:2,maximumFractionDigits:2}) : "—"}</td>
          <td>${a.leads}</td><td>${a.leads>0 ? eur(a.cpl) : "—"}</td>
          <td>${a.afspraken}</td><td>${a.afspraken>0 ? eur(a.cpa) : "—"}</td>
+         <td>${a.afspraken>0 ? a.no_show_pct+"%" : "—"}</td>
          <td>${a.sales}</td><td>${a.omzet>0 ? eur(a.omzet) : "—"}</td>
          <td>${Number(a.roas)>0 ? Number(a.roas).toFixed(2) : "—"}</td></tr>`;
      }).join("")}</tbody>`;
