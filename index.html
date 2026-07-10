@@ -194,7 +194,13 @@
       <span class="info" tabindex="0">i<span class="tip">Alle deals vanaf mondeling akkoord (Informeel akkoord ontvangen) tot en met notaris gepasseerd. Courtage = 1,5% van de verkoopsom, met een maximum van €3.500 voor de makelaar. Wat Recraparcs overhoudt is de courtage minus de makelaarsuitbetaling.</span></span>
     </div>
     <div class="cards" id="finKpis"></div>
-    <div class="panel" style="margin-top:18px"><div class="scroll"><table id="finTable"></table></div></div>
+    <div class="sec" style="margin-top:22px">Omzet en winst per maand
+      <span class="info" tabindex="0">i<span class="tip">Omzet = totale courtage die Recraparcs factureert (1,5% van de verkoopsom). Winst = wat overblijft na uitbetaling aan de makelaar (max €3.500 per verkoop). Gegroepeerd op de maand waarin de deal definitief werd.</span></span>
+    </div>
+    <div class="chartbox" style="margin-bottom:14px"><canvas id="finChart" height="220"></canvas></div>
+    <div class="panel" style="margin-bottom:26px"><table id="finMonthTable"></table></div>
+    <div class="sec">Per deal</div>
+    <div class="panel"><div class="scroll"><table id="finTable"></table></div></div>
     <p class="foot">Notarisdatum en ontbindende voorwaarden komen uit de handmatige Pipedrive-velden; staat daar niets, dan toont het dashboard "Nog niet bekend".</p>
   </div>
 
@@ -382,10 +388,28 @@ document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () =>
 }));
 
 /* ---------- FINANCIEN ---------- */
+let finChart;
 async function renderFinance(){
   const v = currentView();
   const pp = v.role==="owner" ? ($("fPark").value==="all" ? null : Number($("fPark").value)) : v.id;
   const rows = await rpc("finance_deals", { p_park_id: pp }) || [];
+
+  const mo = await rpc("finance_monthly", { p_park_id: pp }) || [];
+  const mfmt = d => { const s=new Date(d).toLocaleDateString("nl-NL",{month:"long",year:"numeric"}); return s.charAt(0).toUpperCase()+s.slice(1); };
+  if(finChart) finChart.destroy();
+  finChart = new Chart($("finChart"), {
+    data:{ labels: mo.map(x=>mfmt(x.maand)), datasets:[
+      { type:"bar", label:"Omzet (courtage)", data:mo.map(x=>Number(x.omzet)||0), backgroundColor:accent(), order:2 },
+      { type:"bar", label:"Winst", data:mo.map(x=>Number(x.winst)||0), backgroundColor:"#0f6e56", order:1 } ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:"bottom", labels:{ boxWidth:10, font:{size:11} } } },
+      scales:{ y:{ ticks:{ callback:v=>"€"+v }, grid:{display:false} }, x:{ grid:{display:false} } } }
+  });
+  $("finMonthTable").innerHTML =
+    `<thead><tr><th>Maand</th><th>Verkopen</th><th>Verkoopsom</th><th>Omzet</th><th>Winst</th></tr></thead>
+     <tbody>${mo.map(x=>`<tr><td>${mfmt(x.maand)}</td><td>${x.verkopen}</td><td>${eur(x.verkoopsom)}</td>
+       <td style="font-weight:600">${eur(x.omzet)}</td><td style="font-weight:600;color:var(--good)">${eur(x.winst)}</td></tr>`).join("")
+       || `<tr><td colspan="5" style="color:var(--muted);padding:14px">Nog geen definitieve verkopen om per maand te tonen.</td></tr>`}</tbody>`;
 
   const lopend = rows.filter(r => r.status_label !== "Afgevallen");
   const bekend = r => r.amount != null;
