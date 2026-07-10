@@ -412,21 +412,30 @@ async function renderFinance(){
        || `<tr><td colspan="5" style="color:var(--muted);padding:14px">Nog geen definitieve verkopen om per maand te tonen.</td></tr>`}</tbody>`;
 
   const lopend = rows.filter(r => r.status_label !== "Afgevallen");
+  const definitief = lopend.filter(r => r.status_label.startsWith("Definitief"));
   const bekend = r => r.amount != null;
-  const totOmzet = lopend.reduce((s,r)=>s+(bekend(r)?Number(r.amount):0),0);
-  const totCourtage = lopend.reduce((s,r)=>s+(bekend(r)?Number(r.courtage_makelaar||0):0),0);
+  const omzetVan = list => list.reduce((s,r)=>s+(bekend(r)?Number(r.courtage_makelaar||0)+Number(r.marge_recraparcs||0):0),0);
+  const totOmzet = omzetVan(lopend);
+  const definitiefOmzet = omzetVan(definitief);
+  const totVerkoopsom = lopend.reduce((s,r)=>s+(bekend(r)?Number(r.amount):0),0);
   const totMarge = lopend.reduce((s,r)=>s+(bekend(r)?Number(r.marge_recraparcs||0):0),0);
-  const onbekendCount = lopend.filter(r=>!bekend(r)).length;
 
   $("finKpis").innerHTML =
     metric("Mondeling verkocht (of verder)", lopend.length) +
-    metric("Waarvan definitief", lopend.filter(r=>r.status_label.startsWith("Definitief")).length) +
-    metric("Verkoopsom (bekend)", eur(totOmzet)) +
-    metric("Courtage totaal", eur(totCourtage)) +
+    metric("Waarvan definitief", definitief.length) +
+    metric("Verkoopsom (bekend)", eur(totVerkoopsom)) +
+    metric("Omzet totaal", eur(totOmzet)) +
+    metric("Omzet definitief", eur(definitiefOmzet)) +
     metric("Marge Recraparcs", eur(totMarge)) +
     metric("Afgevallen", rows.length - lopend.length);
 
   const dt = d => d ? new Date(d).toLocaleDateString("nl-NL",{day:"2-digit",month:"short",year:"numeric"}) : "Nog niet bekend";
+  const vandaag = new Date().toISOString().slice(0,10);
+  const dtVoorwaarde = d => {
+    if(!d) return "Nog niet bekend";
+    const label = dt(d);
+    return d < vandaag ? `${label} <span class="badge held" style="background:#fbe4e4;color:var(--bad)">Verlopen</span>` : label;
+  };
   const statusKleur = s => s==="Afgevallen" ? "bad" : s.startsWith("Definitief") ? "good" : "";
 
   $("finTable").innerHTML =
@@ -441,7 +450,7 @@ async function renderFinance(){
        <td>${r.courtage_makelaar!=null ? eur(r.courtage_makelaar) : "Nog niet bekend"}</td>
        <td>${r.marge_recraparcs!=null ? eur(r.marge_recraparcs) : "Nog niet bekend"}</td>
        <td>${dt(r.notary_date)}</td>
-       <td>${dt(r.rescission_date)}</td>
+       <td>${dtVoorwaarde(r.rescission_date)}</td>
        <td><a href="${r.pipedrive_url}" target="_blank" rel="noopener">Pipedrive ↗</a></td>
      </tr>`).join("") || `<tr><td colspan="10" style="color:var(--muted);padding:14px">Nog geen deals mondeling verkocht of verder in deze selectie.</td></tr>`}</tbody>`;
 }
