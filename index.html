@@ -168,13 +168,13 @@
   </div><!-- /tabResultaten -->
 
   <div id="tabAdvertenties" class="hidden">
-    <div class="sec">Advertentiekosten per maand
-      <span class="info" tabindex="0">i<span class="tip">Advertentiekosten van deze maand. Let op: een lead van nu leidt vaak pas weken tot maanden later tot een verkoop, dus deze kosten horen niet één-op-één bij de omzet van dezelfde maand.</span></span>
+    <div class="cards" id="adKpis"></div>
+    <div class="sec">Trend per dag
+      <span class="info" tabindex="0">i<span class="tip">Uitgaven en clicks komen uit Meta; leads komen uit Pipedrive. Een lead van nu leidt vaak pas weken tot maanden later tot een verkoop, dus de kosten van een periode horen niet één-op-één bij de omzet van dezelfde periode.</span></span>
     </div>
-    <div class="chartbox" style="margin-bottom:14px"><canvas id="adChart" height="200"></canvas></div>
-    <div class="panel" style="margin-bottom:26px"><table id="adMonthTable"></table></div>
+    <div class="chartbox" style="margin-bottom:26px"><canvas id="adChart" height="220"></canvas></div>
     <div id="adOverviewSec">
-      <div class="sec">Per advertentie</div>
+      <div class="sec">Per advertentie · klik op een kolomkop om te sorteren</div>
       <div class="panel"><div class="scroll"><table id="adTable"></table></div></div>
     </div>
     <p class="foot" id="adFoot"></p>
@@ -399,39 +399,85 @@ function updatePrognose(){
 
 /* ---------- ADVERTENTIES ---------- */
 let adChart;
+let ADROWS = [], ADSORT = { key:"spend", dir:-1 };
+const STATUSNL = { active:["Actief","sale"], killed:["Gestopt","held"], draft:["Concept","held"], unknown:["Onbekend","held"], demo:["Demo","held"] };
+
 async function renderAds(){
   const v = currentView();
   const pp = v.role==="park" ? v.id : ($("fPark").value==="all" ? null : Number($("fPark").value));
-  const mo = await rpc("ad_monthly", { p_park_id: pp }) || [];
-  const mfmt = d => { const s=new Date(d).toLocaleDateString("nl-NL",{month:"long",year:"numeric"}); return s.charAt(0).toUpperCase()+s.slice(1); };
-  if(!mo.length){
-    $("adMonthTable").innerHTML = `<tbody><tr><td style="color:var(--muted);padding:14px">Nog geen advertentiedata voor deze selectie. Zodra er advertenties aan dit park gekoppeld zijn, verschijnen de kosten hier.</td></tr></tbody>`;
-    if(adChart) adChart.destroy();
-    $("adOverviewSec").classList.add("hidden"); $("adFoot").textContent=""; return;
-  }
-  $("adOverviewSec").classList.remove("hidden");
-  const el = $("adChart");
+  const r = periodRange();
+  const [k, daily, ov] = await Promise.all([
+    rpc("ad_kpis",  { ...r, p_park_id: pp }).then(x=>x?.[0]||{}),
+    rpc("ad_daily", { ...r, p_park_id: pp }),
+    rpc("ad_overview", { ...r, p_park_id: pp }),
+  ]);
+
+  const spend=Number(k.spend)||0, leads=Number(k.leads)||0, afspr=Number(k.afspraken)||0,
+        sales=Number(k.sales)||0, omzet=Number(k.omzet)||0, clicks=Number(k.clicks)||0;
+  $("adKpis").innerHTML =
+    metric("Totaal uitgaven", eur(spend)) +
+    metric("Clicks", clicks.toLocaleString("nl-NL")) +
+    metric("Leads", leads) +
+    metric("Kosten per lead", leads ? eur(spend/leads) : "—") +
+    metric("Afspraken", afspr) +
+    metric("Kosten per afspraak", afspr ? eur(spend/afspr) : "—") +
+    metric("Sales", sales) +
+    metric("Kosten per sale", sales ? eur(spend/sales) : "—") +
+    metric("Omzet", eur(omzet)) +
+    metric("ROAS", spend ? (omzet/spend).toFixed(2) : "—");
+
+  const dd = daily || [];
+  const dt2 = d => new Date(d).toLocaleDateString("nl-NL",{day:"numeric",month:"short"});
   if(adChart) adChart.destroy();
-  adChart = new Chart(el, {
-    data:{ labels: mo.map(x=>mfmt(x.maand)), datasets:[
-      { type:"bar", label:"Uitgaven", data:mo.map(x=>Number(x.spend)||0), backgroundColor:accent(), yAxisID:"y", order:2 },
-      { type:"line", label:"Leads", data:mo.map(x=>Number(x.leads)||0), borderColor:"#b45309", backgroundColor:"#b45309", borderWidth:2, tension:0.3, yAxisID:"y1", order:1 } ]},
+  adChart = new Chart($("adChart"), {
+    data:{ labels: dd.map(x=>dt2(x.dag)), datasets:[
+      { type:"bar", label:"Uitgaven", data:dd.map(x=>Number(x.spend)||0), backgroundColor:accent(), yAxisID:"y", order:3 },
+      { type:"line", label:"Leads", data:dd.map(x=>Number(x.leads)||0), borderColor:"#b45309", backgroundColor:"#b45309", borderWidth:2, tension:0.3, pointRadius:2, yAxisID:"y1", order:1 } ]},
     options:{ responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{ position:"bottom", labels:{ boxWidth:10, font:{size:11} } } },
       scales:{ y:{ position:"left", ticks:{ callback:v=>"€"+v }, grid:{display:false} },
         y1:{ position:"right", beginAtZero:true, ticks:{precision:0}, grid:{display:false}, title:{display:true,text:"leads",font:{size:10}} },
-        x:{ grid:{display:false} } } }
+        x:{ grid:{display:false}, ticks:{ maxTicksLimit:15 } } } }
   });
-  $("adMonthTable").innerHTML =
-    `<thead><tr><th>Maand</th><th>Uitgaven</th><th>Clicks</th><th>Leads</th><th>Kosten per lead</th></tr></thead>
-     <tbody>${mo.map(x=>`<tr><td>${mfmt(x.maand)}</td><td style="font-weight:600">${eur(x.spend)}</td>
-       <td>${x.clicks}</td><td>${x.leads}</td><td>${eur(x.cpl)}</td></tr>`).join("")}</tbody>`;
-  const ov = await rpc("ad_overview", { ...periodRange(), p_park_id: pp }) || [];
+
+  ADROWS = ov || [];
+  drawAdTable();
+  $("adOverviewSec").classList.toggle("hidden", !ADROWS.length);
+  $("adFoot").textContent = ADROWS.length
+    ? "Uitgaven en clicks uit Meta · leads, afspraken, sales en omzet uit Pipedrive via het AD ID op de deal."
+    : "Nog geen advertentiedata voor deze selectie.";
+}
+
+const ADCOLS = [
+  ["advertentie","Advertentie"], ["status","Status"], ["spend","Uitgaven"], ["clicks","Clicks"],
+  ["cpc","CPC"], ["leads","Leads"], ["cpl","CPL"], ["afspraken","Afspraken"], ["cpa","CPA"],
+  ["sales","Sales"], ["omzet","Omzet"], ["roas","ROAS"],
+];
+function drawAdTable(){
+  const s = ADSORT;
+  const rows = [...ADROWS].sort((a,b)=>{
+    const av=a[s.key], bv=b[s.key];
+    return (typeof av==="string" ? av.localeCompare(bv) : (Number(av)||0)-(Number(bv)||0)) * s.dir;
+  });
   $("adTable").innerHTML =
-    `<thead><tr><th>Advertentie</th><th>Status</th><th>Uitgaven</th><th>Leads</th><th>Kosten per lead</th><th>Deals</th></tr></thead>
-     <tbody>${ov.map(a=>`<tr><td style="text-align:left">${a.advertentie}</td><td style="text-align:left">${a.status}</td>
-       <td>${eur(a.spend)}</td><td>${a.leads}</td><td>${eur(a.cpl)}</td><td>${a.deals}</td></tr>`).join("")}</tbody>`;
-  $("adFoot").textContent = "Advertentiekosten worden op campagneniveau beheerd; de omzet volgt via de gekoppelde deals zodra verkopen in Pipedrive staan.";
+    `<thead><tr>${ADCOLS.map(([key,label])=>
+      `<th data-key="${key}" style="cursor:pointer;user-select:none">${label}${s.key===key ? (s.dir<0?" ↓":" ↑") : ""}</th>`).join("")}</tr></thead>
+     <tbody>${rows.map(a=>{
+       const st = STATUSNL[a.status] || [a.status||"—","held"];
+       return `<tr><td style="text-align:left">${a.advertentie}</td>
+         <td style="text-align:left"><span class="badge ${st[1]}">${st[0]}</span></td>
+         <td style="font-weight:600">${eur(a.spend)}</td><td>${a.clicks}</td>
+         <td>${a.cpc ? "€"+Number(a.cpc).toLocaleString("nl-NL",{minimumFractionDigits:2,maximumFractionDigits:2}) : "—"}</td>
+         <td>${a.leads}</td><td>${a.leads>0 ? eur(a.cpl) : "—"}</td>
+         <td>${a.afspraken}</td><td>${a.afspraken>0 ? eur(a.cpa) : "—"}</td>
+         <td>${a.sales}</td><td>${a.omzet>0 ? eur(a.omzet) : "—"}</td>
+         <td>${Number(a.roas)>0 ? Number(a.roas).toFixed(2) : "—"}</td></tr>`;
+     }).join("")}</tbody>`;
+  document.querySelectorAll("#adTable th").forEach(th => th.addEventListener("click", () => {
+    const key = th.dataset.key;
+    if(ADSORT.key === key) ADSORT.dir *= -1; else ADSORT = { key, dir:-1 };
+    drawAdTable();
+  }));
 }
 
 /* ---------- monthly overview (all roles) ---------- */
