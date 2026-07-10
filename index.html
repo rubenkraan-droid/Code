@@ -4,70 +4,96 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Recraparcs Dashboard</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23185fa5'/%3E%3Ctext x='50' y='72' font-size='62' text-anchor='middle' fill='white' font-family='system-ui,sans-serif' font-weight='700'%3ER%3C/text%3E%3C/svg%3E" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%232C5F52'/%3E%3Ctext x='50' y='72' font-size='62' text-anchor='middle' fill='white' font-family='Georgia,serif' font-weight='700'%3ER%3C/text%3E%3C/svg%3E" />
 <style>
-  :root{--bg:#f6f6f4;--card:#fff;--ink:#1d1d1b;--muted:#6b6b66;--line:#e6e6e1;
-    --accent:#185fa5;--good:#0f6e56;--bad:#a32d2d}
+  :root{
+    --bg:#F6F3EC; --card:#FFFFFF; --surface-2:#FBF9F4;
+    --ink:#22211C; --muted:#726F60; --faint:#A5A192;
+    --line:#E4DFD1; --line-strong:#D2CBB6;
+    --accent:#2C5F52; --accent-ink:#173D33; --accent-soft:#E4ECE7; --accent-soft-ink:#1F4A3E;
+    --good:#4B7A3E; --good-soft:#EAF1E5;
+    --bad:#B5432E; --bad-soft:#F6E7E2;
+    --warn:#B8862E; --warn-soft:#F7EFDE;
+    --serif: ui-serif, Charter, "Iowan Old Style", Georgia, "Times New Roman", serif;
+  }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);
-    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.5}
-  .wrap{max-width:1040px;margin:0 auto;padding:24px 20px 64px}
-  .top{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:18px}
-  h1{font-size:20px;font-weight:600;margin:0}
-  .sub{font-size:13px;color:var(--muted);margin:2px 0 0}
-  .who{font-size:13px;color:var(--muted)}
-  .who button{margin-left:10px;border:1px solid var(--line);background:#fff;border-radius:7px;
-    padding:6px 11px;font:inherit;font-size:13px;cursor:pointer}
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,Roboto,Arial,sans-serif;line-height:1.5;
+    -webkit-font-smoothing:antialiased}
+  h1{font-family:var(--serif);font-weight:500;font-size:22px;margin:0}
+  .shell{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
+  @media(max-width:860px){.shell{grid-template-columns:1fr}.side{flex-direction:row;flex-wrap:wrap;align-items:center;gap:10px 16px}}
+  .side{background:var(--surface-2);border-right:1px solid var(--line);padding:22px 16px;
+    display:flex;flex-direction:column;gap:20px}
+  .brand{display:flex;align-items:center;gap:10px;padding:0 4px}
+  .brand .mark{width:30px;height:30px;border-radius:8px;background:var(--accent);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:16px;flex:none}
+  .brand .name{font-size:14px;font-weight:600;line-height:1.2}
+  .brand .name small{display:block;font-size:11px;font-weight:400;color:var(--muted)}
+  .main{padding:26px 34px 60px;min-width:0;max-width:1180px}
+  .top{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+  .sub{font-size:13px;color:var(--muted);margin:3px 0 0}
+  .who{font-size:13px;color:var(--muted);display:flex;align-items:center}
+  .who button{margin-left:10px;border:1px solid var(--line-strong);background:var(--card);border-radius:8px;
+    padding:7px 12px;font:inherit;font-size:13px;cursor:pointer;color:var(--ink)}
+  .who button:hover{background:var(--surface-2)}
   .who select{margin-left:10px;min-width:0}
-  .filters{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:22px}
-  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:18px}
-  .tab{border:none;background:none;font:inherit;font-size:14px;padding:10px 16px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
-  .tab.active{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+  .filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px}
+  .tabs{display:flex;flex-direction:column;gap:2px}
+  .tab{display:flex;align-items:center;gap:10px;border:none;background:none;font:inherit;font-size:13.5px;
+    padding:9px 10px;cursor:pointer;color:var(--muted);border-radius:8px;text-align:left;width:100%}
+  .tab:hover{background:var(--line)}
+  .tab.active{color:var(--accent-soft-ink);background:var(--accent-soft);font-weight:600}
+  #adParkTabs.tabs{flex-direction:row;gap:4px;border-bottom:1px solid var(--line);padding-bottom:0}
+  #adParkTabs.tabs .tab{border-radius:8px 8px 0 0;border-bottom:2px solid transparent;padding:8px 14px}
+  #adParkTabs.tabs .tab.active{background:none;border-bottom-color:var(--accent)}
   .info{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--line);color:var(--muted);font-size:11px;font-style:normal;margin-left:6px;cursor:help;position:relative;vertical-align:middle}
   .info .tip{display:none;position:absolute;left:0;bottom:22px;width:240px;background:var(--ink);color:#fff;font-size:12px;font-weight:400;line-height:1.4;padding:9px 11px;border-radius:8px;z-index:10;text-align:left}
   .info:hover .tip,.info:focus .tip{display:block}
-  select,input{font:inherit;font-size:14px;padding:9px 10px;border:1px solid var(--line);
-    border-radius:8px;background:#fff;color:var(--ink);min-width:150px}
-  .banner{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;margin:0 0 10px}
+  select,input{font:inherit;font-size:13.5px;padding:8px 10px;border:1px solid var(--line-strong);
+    border-radius:8px;background:var(--card);color:var(--ink);min-width:150px}
+  .banner{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;margin:0 0 10px;color:var(--accent-ink)}
   .banner.hide{color:var(--bad)}
-  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:26px}
-  .metric{background:#efefe9;border-radius:10px;padding:14px 16px}
-  .metric.team{background:#e6f1fb}
-  .metric .l{font-size:13px;color:var(--muted);margin-bottom:6px}
-  .metric .v{font-size:23px;font-weight:600}
-  .sec{font-size:14px;font-weight:600;margin:0 0 10px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:10px;margin-bottom:26px}
+  .metric{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .metric.team{background:var(--accent-soft);border-color:var(--accent-soft)}
+  .metric .l{font-size:12px;color:var(--muted);margin-bottom:6px}
+  .metric .v{font-family:var(--serif);font-size:24px;line-height:1.15}
+  .metric.team .l,.metric.team .v{color:var(--accent-soft-ink)}
+  .sec{font-size:11px;font-weight:600;margin:0 0 10px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
   .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:26px}
   .panel .scroll{max-height:420px;overflow-y:auto}
-  table{width:100%;border-collapse:collapse;font-size:13px}
+  table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
   th,td{padding:11px 12px;text-align:right;white-space:nowrap}
-  th:first-child,td:first-child{text-align:left}
-  thead tr{background:#faf9f6}
-  thead th{position:sticky;top:0;background:#faf9f6}
+  th:first-child,td:first-child{text-align:left;font-variant-numeric:normal}
+  thead tr{background:var(--surface-2)}
+  thead th{position:sticky;top:0;background:var(--surface-2);text-transform:uppercase;font-size:10.5px;letter-spacing:.03em}
   th{font-weight:600;color:var(--muted)}
   tbody tr{border-top:1px solid var(--line)}
   .av{display:inline-flex;align-items:center;gap:8px}
-  .dot{width:26px;height:26px;border-radius:50%;background:#e6f1fb;color:#185fa5;display:inline-flex;
-    align-items:center;justify-content:center;font-size:11px;font-weight:600}
+  .dot{width:26px;height:26px;border-radius:50%;background:var(--accent-soft);color:var(--accent-soft-ink);display:inline-flex;
+    align-items:center;justify-content:center;font-size:11px;font-weight:600;flex:none}
   .good{color:var(--good)}.bad{color:var(--bad)}
   .badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600}
-  .badge.sale{background:#e2f3ec;color:var(--good)}
-  .badge.held{background:#efefe9;color:var(--muted)}
-  .badge.lost{background:#fbe4e4;color:var(--bad)}
+  .badge.sale{background:var(--good-soft);color:var(--good)}
+  .badge.held{background:var(--surface-2);color:var(--muted)}
+  .badge.lost{background:var(--bad-soft);color:var(--bad)}
   td a{color:var(--accent);text-decoration:none;font-weight:600}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
   @media(max-width:720px){.grid2{grid-template-columns:1fr}}
   .chartbox{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
   .inv{display:flex;gap:18px}.inv div{flex:1;text-align:center}
   .inv .v{font-size:22px;font-weight:600}.inv .l{font-size:12px;color:var(--muted)}
-  .foot{font-size:12px;color:var(--muted);margin-top:8px}
+  .foot{font-size:12px;color:var(--faint);margin-top:8px}
   /* login */
-  #gate{max-width:380px;margin:12vh auto;background:#fff;border:1px solid var(--line);
+  #gate{max-width:380px;margin:12vh auto;background:var(--card);border:1px solid var(--line);
     border-radius:14px;padding:28px 26px;text-align:center}
-  #gate h2{font-size:18px;margin:0 0 6px}
+  #gate h2{font-family:var(--serif);font-weight:500;font-size:19px;margin:0 0 6px}
   #gate p{font-size:14px;color:var(--muted);margin:0 0 18px}
   #gate input{width:100%;margin-bottom:12px}
   #gate button{width:100%;background:var(--accent);color:#fff;border:0;border-radius:8px;
     padding:11px;font:inherit;font-size:15px;font-weight:600;cursor:pointer}
+  #gate button:hover{background:var(--accent-ink)}
   #gateMsg{font-size:13px;margin-top:14px;min-height:18px}
   .hidden{display:none}
 </style>
@@ -82,7 +108,21 @@
   <div id="gateMsg"></div>
 </div>
 
-<div id="app" class="wrap hidden">
+<div id="app" class="hidden">
+<div class="shell">
+  <aside class="side">
+    <div class="brand">
+      <div class="mark">R</div>
+      <div class="name">Recraparcs<small>Dashboard</small></div>
+    </div>
+    <div id="tabs" class="tabs">
+      <button class="tab active" data-tab="resultaten"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19h16M7 15v4M12 10v9M17 6v13"/></svg>Resultaten</button>
+      <button class="tab" data-tab="advertenties"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M7 13h4M7 16h7"/></svg>Advertenties</button>
+      <button class="tab" data-tab="financien"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5c0-1.4 1.2-2 2.5-2s2.5.7 2.5 1.8c0 2.4-5 1.3-5 3.7 0 1.1 1.2 1.8 2.5 1.8s2.5-.6 2.5-2"/></svg>Financiën</button>
+      <button class="tab" data-tab="prognose"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 17l5-5 4 4 8-9M14 7h6v6"/></svg>Prognose</button>
+    </div>
+  </aside>
+  <main class="main">
   <div class="top">
     <div>
       <img id="parkLogo" class="hidden" alt="" style="height:40px;margin-bottom:8px;display:block" />
@@ -95,13 +135,6 @@
       <select id="viewAs"></select>
       <button id="logout">Uitloggen</button>
     </div>
-  </div>
-
-  <div id="tabs" class="tabs">
-    <button class="tab active" data-tab="resultaten">Resultaten</button>
-    <button class="tab" data-tab="advertenties">Advertenties</button>
-    <button class="tab" data-tab="financien">Financiën</button>
-    <button class="tab" data-tab="prognose">Prognose</button>
   </div>
 
   <div class="filters">
@@ -222,6 +255,8 @@
     <div class="cards" id="progOut"></div>
     <p class="foot">De prognose is een rekenvoorbeeld op basis van je huidige kosten per verkoop, geen garantie.</p>
   </div>
+  </main>
+</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -238,13 +273,13 @@ const eur = n => "€"+Math.round(n||0).toLocaleString("nl-NL");
 const initials = n => n.slice(0,2).toUpperCase();
 
 /* ---------- branding per park (logo + favicon) ---------- */
-const DEFAULT_FAVICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23185fa5'/%3E%3Ctext x='50' y='72' font-size='62' text-anchor='middle' fill='white' font-family='system-ui,sans-serif' font-weight='700'%3ER%3C/text%3E%3C/svg%3E";
+const DEFAULT_FAVICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%232C5F52'/%3E%3Ctext x='50' y='72' font-size='62' text-anchor='middle' fill='white' font-family='Georgia,serif' font-weight='700'%3ER%3C/text%3E%3C/svg%3E";
 function setFavicon(href){
   let l = document.querySelector('link[rel="icon"]');
   if(!l){ l = document.createElement('link'); l.rel = 'icon'; document.head.appendChild(l); }
   l.href = href;
 }
-const DEFAULT_ACCENT = "#185fa5";
+const DEFAULT_ACCENT = "#2C5F52";
 const accent = () => (getComputedStyle(document.documentElement).getPropertyValue('--accent')||DEFAULT_ACCENT).trim();
 function setBranding(parkId){
   const p = (typeof PARKS!=="undefined" ? PARKS : []).find(x=>x.id===parkId);
@@ -402,9 +437,9 @@ async function renderFinance(){
   if(finChart) finChart.destroy();
   finChart = new Chart($("finChart"), {
     data:{ labels: mo.map(x=>mfmt(x.maand)), datasets:[
-      { type:"bar", label:"Verkoopsom", data:mo.map(x=>Number(x.verkoopsom)||0), backgroundColor:"#b5d4f4", order:3 },
+      { type:"bar", label:"Verkoopsom", data:mo.map(x=>Number(x.verkoopsom)||0), backgroundColor:"#D2CBB6", order:3 },
       { type:"bar", label:"Omzet (courtage)", data:mo.map(x=>Number(x.omzet)||0), backgroundColor:accent(), order:2 },
-      { type:"bar", label:"Marge Recraparcs", data:mo.map(x=>Number(x.marge_recraparcs)||0), backgroundColor:"#0f6e56", order:1 } ]},
+      { type:"bar", label:"Marge Recraparcs", data:mo.map(x=>Number(x.marge_recraparcs)||0), backgroundColor:"#B8862E", order:1 } ]},
     options:{ responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{ position:"bottom", labels:{ boxWidth:10, font:{size:11} } } },
       scales:{ y:{ ticks:{ callback:v=>"€"+v }, grid:{display:false} }, x:{ grid:{display:false} } } }
@@ -440,7 +475,7 @@ async function renderFinance(){
   const dtVoorwaarde = d => {
     if(!d) return "Nog niet bekend";
     const label = dt(d);
-    return d < vandaag ? `${label} <span class="badge held" style="background:#fbe4e4;color:var(--bad)">Verlopen</span>` : label;
+    return d < vandaag ? `${label} <span class="badge held" style="background:var(--bad-soft);color:var(--bad)">Verlopen</span>` : label;
   };
   const statusKleur = s => s==="Afgevallen" ? "bad" : s.startsWith("Definitief") ? "good" : "";
 
@@ -553,7 +588,7 @@ async function renderAds(){
   adChart = new Chart($("adChart"), {
     data:{ labels: dd.map(x=>dt2(x.dag)), datasets:[
       { type:"bar", label:"Uitgaven", data:dd.map(x=>Number(x.spend)||0), backgroundColor:parkAccent(pp), yAxisID:"y", order:3 },
-      { type:"line", label:"Leads", data:dd.map(x=>Number(x.leads)||0), borderColor:"#b45309", backgroundColor:"#b45309", borderWidth:2, tension:0.3, pointRadius:2, yAxisID:"y1", order:1 } ]},
+      { type:"line", label:"Leads", data:dd.map(x=>Number(x.leads)||0), borderColor:"#B8862E", backgroundColor:"#B8862E", borderWidth:2, tension:0.3, pointRadius:2, yAxisID:"y1", order:1 } ]},
     options:{ responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{ position:"bottom", labels:{ boxWidth:10, font:{size:11} } } },
       scales:{ y:{ position:"left", ticks:{ callback:v=>"€"+v }, grid:{display:false} },
@@ -585,7 +620,7 @@ async function renderAdDetail(adId, naam){
   adDetailChart = new Chart($("adDetailChart"), {
     data:{ labels: dd.map(x=>dt2(x.dag)), datasets:[
       { type:"bar", label:"Uitgaven", data:dd.map(x=>Number(x.spend)||0), backgroundColor:parkAccent(ADPARK), yAxisID:"y", order:2 },
-      { type:"line", label:"Leads", data:dd.map(x=>Number(x.leads)||0), borderColor:"#b45309", backgroundColor:"#b45309", borderWidth:2, tension:0.3, pointRadius:2, yAxisID:"y1", order:1 } ]},
+      { type:"line", label:"Leads", data:dd.map(x=>Number(x.leads)||0), borderColor:"#B8862E", backgroundColor:"#B8862E", borderWidth:2, tension:0.3, pointRadius:2, yAxisID:"y1", order:1 } ]},
     options:{ responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{ position:"bottom", labels:{ boxWidth:10, font:{size:11} } } },
       scales:{ y:{ position:"left", ticks:{ callback:v=>"€"+v }, grid:{display:false} },
@@ -663,7 +698,7 @@ function drawSalesChart(labels, omzet, aantal){
   salesChart = new Chart(el, {
     data:{ labels, datasets:[
       { type:"bar", label:"Omzet", data:omzet, backgroundColor:accent(), yAxisID:"y", order:2 },
-      { type:"line", label:"Aantal verkopen", data:aantal, borderColor:"#0f6e56", backgroundColor:"#0f6e56",
+      { type:"line", label:"Aantal verkopen", data:aantal, borderColor:"#B8862E", backgroundColor:"#B8862E",
         borderWidth:2, tension:0.3, yAxisID:"y1", order:1 }
     ]},
     options:{ responsive:true, maintainAspectRatio:false,
@@ -700,9 +735,9 @@ function renderAppts(rows, showAgent){
 /* ---------- LIVE PIPEDRIVE (echte leads) ---------- */
 async function renderLive(r, pp){
   const stats = await rpc("live_lead_stats", { ...r, p_park_id: pp ?? null }) || [];
-  const kleur = {Frankrijk:"#185fa5","Wielsche Dreef":"#0f6e56",Overig:"#6b6b66"};
+  const kleur = {Frankrijk:"#2C5F52","Wielsche Dreef":"#B8862E",Overig:"#A5A192"};
   $("liveCards").innerHTML = stats.map(s=>
-    `<div class="metric" style="border-left:3px solid ${kleur[s.markt]||'#6b6b66'}">
+    `<div class="metric" style="border-left:3px solid ${kleur[s.markt]||'#726F60'}">
        <div class="l">${s.markt}</div><div class="v">${s.leads}</div>
        <div class="l" style="margin-top:6px">${s.open_deals} open · ${s.verloren} verloren${s.gekoppeld_ad>0?` · ${s.gekoppeld_ad} via ad`:""}</div>
      </div>`).join("") || `<div class="metric"><div class="l">Geen leads in deze periode</div></div>`;
@@ -762,7 +797,7 @@ async function renderOwner(){
   const pa = await rpc("owner_park_agent", r) || [];
   const parkNames = [...new Set(pa.map(x=>x.park))];
   const agentNames = [...new Set(pa.map(x=>x.agent))];
-  const palette = ["#185fa5","#85b7eb","#b5d4f4","#0f6e56","#5dcaa5"];
+  const palette = ["#2C5F52","#B8862E","#B5432E","#726F60","#4B7A3E"];
   const datasets = agentNames.map((ag,i)=>({
     label:ag, backgroundColor:palette[i%palette.length],
     data: parkNames.map(pn => Number((pa.find(x=>x.park===pn&&x.agent===ag)||{}).revenue)||0)
