@@ -402,33 +402,36 @@ async function renderFinance(){
   if(finChart) finChart.destroy();
   finChart = new Chart($("finChart"), {
     data:{ labels: mo.map(x=>mfmt(x.maand)), datasets:[
-      { type:"bar", label:"Omzet", data:mo.map(x=>Number(x.omzet)||0), backgroundColor:accent(), order:2 },
+      { type:"bar", label:"Verkoopsom", data:mo.map(x=>Number(x.verkoopsom)||0), backgroundColor:"#b5d4f4", order:3 },
+      { type:"bar", label:"Omzet (courtage)", data:mo.map(x=>Number(x.omzet)||0), backgroundColor:accent(), order:2 },
       { type:"bar", label:"Marge Recraparcs", data:mo.map(x=>Number(x.marge_recraparcs)||0), backgroundColor:"#0f6e56", order:1 } ]},
     options:{ responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{ position:"bottom", labels:{ boxWidth:10, font:{size:11} } } },
       scales:{ y:{ ticks:{ callback:v=>"€"+v }, grid:{display:false} }, x:{ grid:{display:false} } } }
   });
   $("finMonthTable").innerHTML =
-    `<thead><tr><th>Maand</th><th>Verkopen</th><th>Omzet</th><th>Courtage makelaar</th><th>Marge Recraparcs</th></tr></thead>
-     <tbody>${mo.map(x=>`<tr><td>${mfmt(x.maand)}</td><td>${x.verkopen}</td>
+    `<thead><tr><th>Maand</th><th>Verkopen</th><th>Verkoopsom</th><th>Omzet</th><th>Courtage makelaar</th><th>Marge Recraparcs</th></tr></thead>
+     <tbody>${mo.map(x=>`<tr><td>${mfmt(x.maand)}</td><td>${x.verkopen}</td><td>${eur(x.verkoopsom)}</td>
        <td style="font-weight:600">${eur(x.omzet)}</td><td>${eur(x.courtage_makelaar)}</td><td style="font-weight:600;color:var(--good)">${eur(x.marge_recraparcs)}</td></tr>`).join("")
-       || `<tr><td colspan="5" style="color:var(--muted);padding:14px">Nog geen definitieve verkopen om per maand te tonen.</td></tr>`}</tbody>`;
+       || `<tr><td colspan="6" style="color:var(--muted);padding:14px">Nog geen definitieve verkopen om per maand te tonen.</td></tr>`}</tbody>`;
 
   const lopend = rows.filter(r => r.status_label !== "Afgevallen");
   const definitief = lopend.filter(r => r.status_label.startsWith("Definitief"));
   const bekend = r => r.amount != null;
-  const omzetVan = list => list.reduce((s,r)=>s+(bekend(r)?Number(r.amount):0),0);
-  const totOmzet = omzetVan(lopend);
-  const definitiefOmzet = omzetVan(definitief);
-  const totCourtage = lopend.reduce((s,r)=>s+(bekend(r)?Number(r.courtage_makelaar||0):0),0);
-  const totMarge = lopend.reduce((s,r)=>s+(bekend(r)?Number(r.marge_recraparcs||0):0),0);
+  const somVan = (list, key) => list.reduce((s,r)=>s+(bekend(r)?Number(r[key]||0):0),0);
+  const totVerkoopsom = somVan(lopend, "amount");
+  const totOmzet = somVan(lopend, "omzet");
+  const definitiefOmzet = somVan(definitief, "omzet");
+  const totCourtage = somVan(lopend, "courtage_makelaar");
+  const totMarge = somVan(lopend, "marge_recraparcs");
 
   $("finKpis").innerHTML =
     metric("Mondeling verkocht (of verder)", lopend.length) +
     metric("Waarvan definitief", definitief.length) +
+    metric("Verkoopsom totaal", eur(totVerkoopsom)) +
     metric("Omzet totaal", eur(totOmzet)) +
     metric("Omzet definitief", eur(definitiefOmzet)) +
-    metric("Courtage totaal", eur(totCourtage)) +
+    metric("Courtage makelaar", eur(totCourtage)) +
     metric("Marge Recraparcs", eur(totMarge)) +
     metric("Afgevallen", rows.length - lopend.length);
 
@@ -443,13 +446,14 @@ async function renderFinance(){
 
   $("finTable").innerHTML =
     `<thead><tr><th>Kavel</th><th>Park</th><th>Makelaar</th><th>Status</th>
-      <th>Omzet</th><th>Courtage</th><th>Marge Recraparcs</th><th>Notarisdatum</th><th>Ontbindende voorwaarden</th><th></th></tr></thead>
+      <th>Verkoopsom</th><th>Omzet</th><th>Courtage</th><th>Marge Recraparcs</th><th>Notarisdatum</th><th>Ontbindende voorwaarden</th><th></th></tr></thead>
      <tbody>${rows.map(r=>`<tr>
        <td style="text-align:left">${r.kavelnummer || "—"}</td>
        <td style="text-align:left">${r.park}</td>
        <td style="text-align:left">${r.agent}</td>
        <td style="text-align:left" class="${statusKleur(r.status_label)}">${r.status_label}</td>
        <td>${r.amount!=null ? eur(r.amount) : "Nog niet bekend"}</td>
+       <td>${r.omzet!=null ? eur(r.omzet) : "Nog niet bekend"}</td>
        <td>${r.courtage_makelaar!=null ? eur(r.courtage_makelaar) : "Nog niet bekend"}</td>
        <td>${r.marge_recraparcs!=null ? eur(r.marge_recraparcs) : "Nog niet bekend"}</td>
        <td>${dt(r.notary_date)}</td>
