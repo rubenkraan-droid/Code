@@ -168,6 +168,7 @@
   </div><!-- /tabResultaten -->
 
   <div id="tabAdvertenties" class="hidden">
+    <div id="adParkTabs" class="tabs hidden" style="margin-bottom:16px"></div>
     <div class="cards" id="adKpis"></div>
     <div class="sec">Trend per dag
       <span class="info" tabindex="0">i<span class="tip">Uitgaven en clicks komen uit Meta; leads komen uit Pipedrive. Een lead van nu leidt vaak pas weken tot maanden later tot een verkoop, dus de kosten van een periode horen niet één-op-één bij de omzet van dezelfde periode.</span></span>
@@ -352,6 +353,7 @@ document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () =>
   $("tabAdvertenties").classList.toggle("hidden", activeTab!=="advertenties");
   $("tabPrognose").classList.toggle("hidden", activeTab!=="prognose");
   $("fAgent").classList.toggle("hidden", activeTab!=="resultaten" || !currentView || currentView().role!=="owner");
+  $("fPark").classList.toggle("hidden", (currentView && currentView().role==="park") || activeTab==="advertenties");
   if(activeTab==="advertenties") renderAds();
   if(activeTab==="prognose") renderPrognose();
 }));
@@ -399,12 +401,27 @@ function updatePrognose(){
 
 /* ---------- ADVERTENTIES ---------- */
 let adChart;
-let ADROWS = [], ADSORT = { key:"spend", dir:-1 };
+let ADROWS = [], ADSORT = { key:"spend", dir:-1 }, ADPARK = null;
+const parkAccent = id => { const p = PARKS.find(x=>x.id===id); return (p && p.accent_color) || accent(); };
 const STATUSNL = { active:["Actief","sale"], killed:["Gestopt","held"], draft:["Concept","held"], unknown:["Onbekend","held"], demo:["Demo","held"] };
 
 async function renderAds(){
   const v = currentView();
-  const pp = v.role==="park" ? v.id : ($("fPark").value==="all" ? null : Number($("fPark").value));
+  let pp;
+  if(v.role==="park"){
+    pp = v.id;
+    $("adParkTabs").classList.add("hidden");
+  } else {
+    // eigenaar: altijd één park tegelijk, via sub-tabbladen (gemengd totaal zegt niets)
+    if(!ADPARK || !PARKS.find(p=>p.id===ADPARK)) ADPARK = (PARKS[0]||{}).id;
+    pp = ADPARK;
+    $("adParkTabs").innerHTML = PARKS.map(p=>
+      `<button class="tab ${p.id===ADPARK?"active":""}" data-park="${p.id}">${p.name}</button>`).join("");
+    $("adParkTabs").classList.remove("hidden");
+    document.querySelectorAll("#adParkTabs .tab").forEach(b=>b.addEventListener("click", ()=>{
+      ADPARK = Number(b.dataset.park); renderAds();
+    }));
+  }
   const r = periodRange();
   const [k, daily, ov] = await Promise.all([
     rpc("ad_kpis",  { ...r, p_park_id: pp }).then(x=>x?.[0]||{}),
@@ -431,7 +448,7 @@ async function renderAds(){
   if(adChart) adChart.destroy();
   adChart = new Chart($("adChart"), {
     data:{ labels: dd.map(x=>dt2(x.dag)), datasets:[
-      { type:"bar", label:"Uitgaven", data:dd.map(x=>Number(x.spend)||0), backgroundColor:accent(), yAxisID:"y", order:3 },
+      { type:"bar", label:"Uitgaven", data:dd.map(x=>Number(x.spend)||0), backgroundColor:parkAccent(pp), yAxisID:"y", order:3 },
       { type:"line", label:"Leads", data:dd.map(x=>Number(x.leads)||0), borderColor:"#b45309", backgroundColor:"#b45309", borderWidth:2, tension:0.3, pointRadius:2, yAxisID:"y1", order:1 } ]},
     options:{ responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{ position:"bottom", labels:{ boxWidth:10, font:{size:11} } } },
