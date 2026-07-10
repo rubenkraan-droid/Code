@@ -52,6 +52,7 @@
   .badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600}
   .badge.sale{background:#e2f3ec;color:var(--good)}
   .badge.held{background:#efefe9;color:var(--muted)}
+  .badge.lost{background:#fbe4e4;color:var(--bad)}
   td a{color:var(--accent);text-decoration:none;font-weight:600}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
   @media(max-width:720px){.grid2{grid-template-columns:1fr}}
@@ -126,18 +127,21 @@
     <div class="panel"><table id="liveMonths"></table></div>
   </div>
 
-  <div id="demoBanner" class="banner hidden" style="color:var(--muted)"><span>●</span><span>Voorbeeldcijfers hieronder · afspraken, verkopen en omzet zijn nog demodata tot Pipedrive de verkoopvelden vult</span></div>
   <div class="cards" id="cardsTop"></div>
 
   <div id="agentOnly" class="hidden">
     <div class="sec" id="teamTitle">Teamgemiddelde (alle makelaars, zonder namen)</div>
     <div class="cards" id="cardsTeam"></div>
+    <div class="sec" style="margin-top:18px">Mijn belactiviteit</div>
+    <div class="cards" id="cardsCallMe"></div>
   </div>
 
   <div id="ownerOnly" class="hidden">
     <div class="banner hide"><span>●</span><span>Alleen voor eigenaar · nooit zichtbaar voor makelaar of ontwikkelaar</span></div>
     <div class="sec">Per agent</div>
     <div class="panel"><table id="agentTable"></table></div>
+    <div class="sec">Gebeld · gesprek · ingepland</div>
+    <div class="panel" style="margin-bottom:26px"><table id="callTable"></table></div>
     <div class="sec">Omzet per park</div>
     <div class="chartbox" style="margin-bottom:26px"><canvas id="parkChart" height="200"></canvas></div>
     <div class="sec">Waarom leads afvallen · verloren redenen uit Pipedrive</div>
@@ -321,7 +325,6 @@ async function applyRole(){
   $("agentOnly").classList.toggle("hidden", !agentV);
   $("parkOnly").classList.toggle("hidden", !parkV);
   $("liveSec").classList.toggle("hidden", !owner);
-  $("demoBanner").classList.toggle("hidden", !owner);
   $("adLink").classList.add("hidden");
   $("monthSec").classList.remove("hidden");
   $("apptSec").classList.toggle("hidden", parkV);
@@ -399,33 +402,33 @@ async function renderFinance(){
   if(finChart) finChart.destroy();
   finChart = new Chart($("finChart"), {
     data:{ labels: mo.map(x=>mfmt(x.maand)), datasets:[
-      { type:"bar", label:"Omzet (courtage)", data:mo.map(x=>Number(x.omzet)||0), backgroundColor:accent(), order:2 },
-      { type:"bar", label:"Winst", data:mo.map(x=>Number(x.winst)||0), backgroundColor:"#0f6e56", order:1 } ]},
+      { type:"bar", label:"Omzet", data:mo.map(x=>Number(x.omzet)||0), backgroundColor:accent(), order:2 },
+      { type:"bar", label:"Marge Recraparcs", data:mo.map(x=>Number(x.marge_recraparcs)||0), backgroundColor:"#0f6e56", order:1 } ]},
     options:{ responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{ position:"bottom", labels:{ boxWidth:10, font:{size:11} } } },
       scales:{ y:{ ticks:{ callback:v=>"€"+v }, grid:{display:false} }, x:{ grid:{display:false} } } }
   });
   $("finMonthTable").innerHTML =
-    `<thead><tr><th>Maand</th><th>Verkopen</th><th>Verkoopsom</th><th>Omzet</th><th>Winst</th></tr></thead>
-     <tbody>${mo.map(x=>`<tr><td>${mfmt(x.maand)}</td><td>${x.verkopen}</td><td>${eur(x.verkoopsom)}</td>
-       <td style="font-weight:600">${eur(x.omzet)}</td><td style="font-weight:600;color:var(--good)">${eur(x.winst)}</td></tr>`).join("")
+    `<thead><tr><th>Maand</th><th>Verkopen</th><th>Omzet</th><th>Courtage makelaar</th><th>Marge Recraparcs</th></tr></thead>
+     <tbody>${mo.map(x=>`<tr><td>${mfmt(x.maand)}</td><td>${x.verkopen}</td>
+       <td style="font-weight:600">${eur(x.omzet)}</td><td>${eur(x.courtage_makelaar)}</td><td style="font-weight:600;color:var(--good)">${eur(x.marge_recraparcs)}</td></tr>`).join("")
        || `<tr><td colspan="5" style="color:var(--muted);padding:14px">Nog geen definitieve verkopen om per maand te tonen.</td></tr>`}</tbody>`;
 
   const lopend = rows.filter(r => r.status_label !== "Afgevallen");
   const definitief = lopend.filter(r => r.status_label.startsWith("Definitief"));
   const bekend = r => r.amount != null;
-  const omzetVan = list => list.reduce((s,r)=>s+(bekend(r)?Number(r.courtage_makelaar||0)+Number(r.marge_recraparcs||0):0),0);
+  const omzetVan = list => list.reduce((s,r)=>s+(bekend(r)?Number(r.amount):0),0);
   const totOmzet = omzetVan(lopend);
   const definitiefOmzet = omzetVan(definitief);
-  const totVerkoopsom = lopend.reduce((s,r)=>s+(bekend(r)?Number(r.amount):0),0);
+  const totCourtage = lopend.reduce((s,r)=>s+(bekend(r)?Number(r.courtage_makelaar||0):0),0);
   const totMarge = lopend.reduce((s,r)=>s+(bekend(r)?Number(r.marge_recraparcs||0):0),0);
 
   $("finKpis").innerHTML =
     metric("Mondeling verkocht (of verder)", lopend.length) +
     metric("Waarvan definitief", definitief.length) +
-    metric("Verkoopsom (bekend)", eur(totVerkoopsom)) +
     metric("Omzet totaal", eur(totOmzet)) +
     metric("Omzet definitief", eur(definitiefOmzet)) +
+    metric("Courtage totaal", eur(totCourtage)) +
     metric("Marge Recraparcs", eur(totMarge)) +
     metric("Afgevallen", rows.length - lopend.length);
 
@@ -440,7 +443,7 @@ async function renderFinance(){
 
   $("finTable").innerHTML =
     `<thead><tr><th>Kavel</th><th>Park</th><th>Makelaar</th><th>Status</th>
-      <th>Verkoopsom</th><th>Courtage</th><th>Marge Recraparcs</th><th>Notarisdatum</th><th>Ontbindende voorwaarden</th><th></th></tr></thead>
+      <th>Omzet</th><th>Courtage</th><th>Marge Recraparcs</th><th>Notarisdatum</th><th>Ontbindende voorwaarden</th><th></th></tr></thead>
      <tbody>${rows.map(r=>`<tr>
        <td style="text-align:left">${r.kavelnummer || "—"}</td>
        <td style="text-align:left">${r.park}</td>
@@ -672,14 +675,17 @@ function drawSalesChart(labels, omzet, aantal){
 /* ---------- appointments table (owner + makelaar) ---------- */
 function renderAppts(rows, showAgent){
   $("apptTable").innerHTML =
-    `<thead><tr><th>Datum</th>${showAgent?"<th>Makelaar</th>":""}<th>Park</th><th>Status</th>
+    `<thead><tr><th>Datum</th>${showAgent?"<th>Makelaar</th>":""}<th>Park</th><th>Kavel</th><th>Status</th>
       <th>Verkocht op</th><th>Notaris</th><th>Omzet</th><th></th></tr></thead>
      <tbody>${rows.map(x=>{
-       const sold = x.outcome==="sale";
+       const sold = x.outcome==="sale", lost = x.outcome==="lost";
+       const label = sold?"Verkocht":lost?"Afgevallen":"Gehouden";
+       const cls = sold?"sale":lost?"lost":"held";
        return `<tr><td>${dt(x.scheduled_at)}</td>
          ${showAgent?`<td style="text-align:left">${x.agent}</td>`:""}
          <td style="text-align:left">${x.park.replace("Park ","")}</td>
-         <td style="text-align:left"><span class="badge ${sold?"sale":"held"}">${sold?"Verkocht":"Gehouden"}</span></td>
+         <td style="text-align:left">${x.kavelnummer || "—"}</td>
+         <td style="text-align:left"><span class="badge ${cls}">${label}</span></td>
          <td>${x.sale_date?dt(x.sale_date):"—"}</td>
          <td>${x.notary_date?dt(x.notary_date):"—"}</td>
          <td style="font-weight:600">${x.sale_amount?eur(x.sale_amount):"—"}</td>
@@ -738,6 +744,14 @@ async function renderOwner(){
          <td>${eur(a.revenue_per_appt)}</td><td style="font-weight:600">${eur(a.revenue)}</td></tr>`;
      }).join("")}</tbody>`;
 
+  const calls = await rpc("call_overview", { p_from:r.p_from, p_to:r.p_to, p_park_id:parkNum,
+    p_agent_id: agentVal==="all"?null:Number(agentVal) }) || [];
+  $("callTable").innerHTML =
+    `<thead><tr><th>Agent</th><th>Gebeld</th><th>Gesprek</th><th>Ingepland</th><th>% gesprek van gebeld</th></tr></thead>
+     <tbody>${calls.map(c=>`<tr><td style="text-align:left">${c.agent}</td><td>${c.gebeld}</td><td>${c.gesprek}</td>
+       <td>${c.ingepland}</td><td>${c.gebeld>0 ? Math.round(c.gesprek/c.gebeld*100)+"%" : "—"}</td></tr>`).join("")
+       || `<tr><td colspan="5" style="color:var(--muted);padding:14px">Nog geen belactiviteiten gelogd.</td></tr>`}</tbody>`;
+
   const pa = await rpc("owner_park_agent", r) || [];
   const parkNames = [...new Set(pa.map(x=>x.park))];
   const agentNames = [...new Set(pa.map(x=>x.agent))];
@@ -781,6 +795,10 @@ async function renderAgent(agentId){
     metricT("Afval %",(s.team_afval_pct||0)+"%") +
     metricT("Afspraken per makelaar",s.team_avg_appointments||0) +
     metricT("Omzet per makelaar",eur(s.team_avg_revenue));
+  const cs = (await rpc("call_overview", {p_from:r.p_from, p_to:r.p_to, p_park_id:pp, p_agent_id:agentId}))?.[0] || {};
+  $("cardsCallMe").innerHTML =
+    metric("Gebeld",cs.gebeld||0) + metric("Gesprek",cs.gesprek||0) + metric("Ingepland",cs.ingepland||0) +
+    metric("% gesprek van gebeld", cs.gebeld>0 ? Math.round(cs.gesprek/cs.gebeld*100)+"%" : "—");
   renderMonths(await rpc("monthly_overview", {p_agent_id:agentId, p_park_id:pp}) || [], {spend:false, leads:false});
   const det = await rpc("appointments_detail", {...r, p_agent_id:agentId, p_park_id:pp}) || [];
   $("apptTitle").textContent = `Mijn afspraken (${det.length})`;
