@@ -324,11 +324,14 @@ async function applyRole(){
     $("subtitle").textContent = "Eigenaarweergave";
     fillSelect($("fPark"), PARKS.map(p=>({value:p.id,label:p.name})), "Alle parken");
     fillSelect($("fAgent"), AGENTS.map(a=>({value:a.id,label:a.name})), "Alle agents");
+    $("fPark").value = "all"; $("fAgent").value = "all";
     refresh = renderOwner;
   } else if(agentV){
     $("title").textContent = "Mijn resultaten";
     $("subtitle").textContent = "Makelaarweergave · " + ((AGENTS.find(a=>a.id===v.id)||{}).name||"");
     fillSelect($("fPark"), PARKS.map(p=>({value:p.id,label:p.name})), "Alle parken");
+    $("fPark").value = "all";
+    setBranding(null);
     refresh = () => renderAgent(v.id);
   } else {
     $("title").textContent = "Park dashboard";
@@ -598,15 +601,15 @@ function renderAppts(rows, showAgent){
 }
 
 /* ---------- LIVE PIPEDRIVE (echte leads) ---------- */
-async function renderLive(r){
-  const stats = await rpc("live_lead_stats", r) || [];
+async function renderLive(r, pp){
+  const stats = await rpc("live_lead_stats", { ...r, p_park_id: pp ?? null }) || [];
   const kleur = {Frankrijk:"#185fa5","Wielsche Dreef":"#0f6e56",Overig:"#6b6b66"};
   $("liveCards").innerHTML = stats.map(s=>
     `<div class="metric" style="border-left:3px solid ${kleur[s.markt]||'#6b6b66'}">
        <div class="l">${s.markt}</div><div class="v">${s.leads}</div>
        <div class="l" style="margin-top:6px">${s.open_deals} open · ${s.verloren} verloren${s.gekoppeld_ad>0?` · ${s.gekoppeld_ad} via ad`:""}</div>
      </div>`).join("") || `<div class="metric"><div class="l">Geen leads in deze periode</div></div>`;
-  const mo = await rpc("live_lead_months", {}) || [];
+  const mo = await rpc("live_lead_months", { p_park_id: pp ?? null }) || [];
   const mfmt = d => { const s=new Date(d).toLocaleDateString("nl-NL",{month:"long",year:"numeric"}); return s.charAt(0).toUpperCase()+s.slice(1); };
   $("liveMonths").innerHTML =
     `<thead><tr><th>Maand</th><th>Frankrijk</th><th>Wielsche Dreef</th><th>Overig</th><th>Totaal</th></tr></thead>
@@ -617,9 +620,10 @@ async function renderLive(r){
 /* ---------- EIGENAAR ---------- */
 async function renderOwner(){
   const r = periodRange();
-  renderLive(r);
   const parkVal = $("fPark").value, agentVal = $("fAgent").value;
-  setBranding(parkVal==="all"?null:Number(parkVal));
+  const parkNum = parkVal==="all" ? null : Number(parkVal);
+  renderLive(r, parkNum);
+  setBranding(parkNum);
 
   let f;
   if(parkVal==="all") f = (await rpc("owner_total_funnel", r))?.[0];
