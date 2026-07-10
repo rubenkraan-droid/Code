@@ -99,6 +99,7 @@
   <div id="tabs" class="tabs">
     <button class="tab active" data-tab="resultaten">Resultaten</button>
     <button class="tab" data-tab="advertenties">Advertenties</button>
+    <button class="tab" data-tab="financien">Financiën</button>
     <button class="tab" data-tab="prognose">Prognose</button>
   </div>
 
@@ -186,6 +187,15 @@
       <div class="panel" style="margin-bottom:26px"><div class="scroll"><table id="adDetailTable"></table></div></div>
     </div>
     <p class="foot" id="adFoot"></p>
+  </div>
+
+  <div id="tabFinance" class="hidden">
+    <div class="sec">Mondeling verkocht en verder
+      <span class="info" tabindex="0">i<span class="tip">Alle deals vanaf mondeling akkoord (Informeel akkoord ontvangen) tot en met notaris gepasseerd. Courtage = 1,5% van de verkoopsom, met een maximum van €3.500 voor de makelaar. Wat Recraparcs overhoudt is de courtage minus de makelaarsuitbetaling.</span></span>
+    </div>
+    <div class="cards" id="finKpis"></div>
+    <div class="panel" style="margin-top:18px"><div class="scroll"><table id="finTable"></table></div></div>
+    <p class="foot">Notarisdatum en ontbindende voorwaarden komen uit de handmatige Pipedrive-velden; staat daar niets, dan toont het dashboard "Nog niet bekend".</p>
   </div>
 
   <div id="tabPrognose" class="hidden">
@@ -313,6 +323,7 @@ async function applyRole(){
   $("fAgent").classList.toggle("hidden", !owner);
   // advertenties-tab niet voor makelaars; bij rolwissel terug naar Resultaten
   document.querySelector('.tab[data-tab="advertenties"]').classList.toggle("hidden", agentV);
+  document.querySelector('.tab[data-tab="financien"]').classList.toggle("hidden", agentV || parkV);
   $("tabs").classList.toggle("hidden", agentV);
   activeTab = "resultaten";
   document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active", x.dataset.tab==="resultaten"));
@@ -361,12 +372,55 @@ document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () =>
   document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active", x===t));
   $("tabResultaten").classList.toggle("hidden", activeTab!=="resultaten");
   $("tabAdvertenties").classList.toggle("hidden", activeTab!=="advertenties");
+  $("tabFinance").classList.toggle("hidden", activeTab!=="financien");
   $("tabPrognose").classList.toggle("hidden", activeTab!=="prognose");
   $("fAgent").classList.toggle("hidden", activeTab!=="resultaten" || !currentView || currentView().role!=="owner");
-  $("fPark").classList.toggle("hidden", (currentView && currentView().role==="park") || activeTab==="advertenties");
+  $("fPark").classList.toggle("hidden", (currentView && currentView().role==="park") || activeTab==="advertenties" || activeTab==="financien");
   if(activeTab==="advertenties") renderAds();
+  if(activeTab==="financien") renderFinance();
   if(activeTab==="prognose") renderPrognose();
 }));
+
+/* ---------- FINANCIEN ---------- */
+async function renderFinance(){
+  const v = currentView();
+  const pp = v.role==="owner" ? ($("fPark").value==="all" ? null : Number($("fPark").value)) : v.id;
+  const rows = await rpc("finance_deals", { p_park_id: pp }) || [];
+
+  const lopend = rows.filter(r => r.status_label !== "Afgevallen");
+  const bekend = r => r.amount != null;
+  const totOmzet = lopend.reduce((s,r)=>s+(bekend(r)?Number(r.amount):0),0);
+  const totCourtage = lopend.reduce((s,r)=>s+(bekend(r)?Number(r.courtage_makelaar||0):0),0);
+  const totMarge = lopend.reduce((s,r)=>s+(bekend(r)?Number(r.marge_recraparcs||0):0),0);
+  const onbekendCount = lopend.filter(r=>!bekend(r)).length;
+
+  $("finKpis").innerHTML =
+    metric("Mondeling verkocht (of verder)", lopend.length) +
+    metric("Waarvan definitief", lopend.filter(r=>r.status_label.startsWith("Definitief")).length) +
+    metric("Verkoopsom (bekend)", eur(totOmzet)) +
+    metric("Courtage totaal", eur(totCourtage)) +
+    metric("Marge Recraparcs", eur(totMarge)) +
+    metric("Afgevallen", rows.length - lopend.length);
+
+  const dt = d => d ? new Date(d).toLocaleDateString("nl-NL",{day:"2-digit",month:"short",year:"numeric"}) : "Nog niet bekend";
+  const statusKleur = s => s==="Afgevallen" ? "bad" : s.startsWith("Definitief") ? "good" : "";
+
+  $("finTable").innerHTML =
+    `<thead><tr><th>Kavel</th><th>Park</th><th>Makelaar</th><th>Status</th>
+      <th>Verkoopsom</th><th>Courtage</th><th>Marge Recraparcs</th><th>Notarisdatum</th><th>Ontbindende voorwaarden</th><th></th></tr></thead>
+     <tbody>${rows.map(r=>`<tr>
+       <td style="text-align:left">${r.kavelnummer || "—"}</td>
+       <td style="text-align:left">${r.park}</td>
+       <td style="text-align:left">${r.agent}</td>
+       <td style="text-align:left" class="${statusKleur(r.status_label)}">${r.status_label}</td>
+       <td>${r.amount!=null ? eur(r.amount) : "Nog niet bekend"}</td>
+       <td>${r.courtage_makelaar!=null ? eur(r.courtage_makelaar) : "Nog niet bekend"}</td>
+       <td>${r.marge_recraparcs!=null ? eur(r.marge_recraparcs) : "Nog niet bekend"}</td>
+       <td>${dt(r.notary_date)}</td>
+       <td>${dt(r.rescission_date)}</td>
+       <td><a href="${r.pipedrive_url}" target="_blank" rel="noopener">Pipedrive ↗</a></td>
+     </tr>`).join("") || `<tr><td colspan="10" style="color:var(--muted);padding:14px">Nog geen deals mondeling verkocht of verder in deze selectie.</td></tr>`}</tbody>`;
+}
 
 /* ---------- PROGNOSE ---------- */
 let PROG = null;
