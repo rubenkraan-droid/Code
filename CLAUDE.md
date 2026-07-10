@@ -106,11 +106,14 @@ in this repo. `list_migrations` on the project is the source of truth, not git l
   flag — it recalculates automatically on every deal upsert. If a deal is manually moved out of that
   stage later (rescheduled), `no_show` flips back to `false` with no extra logic needed. Don't build a
   separate backfill mechanism for it.
-- **`sync-meta`'s ad-name backfill only sees ads with impressions in its lookback window** (default
-  7 days, from Meta's `/insights` endpoint). An ad that generated Pipedrive leads weeks ago but has had
-  no recent spend never reappears in that call, so its `ads.name` stays stuck at the placeholder
-  `"Meta-advertentie <external_id>"` forever. This is the live cause of ugly/raw ad IDs showing in the
-  "Per advertentie" table instead of real names — **not yet fixed**, see Current state.
+- **`sync-meta`'s insights-based ad-name update only sees ads with impressions in its lookback window**
+  (default 7 days, from Meta's `/insights` endpoint) — an ad that generated Pipedrive leads weeks ago
+  but has had no recent spend never reappears there. Fixed by a separate `adNameBackfill()` step
+  (added in this session) that looks up each `name like 'Meta-advertentie %'` row directly via
+  `GET /{ad_id}?fields=id,name,status` — this works regardless of recency or pause/archive state,
+  unlike `/act_.../ads` list calls which silently omit some archived ads. Uses
+  `internal_ads_needing_name_backfill`/`internal_set_ad_name`, same pattern as the Pipedrive stage
+  changelog backfill.
 - **Duplicate `ads` rows for what's conceptually the same ad exist** (e.g. id 28 `"Niet huren. Bezitten.
   - NH-AD2"` vs id 35 `"NH-AD2"`, different `external_id`s, both `park_id=1`). Root cause unconfirmed
   [unverified] — likely a mismatch between the manually-entered Pipedrive `ad_external_id` field and
@@ -134,13 +137,10 @@ Financiën tab with the 4-number courtage breakdown, margin hidden from makelaar
 voorwaarden "Verlopen" badge, "Definitief" status on reaching stage B, real (non-demo) funnel numbers
 for France, call-activity overview (Gebeld/Gesprek/Ingepland), appointment counting from "Afspraak
 gepland" (not just "Afspraak geweest") with no-show tracking via the "Klant niet geweest" stage and a
-"No-show %" KPI on owner/agent/park views.
+"No-show %" KPI on owner/agent/park views. Ad-name placeholder backfill for paused/old ads (see
+Gotchas) — ran once, fixed all 7 affected rows at the time.
 
 **Known broken:**
-- Ad names in the "Per advertentie" table show as `"Meta-advertentie <id>"` or bare ad-set codes
-  instead of real Meta ad names, for any ad with leads but no recent spend — see Gotchas. Fix not yet
-  applied; needs either a wider `sync-meta` lookback or a separate one-time name-only pull from Meta's
-  Ads Management API (`/act_.../ads?fields=id,name`) that doesn't depend on the insights time window.
 - Possible duplicate `ads` rows for the same real ad (see Gotchas) — needs investigation before a fix.
 
 **Not started / waiting on Ruben:**
