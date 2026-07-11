@@ -416,6 +416,13 @@ function periodRange(){
   return { p_from: iso(from), p_to: iso(to) };
 }
 const metric  = (l,v) => `<div class="metric"><div class="l">${l}</div><div class="v">${v}</div></div>`;
+/* klikbare deals-cellen/cards: leads/afspraken/verkopen -> lijst met Pipedrive-links */
+const KINDLBL = { leads:"Leads", afspraken:"Afspraken", verkopen:"Verkopen" };
+const dcell = (waarde, kind, agentId, naam, resale) => Number(waarde)>0
+  ? `<td><span class="deal-link" data-kind="${kind}" data-agentid="${agentId==null?'':agentId}" data-naam="${String(naam||'').replace(/"/g,'')}" data-resale="${resale?1:0}" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px">${waarde}</span></td>`
+  : `<td>${waarde}</td>`;
+const metricDeal = (l,v,kind,agentId,naam,resale) =>
+  `<div class="metric deal-link" style="cursor:pointer" data-kind="${kind}" data-agentid="${agentId==null?'':agentId}" data-naam="${String(naam||'').replace(/"/g,'')}" data-resale="${resale?1:0}"><div class="l">${l} <span style="font-size:11px;color:var(--muted)">↗</span></div><div class="v">${v}</div></div>`;
 const metricT = (l,v) => `<div class="metric team"><div class="l">${l}</div><div class="v">${v}</div></div>`;
 async function rpc(fn, args){ const {data,error} = await sb.rpc(fn, args||{});
   if(error){ console.error(fn, error); return null; } return data; }
@@ -657,11 +664,14 @@ async function renderFinanceAgent(agentId){
   if(finChart) finChart.destroy();
   finChart = new Chart($("finChart"), {
     data:{ labels: mo.map(x=>mfmt(x.maand)), datasets:[
-      { type:"bar", label:"Verkoopsom", data:mo.map(x=>Number(x.verkoopsom)||0), backgroundColor:"#D2CBB6", order:2 },
-      { type:"bar", label:"Mijn commissie", data:mo.map(x=>Number(x.mijn_commissie)||0), backgroundColor:accent(), order:1 } ]},
+      { type:"bar", label:"Mijn commissie", data:mo.map(x=>Number(x.mijn_commissie)||0), backgroundColor:accent(), yAxisID:"y", order:2 },
+      { type:"line", label:"Verkoopsom", data:mo.map(x=>Number(x.verkoopsom)||0), borderColor:"#B8862E", backgroundColor:"#B8862E", borderWidth:2, tension:0.3, pointRadius:3, yAxisID:"y1", order:1 } ]},
     options:{ responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{ position:"bottom", labels:{ boxWidth:10, font:{size:11} } } },
-      scales:{ y:{ ticks:{ callback:v=>"€"+v }, grid:{display:false} }, x:{ grid:{display:false} } } }
+      scales:{
+        y:{ position:"left", beginAtZero:true, ticks:{ callback:v=>"€"+Number(v).toLocaleString("nl-NL") }, grid:{display:false}, title:{display:true,text:"commissie",font:{size:10}} },
+        y1:{ position:"right", beginAtZero:true, ticks:{ callback:v=>"€"+Math.round(v/1000)+"k" }, grid:{display:false}, title:{display:true,text:"verkoopsom",font:{size:10}} },
+        x:{ grid:{display:false} } } }
   });
   $("finMonthTable").innerHTML =
     `<thead><tr><th>Maand</th><th>Verkopen</th><th>Verkoopsom</th><th>Mijn commissie</th></tr></thead>
@@ -1176,16 +1186,14 @@ async function renderOwner(){
        const scls = showPct>=90?"good":showPct<80?"bad":"";
        const cls = a.closing_rate_pct>=40?"good":a.closing_rate_pct<30?"bad":"";
        return `<tr><td><span class="av"><span class="dot">${initials(a.agent)}</span>${a.agent}</span></td>
-         <td>${a.leads>0 ? `<span class="lead-link" data-agentid="${a.agent_id}" data-agent="${a.agent}" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px">${a.leads}</span>` : 0}</td>
-         <td>${a.appointments}</td>
+         ${dcell(a.leads,'leads',a.agent_id,a.agent)}
+         ${dcell(a.appointments,'afspraken',a.agent_id,a.agent)}
          <td class="${scls}">${a.appointments>0?showPct+"%":"—"}</td>
          <td>${a.shows}</td>
          <td class="${cls}">${a.shows>0?a.closing_rate_pct+"%":"—"}</td>
-         <td>${a.sales}</td>
+         ${dcell(a.sales,'verkopen',a.agent_id,a.agent)}
          <td>${eur(a.revenue_per_appt)}</td><td style="font-weight:600">${eur(a.revenue)}</td></tr>`;
      }).join("")}</tbody>`;
-  document.querySelectorAll("#agentTable .lead-link").forEach(el =>
-    el.addEventListener("click", () => toonAgentLeads(el.dataset.agentid, el.dataset.agent)));
 
   const calls = await rpc("call_overview", { p_from:r.p_from, p_to:r.p_to, p_park_id:parkNum,
     p_agent_id: agentVal==="all"?null:Number(agentVal) }) || [];
@@ -1230,7 +1238,7 @@ async function renderAgent(agentId){
     + (pp ? " · " + ((PARKS.find(p=>p.id===pp)||{}).name||"") : "") + ")";
   const s = (await rpc("agent_stats", {p_agent_id:agentId, p_park_id:pp, ...r}))?.[0] || {};
   $("cardsTop").innerHTML =
-    metric("Mijn afspraken",s.appointments||0) + metric("Mijn sales",s.sales||0) +
+    metricDeal("Mijn afspraken",s.appointments||0,'afspraken',agentId,'') + metricDeal("Mijn sales",s.sales||0,'verkopen',agentId,'') +
     metric("Mijn omzet",eur(s.revenue)) + metric("Mijn commissie",eur(s.mijn_commissie)) +
     metric("Omzet per afspraak",eur(s.revenue_per_appt)) +
     metric("Closing %",(s.closing_rate_pct||0)+"%") + metric("Afval %",(s.afval_pct||0)+"%") +
@@ -1318,19 +1326,20 @@ async function toonVerlorenDeals(fase, reden){
   $("lostDealsSec").classList.remove("hidden");
   $("lostDealsSec").scrollIntoView({ behavior:"smooth", block:"nearest" });
 }
-async function toonAgentLeads(agentId, agentNaam){
-  const rows = await rpc("agent_leads", { p_agent_id: Number(agentId), ...periodRange() }) || [];
-  $("lostDealsTitle").textContent = `Leads · ${agentNaam} (${rows.length})`;
+async function toonAgentDeals(agentId, kind, naam){
+  const rows = await rpc("agent_deals", { p_agent_id: agentId==null?null:Number(agentId), ...periodRange(), p_kind: kind }) || [];
+  $("lostDealsTitle").textContent = `${KINDLBL[kind]||"Deals"}${naam?` · ${naam}`:""} (${rows.length})`;
   $("lostDealsTable").innerHTML =
-    `<thead><tr><th class="tl">Deal</th><th class="tl">Fase</th><th class="tl">Lead sinds</th><th class="tl">Afspraak</th><th class="tl">Verkocht</th><th></th></tr></thead>
+    `<thead><tr><th class="tl">Deal</th><th class="tl">Fase</th><th class="tl">Lead sinds</th><th class="tl">Afspraak</th><th class="tl">Verkocht</th><th>Verkoopsom</th><th></th></tr></thead>
      <tbody>${rows.map(x=>`<tr>
        <td style="text-align:left">#${x.deal_id}${x.titel?` · ${x.titel}`:""}</td>
        <td style="text-align:left">${x.stage_name||"—"}</td>
        <td style="text-align:left">${x.lead_created?dt(x.lead_created):"—"}</td>
        <td style="text-align:left">${x.appointment_date?dt(x.appointment_date):"—"}</td>
        <td style="text-align:left">${x.sale_date?dt(x.sale_date):"—"}</td>
+       <td>${x.bedrag>0?eur(x.bedrag):"—"}</td>
        <td><a href="${x.pipedrive_url}" target="_blank" rel="noopener">Pipedrive ↗</a></td></tr>`).join("")
-       || `<tr><td colspan="6" style="color:var(--muted);padding:14px">Geen leads gevonden.</td></tr>`}</tbody>`;
+       || `<tr><td colspan="7" style="color:var(--muted);padding:14px">Geen deals gevonden.</td></tr>`}</tbody>`;
   $("lostDealsSec").classList.remove("hidden");
   $("lostDealsSec").scrollIntoView({ behavior:"smooth", block:"nearest" });
 }
@@ -1345,15 +1354,15 @@ async function renderResale(){
   if(v.role==="agent"){
     const s = (await rpc("resale_agent_stats", { p_agent_id:v.id, ...r }))?.[0] || {};
     $("resaleKpis").innerHTML =
-      metric("Mijn leads", s.leads||0) + metric("Mijn afspraken", s.afspraken||0) +
-      metric("Mijn verkopen", s.verkopen||0) + metric("Closing %", (s.closing_pct||0)+"%") +
+      metricDeal("Mijn leads", s.leads||0,'leads',v.id,'',true) + metricDeal("Mijn afspraken", s.afspraken||0,'afspraken',v.id,'',true) +
+      metricDeal("Mijn verkopen", s.verkopen||0,'verkopen',v.id,'',true) + metric("Closing %", (s.closing_pct||0)+"%") +
       metric("Afval %", (s.afval_pct||0)+"%");
     $("resaleTeam").innerHTML =
       metricT("Leads per makelaar", s.team_avg_leads||0) + metricT("Afspraken per makelaar", s.team_avg_afspraken||0) +
       metricT("Verkopen per makelaar", s.team_avg_verkopen||0) + metricT("Closing %", (s.team_closing_pct||0)+"%") +
       metricT("Afval %", (s.team_afval_pct||0)+"%");
     $("resaleTeamWrap").classList.remove("hidden");
-    await resaleLeadsToon(v.id, "Mijn leads");
+    await resaleDealsToon(v.id, 'leads', '');
     return;
   }
 
@@ -1368,14 +1377,12 @@ async function renderResale(){
     `<thead><tr><th>Makelaar</th><th>Leads</th><th>Afspraken</th><th>Verkopen</th><th>Closing %</th><th>Afval %</th><th>Fee-omzet</th></tr></thead>
      <tbody>${agents.map(a=>`<tr>
        <td><span class="av"><span class="dot">${initials(a.agent)}</span>${a.agent}</span></td>
-       <td>${a.leads>0?`<span class="lead-link" data-agentid="${a.agent_id}" data-agent="${a.agent}" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px">${a.leads}</span>`:0}</td>
-       <td>${a.afspraken}</td><td>${a.verkopen}</td>
+       ${dcell(a.leads,'leads',a.agent_id,a.agent,true)}
+       ${dcell(a.afspraken,'afspraken',a.agent_id,a.agent,true)}${dcell(a.verkopen,'verkopen',a.agent_id,a.agent,true)}
        <td>${a.afspraken>0?a.closing_pct+"%":"—"}</td>
        <td>${a.leads>0?a.afval_pct+"%":"—"}</td>
        <td style="font-weight:600">${a.fee_omzet>0?eur(a.fee_omzet):"—"}</td></tr>`).join("")
        || `<tr><td colspan="7" style="color:var(--muted);padding:14px">Nog geen resale-deals met makelaar.</td></tr>`}</tbody>`;
-  document.querySelectorAll("#resaleAgentTable .lead-link").forEach(el =>
-    el.addEventListener("click", () => resaleLeadsToon(el.dataset.agentid, `Leads · ${el.dataset.agent}`)));
   $("resaleAgentWrap").classList.remove("hidden");
 
   const mo = await rpc("resale_monthly", r) || [];
@@ -1386,9 +1393,9 @@ async function renderResale(){
        <td style="font-weight:600">${Number(m.fee_omzet)>0?eur(m.fee_omzet):"—"}</td></tr>`).join("")}</tbody>`;
   $("resaleMonthWrap").classList.remove("hidden");
 }
-async function resaleLeadsToon(agentId, titel){
-  const rows = await rpc("resale_leads", { p_agent_id: agentId?Number(agentId):null, ...periodRange() }) || [];
-  $("resaleLeadsTitle").textContent = `${titel} (${rows.length})`;
+async function resaleDealsToon(agentId, kind, naam){
+  const rows = await rpc("resale_deals", { p_agent_id: agentId==null?null:Number(agentId), ...periodRange(), p_kind: kind }) || [];
+  $("resaleLeadsTitle").textContent = `${KINDLBL[kind]||"Deals"}${naam?` · ${naam}`:""} (${rows.length})`;
   $("resaleLeadsTable").innerHTML =
     `<thead><tr><th class="tl">Deal</th><th class="tl">Fase</th><th class="tl">Lead sinds</th><th class="tl">Afspraak</th><th class="tl">Verkocht</th><th>Woningwaarde</th><th></th></tr></thead>
      <tbody>${rows.map(x=>`<tr>
@@ -1399,9 +1406,21 @@ async function resaleLeadsToon(agentId, titel){
        <td style="text-align:left">${x.sale_date?dt(x.sale_date):"—"}</td>
        <td>${x.woningwaarde?eur(x.woningwaarde):"—"}</td>
        <td><a href="${x.pipedrive_url}" target="_blank" rel="noopener">Pipedrive ↗</a></td></tr>`).join("")
-       || `<tr><td colspan="7" style="color:var(--muted);padding:14px">Geen leads gevonden.</td></tr>`}</tbody>`;
+       || `<tr><td colspan="7" style="color:var(--muted);padding:14px">Geen deals gevonden.</td></tr>`}</tbody>`;
   $("resaleLeadsWrap").classList.remove("hidden");
+  $("resaleLeadsWrap").scrollIntoView({ behavior:"smooth", block:"nearest" });
 }
+
+/* centrale click-handler: elke .deal-link (cel of card) opent de bijbehorende deals */
+document.addEventListener("click", (e) => {
+  const el = e.target.closest(".deal-link");
+  if(!el) return;
+  const kind = el.dataset.kind || "leads";
+  const agentId = el.dataset.agentid ? Number(el.dataset.agentid) : null;
+  const naam = el.dataset.naam || "";
+  if(el.dataset.resale === "1") resaleDealsToon(agentId, kind, naam);
+  else toonAgentDeals(agentId, kind, naam);
+});
 
 boot();
 </script>
