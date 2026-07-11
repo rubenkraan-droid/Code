@@ -151,10 +151,10 @@
   <div class="filters">
     <select id="fPeriod">
       <option value="7">Laatste 7 dagen</option>
-      <option value="30" selected>Laatste 30 dagen</option>
+      <option value="30">Laatste 30 dagen</option>
       <option value="month">Deze maand</option>
       <option value="year">Dit jaar</option>
-      <option value="all">All-time</option>
+      <option value="all" selected>All-time</option>
       <option value="custom">Aangepast…</option>
     </select>
     <input type="date" id="fFrom" class="hidden" />
@@ -408,6 +408,7 @@ async function applyRole(){
     refresh = () => renderPark(v.id);
   }
   await refresh();
+  herstelTab();
 }
 
 /* ---------- filters wiring ---------- */
@@ -434,19 +435,32 @@ $("sideToggle").addEventListener("click", () => {
 
 /* ---------- tabs ---------- */
 let activeTab = "resultaten";
-document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => {
-  activeTab = t.dataset.tab;
-  document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active", x===t));
-  $("tabResultaten").classList.toggle("hidden", activeTab!=="resultaten");
-  $("tabAdvertenties").classList.toggle("hidden", activeTab!=="advertenties");
-  $("tabFinance").classList.toggle("hidden", activeTab!=="financien");
-  $("tabPrognose").classList.toggle("hidden", activeTab!=="prognose");
-  $("fAgent").classList.toggle("hidden", activeTab!=="resultaten" || !currentView || currentView().role!=="owner");
-  $("fPark").classList.toggle("hidden", (currentView && currentView().role==="park") || activeTab==="advertenties" || activeTab==="financien");
-  if(activeTab==="advertenties") renderAds();
-  if(activeTab==="financien") renderFinance();
-  if(activeTab==="prognose") renderPrognose();
-}));
+function toonTab(tab, opts){
+  opts = opts || {};
+  activeTab = tab;
+  document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active", x.dataset.tab===tab));
+  $("tabResultaten").classList.toggle("hidden", tab!=="resultaten");
+  $("tabAdvertenties").classList.toggle("hidden", tab!=="advertenties");
+  $("tabFinance").classList.toggle("hidden", tab!=="financien");
+  $("tabPrognose").classList.toggle("hidden", tab!=="prognose");
+  $("fAgent").classList.toggle("hidden", tab!=="resultaten" || !currentView || currentView().role!=="owner");
+  $("fPark").classList.toggle("hidden", (currentView && currentView().role==="park") || tab==="advertenties" || tab==="financien");
+  if(!opts.silent) localStorage.setItem("activeTab", tab);
+  if(tab==="advertenties") renderAds();
+  if(tab==="financien") renderFinance();
+  if(tab==="prognose") renderPrognose();
+}
+// een verborgen tab (niet beschikbaar voor deze rol) is geen geldige bestemming
+function tabBeschikbaar(tab){
+  const btn = document.querySelector(`.tab[data-tab="${tab}"]`);
+  return btn && !btn.classList.contains("hidden") && !$("tabs").classList.contains("hidden");
+}
+// na een rolwissel/herlaad de laatst bekeken tab herstellen (indien geldig voor deze rol)
+function herstelTab(){
+  const saved = localStorage.getItem("activeTab");
+  if(saved && saved!=="resultaten" && tabBeschikbaar(saved)) toonTab(saved, {silent:true});
+}
+document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => toonTab(t.dataset.tab)));
 
 /* ---------- FINANCIEN ---------- */
 let finChart;
@@ -796,7 +810,7 @@ function renderAppts(rows, showAgent){
 /* ---------- LIVE PIPEDRIVE (echte leads) ---------- */
 async function renderLive(r, pp){
   const stats = await rpc("live_lead_stats", { ...r, p_park_id: pp ?? null }) || [];
-  const kleur = {Frankrijk:"#2C5F52","Wielsche Dreef":"#B8862E",Overig:"#A5A192"};
+  const kleur = {Frankrijk:"#2C5F52","Wielsche Dreef":"#B8862E",Resale:"#B5432E",Overig:"#A5A192"};
   $("liveCards").innerHTML = stats.map(s=>
     `<div class="metric" style="border-left:3px solid ${kleur[s.markt]||'#726F60'}">
        <div class="l">${s.markt}</div><div class="v">${s.leads}</div>
@@ -804,10 +818,11 @@ async function renderLive(r, pp){
      </div>`).join("") || `<div class="metric"><div class="l">Geen leads in deze periode</div></div>`;
   const mo = await rpc("live_lead_months", { p_park_id: pp ?? null }) || [];
   const mfmt = d => { const s=new Date(d).toLocaleDateString("nl-NL",{month:"long",year:"numeric"}); return s.charAt(0).toUpperCase()+s.slice(1); };
+  const toonOverig = mo.some(m=>Number(m.overig)>0);
   $("liveMonths").innerHTML =
-    `<thead><tr><th>Maand</th><th>Frankrijk</th><th>Wielsche Dreef</th><th>Overig</th><th>Totaal</th></tr></thead>
+    `<thead><tr><th>Maand</th><th>Frankrijk</th><th>Wielsche Dreef</th><th>Resale</th>${toonOverig?"<th>Overig</th>":""}<th>Totaal</th></tr></thead>
      <tbody>${mo.map(m=>`<tr><td>${mfmt(m.maand)}</td><td>${m.frankrijk}</td><td>${m.wielsche_dreef}</td>
-       <td>${m.overig}</td><td style="font-weight:600">${m.frankrijk+m.wielsche_dreef+m.overig}</td></tr>`).join("")}</tbody>`;
+       <td>${m.resale}</td>${toonOverig?`<td>${m.overig}</td>`:""}<td style="font-weight:600">${m.frankrijk+m.wielsche_dreef+m.resale+m.overig}</td></tr>`).join("")}</tbody>`;
 }
 
 /* ---------- EIGENAAR ---------- */
