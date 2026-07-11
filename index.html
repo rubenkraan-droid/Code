@@ -549,6 +549,39 @@ let ADROWS = [], ADSORT = { key:"spend", dir:-1 }, ADPARK = null;
 const parkAccent = id => { const p = PARKS.find(x=>x.id===id); return (p && p.accent_color) || accent(); };
 const STATUSNL = { active:["Actief","sale"], killed:["Gestopt","held"], draft:["Concept","held"], unknown:["Onbekend","held"], demo:["Demo","held"] };
 
+// Afspraken als losse "zwevende" punten (geen lijn) bovenop de grafiek, geteld op de dag dat de
+// lead is aangemaakt — ook als de afspraak pas weken later is ingepland. Dagen zonder afspraak
+// krijgen null (niet 0) zodat er geen punt getekend wordt.
+function adAfsprakenDataset(dd){
+  return { type:"line", label:"Afspraken",
+    data: dd.map(x => Number(x.afspraken)>0 ? Number(x.afspraken) : null),
+    showLine:false, pointStyle:"circle", pointRadius:6, pointHoverRadius:8,
+    borderColor:"#2C5F52", backgroundColor:"#2C5F52", yAxisID:"y1", order:0 };
+}
+function adChartOptions(dd){
+  return { responsive:true, maintainAspectRatio:false,
+    interaction:{ mode:"index", intersect:false },
+    plugins:{
+      legend:{ position:"bottom", labels:{ boxWidth:10, font:{size:11} } },
+      tooltip:{
+        filter: item => !(item.dataset.label==="Afspraken" && item.raw==null),
+        callbacks:{
+          label: item => {
+            if(item.dataset.label==="Uitgaven") return `Uitgaven: ${eur(item.raw)}`;
+            return `${item.dataset.label}: ${item.raw}`;
+          },
+          afterBody: items => {
+            const i = items[0].dataIndex, leads = Number(dd[i].leads)||0, spend = Number(dd[i].spend)||0;
+            return leads>0 ? [`Kosten per lead: ${eur(spend/leads)}`] : [];
+          }
+        }
+      }
+    },
+    scales:{ y:{ position:"left", ticks:{ callback:v=>"€"+v }, grid:{display:false} },
+      y1:{ position:"right", beginAtZero:true, ticks:{precision:0}, grid:{display:false}, title:{display:true,text:"leads / afspraken",font:{size:10}} },
+      x:{ grid:{display:false}, ticks:{ maxTicksLimit:15 } } } };
+}
+
 async function renderAds(){
   const v = currentView();
   let pp;
@@ -594,12 +627,9 @@ async function renderAds(){
   adChart = new Chart($("adChart"), {
     data:{ labels: dd.map(x=>dt2(x.dag)), datasets:[
       { type:"bar", label:"Uitgaven", data:dd.map(x=>Number(x.spend)||0), backgroundColor:parkAccent(pp), yAxisID:"y", order:3 },
-      { type:"line", label:"Leads", data:dd.map(x=>Number(x.leads)||0), borderColor:"#B8862E", backgroundColor:"#B8862E", borderWidth:2, tension:0.3, pointRadius:2, yAxisID:"y1", order:1 } ]},
-    options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ position:"bottom", labels:{ boxWidth:10, font:{size:11} } } },
-      scales:{ y:{ position:"left", ticks:{ callback:v=>"€"+v }, grid:{display:false} },
-        y1:{ position:"right", beginAtZero:true, ticks:{precision:0}, grid:{display:false}, title:{display:true,text:"leads",font:{size:10}} },
-        x:{ grid:{display:false}, ticks:{ maxTicksLimit:15 } } } }
+      { type:"line", label:"Leads", data:dd.map(x=>Number(x.leads)||0), borderColor:"#B8862E", backgroundColor:"#B8862E", borderWidth:2, tension:0.3, pointRadius:2, yAxisID:"y1", order:1 },
+      adAfsprakenDataset(dd) ]},
+    options: adChartOptions(dd)
   });
 
   ADROWS = ov || [];
@@ -630,12 +660,9 @@ async function renderAdDetail(adId, naam){
   adDetailChart = new Chart($("adDetailChart"), {
     data:{ labels: dd.map(x=>dt2(x.dag)), datasets:[
       { type:"bar", label:"Uitgaven", data:dd.map(x=>Number(x.spend)||0), backgroundColor:parkAccent(ADPARK), yAxisID:"y", order:2 },
-      { type:"line", label:"Leads", data:dd.map(x=>Number(x.leads)||0), borderColor:"#B8862E", backgroundColor:"#B8862E", borderWidth:2, tension:0.3, pointRadius:2, yAxisID:"y1", order:1 } ]},
-    options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ position:"bottom", labels:{ boxWidth:10, font:{size:11} } } },
-      scales:{ y:{ position:"left", ticks:{ callback:v=>"€"+v }, grid:{display:false} },
-        y1:{ position:"right", beginAtZero:true, ticks:{precision:0}, grid:{display:false}, title:{display:true,text:"leads",font:{size:10}} },
-        x:{ grid:{display:false}, ticks:{ maxTicksLimit:15 } } } }
+      { type:"line", label:"Leads", data:dd.map(x=>Number(x.leads)||0), borderColor:"#B8862E", backgroundColor:"#B8862E", borderWidth:2, tension:0.3, pointRadius:2, yAxisID:"y1", order:1 },
+      adAfsprakenDataset(dd) ]},
+    options: adChartOptions(dd)
   });
   const met = dd.filter(x=>Number(x.spend)>0 || Number(x.leads)>0);
   $("adDetailTable").innerHTML =
