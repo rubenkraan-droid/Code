@@ -72,8 +72,12 @@ in this repo. `list_migrations` on the project is the source of truth, not git l
   Verkoopsom (`amount`, house price) → Omzet (total courtage Recraparcs invoices) → Courtage
   (makelaar's cut, `makelaar_uitbetaling`) → Marge Recraparcs (`recraparcs_marge`, the remainder).
   Ruben corrected this definition three times — do not conflate "omzet" with "marge" or with
-  "verkoopsom" again. Courtage formula: `makelaar_uitbetaling = LEAST(amount*0.015, 3500)`,
-  `recraparcs_marge = GREATEST(amount*0.015 - 3500, 0)`.
+  "verkoopsom" again. **Courtage formula is PER PARK** — table `park_commission(park_id, rate, cap)`.
+  Only Wielsche Dreef (park 3) is configured: rate 0.015, cap 3500. `recalc_deal_margins()` applies
+  each deal's park config (`makelaar_uitbetaling = LEAST(round(amount*rate), cap)`,
+  `recraparcs_marge = GREATEST(round(amount*rate) - cap, 0)`); deals in a park WITHOUT a config row get
+  `NULL` commission ("nog niet bekend"). A new park needs its own `park_commission` row before it shows
+  any commission. Don't hardcode 0.015/3500 anywhere — read `park_commission`.
 - **Makelaars never see `recraparcs_marge` or `marge_recraparcs`** in any query result or UI element
   reachable from the makelaar role. This is an AVG/privacy hard rule, not a style preference.
 - **Resale deals (`pipeline_id = 8`) are excluded** from funnel/performance RPCs (`pipeline_id<>8`
