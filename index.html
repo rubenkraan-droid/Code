@@ -941,15 +941,16 @@ async function renderAgent(agentId){
   const s = (await rpc("agent_stats", {p_agent_id:agentId, p_park_id:pp, ...r}))?.[0] || {};
   $("cardsTop").innerHTML =
     metric("Mijn afspraken",s.appointments||0) + metric("Mijn sales",s.sales||0) +
-    metric("Mijn omzet",eur(s.revenue)) + metric("Omzet per afspraak",eur(s.revenue_per_appt)) +
+    metric("Mijn verkoopsom",eur(s.revenue)) + metric("Mijn commissie",eur(s.mijn_commissie)) +
+    metric("Verkoopsom per afspraak",eur(s.revenue_per_appt)) +
     metric("Closing %",(s.closing_rate_pct||0)+"%") + metric("Afval %",(s.afval_pct||0)+"%") +
     metric("No-show %",(s.no_show_pct||0)+"%");
   $("cardsTeam").innerHTML =
-    metricT("Omzet per afspraak",eur(s.team_revenue_per_appt)) +
+    metricT("Verkoopsom per afspraak",eur(s.team_revenue_per_appt)) +
     metricT("Closing %",(s.team_closing_rate_pct||0)+"%") +
     metricT("Afval %",(s.team_afval_pct||0)+"%") +
     metricT("Afspraken per makelaar",s.team_avg_appointments||0) +
-    metricT("Omzet per makelaar",eur(s.team_avg_revenue));
+    metricT("Verkoopsom per makelaar",eur(s.team_avg_revenue));
   const cs = (await rpc("call_overview", {p_from:r.p_from, p_to:r.p_to, p_park_id:pp, p_agent_id:agentId}))?.[0] || {};
   $("cardsCallMe").innerHTML =
     metric("Gebeld",cs.gebeld||0) + metric("Gesprek",cs.gesprek||0) + metric("Ingepland",cs.ingepland||0) +
