@@ -941,7 +941,7 @@ async function renderAgent(agentId){
   const s = (await rpc("agent_stats", {p_agent_id:agentId, p_park_id:pp, ...r}))?.[0] || {};
   $("cardsTop").innerHTML =
     metric("Mijn afspraken",s.appointments||0) + metric("Mijn sales",s.sales||0) +
-    metric("Mijn verkoopsom",eur(s.revenue)) + metric("Mijn commissie",eur(s.mijn_commissie)) +
+    metric("Mijn omzet",eur(s.revenue)) + metric("Mijn commissie",eur(s.mijn_commissie)) +
     metric("Omzet per afspraak",eur(s.revenue_per_appt)) +
     metric("Closing %",(s.closing_rate_pct||0)+"%") + metric("Afval %",(s.afval_pct||0)+"%") +
     metric("No-show %",(s.no_show_pct||0)+"%");
