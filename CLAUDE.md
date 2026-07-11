@@ -129,22 +129,35 @@ in this repo. `list_migrations` on the project is the source of truth, not git l
   above). Brevo was discussed as the SMTP provider (host `smtp-relay.brevo.com:587`, needs SPF/DKIM
   for `recraparcs.nl` specifically, not whatever domain Golden Bricks already verified).
 
-## Current state
+## Current state (bijgewerkt 2026-07-11, eind sessie)
 
-**Done:** role-based views (Eigenaar/Makelaar/Ontwikkelaar), custom domain, Wielsche Dreef branding,
-hourly Pipedrive sync + 6-hourly Meta sync (France only), park exclusions (Riverte/Berkenstrand),
-Financiën tab with the 4-number courtage breakdown, margin hidden from makelaar UI, ontbindende
-voorwaarden "Verlopen" badge, "Definitief" status on reaching stage B, real (non-demo) funnel numbers
-for France, call-activity overview (Gebeld/Gesprek/Ingepland), appointment counting from "Afspraak
-gepland" (not just "Afspraak geweest") with no-show tracking via the "Klant niet geweest" stage and a
-"No-show %" KPI on owner/agent/park views. Ad-name placeholder backfill for paused/old ads (see
-Gotchas) — ran once, fixed all 7 affected rows at the time.
+Fullest handoff = Google Drive **Recraparcs / agent-dashboard** → doc "CONTEXT — RecraVas agent-dashboard".
 
-**Known broken:**
-- Possible duplicate `ads` rows for the same real ad (see Gotchas) — needs investigation before a fix.
+**Done:** role-based views (Eigenaar/Makelaar/Ontwikkelaar); custom domain; Wielsche Dreef branding
+(alleen WD, niet Frankrijk); hourly Pipedrive + 6-hourly Meta sync (France only); Financiën tab with
+the 4-number courtage breakdown, margin hidden from makelaar; "Verlopen" badge; "Definitief" status;
+appointment counting from "Afspraak gepland" + no-show via "Klant niet geweest" + "No-show %" KPI;
+verkoop telt vanaf "Informeel akkoord ontvangen".
+**Deze sessie toegevoegd:** volledige redesign (zijbalk-nav met hamburger-inklap, warme kleuren, serif
+KPI's) + **mobiele layout** (compacte topbalk, horizontaal scrollbare tabs, tabellen scrollen binnen
+paneel); UI-naam **RecraVas**; **Resale**-label i.p.v. Overig (pipeline 8); defaults op **all-time**;
+**actieve tab onthouden bij refresh** (localStorage); **Show %** vóór Closing % + Leads/Sales in
+per-makelaar tabel; **Gesprek→afspraak %** in beloverzicht; **Ongekwalificeerd %** per advertentie +
+waarschuwingsvlag; advertentiegrafiek met **zwevende afspraak-bolletjes** + tooltip (kosten/lead,
+leads, uitgaven, afspraken); **verloren-redenen klikbaar** (RPC `lost_deals` → deals + Pipedrive-links);
+afspraken-no-show apart als **"Niet geweest"** (i.p.v. onterecht "Gehouden") in `appointments_detail`;
+**makelaar ziet eigen commissie** (`agent_stats.mijn_commissie` = sum `makelaar_uitbetaling`; omzet/marge
+blijven verborgen); `manual_ad_spend`-tabel (leeg); Meta-spend volledig herbouwd uit echte Meta-historie
+(campagne-id-dubbeltellingen weg); WD demo-advertenties verwijderd.
 
-**Not started / waiting on Ruben:**
-- Supabase Auth SMTP setup (Brevo or Resend) → then re-enable login → then margin access becomes a
-  real DB-level boundary again.
-- Wielsche Dreef Meta ad account connection (was pending "this afternoon" as of the last session — status
-  unconfirmed) [unverified].
+**Bekend / open:**
+- **Bel-activiteiten leeg**: `call_activities` = 0 rijen. In Pipedrive staan 45 activiteiten, ALLEMAAL
+  type "Verkoopdag" — nul van type call/ggh/ongelegen. De pijplijn (sync → per makelaar tellen) werkt en
+  vult zich zodra het team gesprekken als Gesprek/GGH/Ongelegen-activiteit logt. Niets kapot; er is enkel
+  geen data. "Ingepland" komt uit deals, niet uit activiteiten.
+- **Betrokken verkoper**: slechts ~10 van ~530 deals hebben dit veld ingevuld → per-makelaar cijfers
+  (incl. commissie) grotendeels leeg. CRM-datakwaliteit, geen bug.
+- Mogelijke dubbele `ads`-rijen (zie Gotchas).
+- **SMTP** (Brevo) nog niet ingesteld → login uit → marge nog niet db-niveau afgeschermd.
+- **Wielsche Dreef Meta-adaccount** koppelen zodra Ruben toegang heeft (nu alleen Frankrijk-account;
+  tot dan handmatige spend mogelijk via `manual_ad_spend`).
