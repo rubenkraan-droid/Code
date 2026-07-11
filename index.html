@@ -305,8 +305,14 @@
     </div>
     <div id="adOverviewSec">
       <div id="adWarnBanner" class="hidden banner" style="background:var(--warn-soft);color:var(--warn);padding:10px 14px;border-radius:8px"></div>
-      <div class="sec">Per advertentie · klik op een rij voor het dagverloop, op een kolomkop om te sorteren</div>
+      <div class="sec">Per advertentie · klik op een rij voor het dagverloop, op een aantal (leads/afspraken/sales) voor de deals, op een kolomkop om te sorteren</div>
       <div class="panel"><div class="scroll"><table id="adTable"></table></div></div>
+    </div>
+    <div id="adDealsSec" class="hidden" style="margin-top:26px">
+      <div class="sec"><span id="adDealsTitle">Deals</span>
+        <button onclick="$('adDealsSec').classList.add('hidden')" style="margin-left:10px;border:1px solid var(--line);background:#fff;border-radius:7px;padding:3px 10px;font:inherit;font-size:12px;cursor:pointer">Sluiten ×</button>
+      </div>
+      <div class="panel" style="margin-bottom:26px"><div class="scroll"><table id="adDealsTable"></table></div></div>
     </div>
     <div id="adBestSec" class="hidden" style="margin-top:26px">
       <div class="sec"><span id="adBestTitle">Best presterende advertenties</span>
@@ -443,6 +449,9 @@ const dcell = (waarde, kind, agentId, naam, resale) => Number(waarde)>0
   : `<td>${waarde}</td>`;
 const metricDeal = (l,v,kind,agentId,naam,resale,parkId) =>
   `<div class="metric deal-link" style="cursor:pointer" data-kind="${kind}" data-agentid="${agentId==null?'':agentId}" data-naam="${String(naam||'').replace(/"/g,'')}" data-resale="${resale?1:0}" data-park="${parkId==null?'':parkId}"><div class="l">${l} <span style="font-size:11px;color:var(--muted)">↗</span></div><div class="v">${v}</div></div>`;
+const adLink = (v,kind,adId,naam) => Number(v)>0
+  ? `<span class="ad-deal-link" data-adid="${adId}" data-kind="${kind}" data-naam="${String(naam||'').replace(/"/g,'')}" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px">${v}</span>`
+  : v;
 const metricT = (l,v) => `<div class="metric team"><div class="l">${l}</div><div class="v">${v}</div></div>`;
 async function rpc(fn, args){ const {data,error} = await sb.rpc(fn, args||{});
   if(error){ console.error(fn, error); return null; } return data; }
@@ -1011,10 +1020,10 @@ function drawAdTable(){
          <td style="text-align:left"><span class="badge ${st[1]}">${st[0]}</span></td>
          <td style="font-weight:600">${eur(a.spend)}</td><td>${a.clicks}</td>
          <td>${a.cpc ? "€"+Number(a.cpc).toLocaleString("nl-NL",{minimumFractionDigits:2,maximumFractionDigits:2}) : "—"}</td>
-         <td>${a.leads}</td><td>${a.leads>0 ? eur(a.cpl) : "—"}</td>
-         <td>${a.afspraken}</td><td>${a.afspraken>0 ? eur(a.cpa) : "—"}</td>
+         <td>${adLink(a.leads,'leads',a.ad_id,a.advertentie)}</td><td>${a.leads>0 ? eur(a.cpl) : "—"}</td>
+         <td>${adLink(a.afspraken,'afspraken',a.ad_id,a.advertentie)}</td><td>${a.afspraken>0 ? eur(a.cpa) : "—"}</td>
          <td class="${okCls}">${a.leads>0 ? ok+"%"+relMark : "—"}</td>
-         <td>${a.sales}</td><td>${a.omzet>0 ? eur(a.omzet) : "—"}</td>
+         <td>${adLink(a.sales,'verkopen',a.ad_id,a.advertentie)}</td><td>${a.omzet>0 ? eur(a.omzet) : "—"}</td>
          <td>${Number(a.roas)>0 ? Number(a.roas).toFixed(2) : "—"}</td></tr>`;
      }).join(""); })()}</tbody>`;
   document.querySelectorAll("#adTable th").forEach(th => th.addEventListener("click", () => {
@@ -1024,6 +1033,10 @@ function drawAdTable(){
   }));
   document.querySelectorAll("#adTable tbody tr").forEach(tr => tr.addEventListener("click", () => {
     renderAdDetail(Number(tr.dataset.adid), tr.dataset.naam);
+  }));
+  document.querySelectorAll("#adTable .ad-deal-link").forEach(el => el.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toonAdDeals(Number(el.dataset.adid), el.dataset.kind, el.dataset.naam);
   }));
 }
 
@@ -1430,6 +1443,24 @@ async function resaleDealsToon(agentId, kind, naam){
        || `<tr><td colspan="7" style="color:var(--muted);padding:14px">Geen deals gevonden.</td></tr>`}</tbody>`;
   $("resaleLeadsWrap").classList.remove("hidden");
   $("resaleLeadsWrap").scrollIntoView({ behavior:"smooth", block:"nearest" });
+}
+
+async function toonAdDeals(adId, kind, naam){
+  const rows = await rpc("ad_deals", { p_ad_id: Number(adId), ...periodRange(), p_kind: kind }) || [];
+  $("adDealsTitle").textContent = `${KINDLBL[kind]||"Deals"} · ${naam} (${rows.length})`;
+  $("adDealsTable").innerHTML =
+    `<thead><tr><th class="tl">Deal</th><th class="tl">Fase</th><th class="tl">Lead sinds</th><th class="tl">Afspraak</th><th class="tl">Verkocht</th><th>Verkoopsom</th><th></th></tr></thead>
+     <tbody>${rows.map(x=>`<tr>
+       <td style="text-align:left">#${x.deal_id}${x.titel?` · ${x.titel}`:""}</td>
+       <td style="text-align:left">${x.stage_name||"—"}</td>
+       <td style="text-align:left">${x.lead_created?dt(x.lead_created):"—"}</td>
+       <td style="text-align:left">${x.appointment_date?dt(x.appointment_date):"—"}</td>
+       <td style="text-align:left">${x.sale_date?dt(x.sale_date):"—"}</td>
+       <td>${x.bedrag>0?eur(x.bedrag):"—"}</td>
+       <td><a href="${x.pipedrive_url}" target="_blank" rel="noopener">Pipedrive ↗</a></td></tr>`).join("")
+       || `<tr><td colspan="7" style="color:var(--muted);padding:14px">Geen deals gevonden.</td></tr>`}</tbody>`;
+  $("adDealsSec").classList.remove("hidden");
+  $("adDealsSec").scrollIntoView({ behavior:"smooth", block:"nearest" });
 }
 
 /* centrale click-handler: elke .deal-link (cel of card) opent de bijbehorende deals */
