@@ -859,10 +859,11 @@ async function renderAdDetail(adId, naam){
       adAfsprakenDataset(dd) ]},
     options: adChartOptions(dd)
   });
+  // grafiek blijft chronologisch (oud -> nieuw); tabel toont nieuwste dag bovenaan
   const met = dd.filter(x=>Number(x.spend)>0 || Number(x.leads)>0);
   $("adDetailTable").innerHTML =
     `<thead><tr><th>Dag</th><th>Uitgaven</th><th>Clicks</th><th>Leads</th><th>Kosten per lead</th></tr></thead>
-     <tbody>${met.map(x=>{
+     <tbody>${[...met].reverse().map(x=>{
        const l=Number(x.leads)||0, s=Number(x.spend)||0;
        return `<tr><td>${dt2(x.dag)}</td><td style="font-weight:600">${eur(s)}</td><td>${x.clicks}</td>
          <td>${l}</td><td>${l>0 ? eur(s/l) : "—"}</td></tr>`;
