@@ -72,12 +72,18 @@ in this repo. `list_migrations` on the project is the source of truth, not git l
   Verkoopsom (`amount`, house price) → Omzet (total courtage Recraparcs invoices) → Courtage
   (makelaar's cut, `makelaar_uitbetaling`) → Marge Recraparcs (`recraparcs_marge`, the remainder).
   Ruben corrected this definition three times — do not conflate "omzet" with "marge" or with
-  "verkoopsom" again. **Courtage formula is PER PARK** — table `park_commission(park_id, rate, cap)`.
-  Only Wielsche Dreef (park 3) is configured: rate 0.015, cap 3500. `recalc_deal_margins()` applies
-  each deal's park config (`makelaar_uitbetaling = LEAST(round(amount*rate), cap)`,
-  `recraparcs_marge = GREATEST(round(amount*rate) - cap, 0)`); deals in a park WITHOUT a config row get
-  `NULL` commission ("nog niet bekend"). A new park needs its own `park_commission` row before it shows
-  any commission. Don't hardcode 0.015/3500 anywhere — read `park_commission`.
+  "verkoopsom" again. **Courtage formula is PER PARK, with TWO rates** — table
+  `park_commission(park_id, omzet_rate, makelaar_rate, makelaar_cap)`. `omzet_rate` = total courtage
+  RecraVas invoices; `makelaar_rate`+`makelaar_cap` = the makelaar's cut. Configured: Wielsche Dreef
+  (park 3) omzet_rate 0.015 / makelaar 0.015 / cap 3500 (so total courtage = 1.5%); Frankrijk (park 1)
+  omzet_rate 0.055 / makelaar 0.015 / cap 3500 (total courtage 5.5%, makelaar still 1.5% max 3500,
+  RecraVas keeps the big rest). `recalc_deal_margins()`:
+  `makelaar_uitbetaling = LEAST(round(amount*makelaar_rate), makelaar_cap)`,
+  `recraparcs_marge = round(amount*omzet_rate) - makelaar_uitbetaling` (so omzet = makelaar+marge =
+  amount*omzet_rate). Deals in a park WITHOUT a config row get `NULL` commission. A new park needs its
+  own `park_commission` row. **The makelaar's cut is always 1.5% max 3500 across parks** (only omzet_rate
+  differs), so makelaar-facing "commissie" copy can safely say 1,5%/€3.500. Never hardcode rates — read
+  `park_commission`.
 - **Makelaars never see `recraparcs_marge` or `marge_recraparcs`** in any query result or UI element
   reachable from the makelaar role. This is an AVG/privacy hard rule, not a style preference.
 - **Resale deals (`pipeline_id = 8`) are excluded** from funnel/performance RPCs (`pipeline_id<>8`
