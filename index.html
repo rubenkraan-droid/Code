@@ -588,7 +588,7 @@ async function renderFinance(){
 
   $("finTable").innerHTML =
     `<thead><tr><th>Kavel</th><th class="tl">Park</th><th class="tl">Makelaar</th><th class="tl">Status</th>
-      <th>Verkoopsom</th><th>Omzet</th><th>Courtage</th><th>Marge RecraVas</th><th class="tl">Notarisdatum</th><th class="tl">Ontbindende voorwaarden</th><th></th></tr></thead>
+      <th>Verkoopsom</th><th>Omzet</th><th>Courtage</th><th>Marge RecraVas</th><th class="tl">Notarisdatum</th><th class="tl">Ontbindende Vw.</th><th></th></tr></thead>
      <tbody>${rows.map(r=>`<tr>
        <td style="text-align:left">${r.kavelnummer || "—"}</td>
        <td style="text-align:left">${r.park}</td>
@@ -647,7 +647,7 @@ async function renderFinanceAgent(agentId){
 
   $("finTable").innerHTML =
     `<thead><tr><th>Kavel</th><th class="tl">Park</th><th class="tl">Status</th>
-      <th>Verkoopsom</th><th>Mijn commissie</th><th class="tl">Notarisdatum</th><th class="tl">Ontbindende voorwaarden</th><th></th></tr></thead>
+      <th>Verkoopsom</th><th>Mijn commissie</th><th class="tl">Notarisdatum</th><th class="tl">Ontbindende Vw.</th><th></th></tr></thead>
      <tbody>${rows.map(r=>`<tr>
        <td style="text-align:left">${r.kavelnummer || "—"}</td>
        <td style="text-align:left">${r.park}</td>
