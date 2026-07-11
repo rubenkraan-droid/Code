@@ -73,6 +73,7 @@
   table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
   th,td{padding:11px 12px;text-align:right;white-space:nowrap}
   th:first-child,td:first-child{text-align:left;font-variant-numeric:normal}
+  th.tl,td.tl{text-align:left;font-variant-numeric:normal}
   thead tr{background:var(--surface-2)}
   thead th{position:sticky;top:0;background:var(--surface-2);text-transform:uppercase;font-size:10.5px;letter-spacing:.03em}
   th{font-weight:600;color:var(--muted)}
@@ -275,11 +276,11 @@
   </div>
 
   <div id="tabFinance" class="hidden">
-    <div class="sec">Mondeling verkocht en verder
+    <div class="sec" id="finSecTop">Mondeling verkocht en verder
       <span class="info" tabindex="0">i<span class="tip">Alle deals vanaf mondeling akkoord (Informeel akkoord ontvangen) tot en met notaris gepasseerd. Courtage = 1,5% van de verkoopsom, met een maximum van €3.500 voor de makelaar. Wat RecraVas overhoudt is de courtage minus de makelaarsuitbetaling.</span></span>
     </div>
     <div class="cards" id="finKpis"></div>
-    <div class="sec" style="margin-top:22px">Omzet en winst per maand
+    <div class="sec" id="finSecMonth" style="margin-top:22px">Omzet en winst per maand
       <span class="info" tabindex="0">i<span class="tip">Omzet = totale courtage die RecraVas factureert (1,5% van de verkoopsom). Winst = wat overblijft na uitbetaling aan de makelaar (max €3.500 per verkoop). Gegroepeerd op de maand waarin de deal definitief werd.</span></span>
     </div>
     <div class="chartbox" style="margin-bottom:14px"><canvas id="finChart" height="220"></canvas></div>
@@ -413,10 +414,11 @@ async function applyRole(){
   $("apptSec").classList.toggle("hidden", parkV);
   $("fPark").classList.toggle("hidden", parkV);
   $("fAgent").classList.toggle("hidden", !owner);
-  // advertenties-tab niet voor makelaars; bij rolwissel terug naar Resultaten
+  // makelaar ziet Resultaten + Financiën (eigen commissie); geen advertenties/prognose.
   document.querySelector('.tab[data-tab="advertenties"]').classList.toggle("hidden", agentV);
-  document.querySelector('.tab[data-tab="financien"]').classList.toggle("hidden", agentV || parkV);
-  $("tabs").classList.toggle("hidden", agentV);
+  document.querySelector('.tab[data-tab="financien"]').classList.toggle("hidden", parkV);
+  document.querySelector('.tab[data-tab="prognose"]').classList.toggle("hidden", agentV);
+  $("tabs").classList.remove("hidden");
   activeTab = "resultaten";
   document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active", x.dataset.tab==="resultaten"));
   $("tabResultaten").classList.remove("hidden");
@@ -481,7 +483,7 @@ function toonTab(tab, opts){
   $("fPark").classList.toggle("hidden", (currentView && currentView().role==="park") || tab==="advertenties" || tab==="financien");
   if(!opts.silent) localStorage.setItem("activeTab", tab);
   if(tab==="advertenties") renderAds();
-  if(tab==="financien") renderFinance();
+  if(tab==="financien"){ const cv=currentView(); if(cv.role==="agent") renderFinanceAgent(cv.id); else renderFinance(); }
   if(tab==="prognose") renderPrognose();
 }
 // een verborgen tab (niet beschikbaar voor deze rol) is geen geldige bestemming
@@ -501,6 +503,8 @@ let finChart;
 async function renderFinance(){
   const v = currentView();
   const pp = v.role==="owner" ? ($("fPark").value==="all" ? null : Number($("fPark").value)) : v.id;
+  $("finSecTop").innerHTML = `Mondeling verkocht en verder <span class="info" tabindex="0">i<span class="tip">Alle deals vanaf mondeling akkoord (Informeel akkoord ontvangen) tot en met notaris gepasseerd. Courtage = 1,5% van de verkoopsom, met een maximum van €3.500 voor de makelaar. Wat RecraVas overhoudt is de courtage minus de makelaarsuitbetaling.</span></span>`;
+  $("finSecMonth").innerHTML = `Omzet en winst per maand <span class="info" tabindex="0">i<span class="tip">Omzet = totale courtage die RecraVas factureert (1,5% van de verkoopsom). Winst = wat overblijft na uitbetaling aan de makelaar (max €3.500 per verkoop).</span></span>`;
   const rows = await rpc("finance_deals", { p_park_id: pp }) || [];
 
   const mo = await rpc("finance_monthly", { p_park_id: pp }) || [];
@@ -551,8 +555,8 @@ async function renderFinance(){
   const statusKleur = s => s==="Afgevallen" ? "bad" : s.startsWith("Definitief") ? "good" : "";
 
   $("finTable").innerHTML =
-    `<thead><tr><th>Kavel</th><th>Park</th><th>Makelaar</th><th>Status</th>
-      <th>Verkoopsom</th><th>Omzet</th><th>Courtage</th><th>Marge RecraVas</th><th>Notarisdatum</th><th>Ontbindende voorwaarden</th><th></th></tr></thead>
+    `<thead><tr><th>Kavel</th><th class="tl">Park</th><th class="tl">Makelaar</th><th class="tl">Status</th>
+      <th>Verkoopsom</th><th>Omzet</th><th>Courtage</th><th>Marge RecraVas</th><th class="tl">Notarisdatum</th><th class="tl">Ontbindende voorwaarden</th><th></th></tr></thead>
      <tbody>${rows.map(r=>`<tr>
        <td style="text-align:left">${r.kavelnummer || "—"}</td>
        <td style="text-align:left">${r.park}</td>
@@ -562,10 +566,66 @@ async function renderFinance(){
        <td>${r.omzet!=null ? eur(r.omzet) : "Nog niet bekend"}</td>
        <td>${r.courtage_makelaar!=null ? eur(r.courtage_makelaar) : "Nog niet bekend"}</td>
        <td>${r.marge_recraparcs!=null ? eur(r.marge_recraparcs) : "Nog niet bekend"}</td>
-       <td>${dt(r.notary_date)}</td>
-       <td>${dtVoorwaarde(r.rescission_date)}</td>
+       <td style="text-align:left">${dt(r.notary_date)}</td>
+       <td style="text-align:left">${dtVoorwaarde(r.rescission_date)}</td>
        <td><a href="${r.pipedrive_url}" target="_blank" rel="noopener">Pipedrive ↗</a></td>
      </tr>`).join("") || `<tr><td colspan="10" style="color:var(--muted);padding:14px">Nog geen deals mondeling verkocht of verder in deze selectie.</td></tr>`}</tbody>`;
+}
+
+/* ---------- FINANCIEN per makelaar (eigen commissie; GEEN omzet-totaal/marge, AVG) ---------- */
+async function renderFinanceAgent(agentId){
+  const pp = $("fPark").value==="all" ? null : Number($("fPark").value);
+  $("finSecTop").innerHTML = `Mijn verkopen · mondeling akkoord en verder <span class="info" tabindex="0">i<span class="tip">Al jouw deals vanaf mondeling akkoord (Informeel akkoord ontvangen) tot en met notaris gepasseerd. Commissie = 1,5% van de verkoopsom, met een maximum van €3.500 per verkoop.</span></span>`;
+  $("finSecMonth").innerHTML = `Mijn commissie per maand`;
+  const rows = await rpc("finance_deals_agent", { p_agent_id: agentId, p_park_id: pp }) || [];
+  const mo = await rpc("finance_monthly_agent", { p_agent_id: agentId, p_park_id: pp }) || [];
+  const mfmt = d => { const s=new Date(d).toLocaleDateString("nl-NL",{month:"long",year:"numeric"}); return s.charAt(0).toUpperCase()+s.slice(1); };
+  if(finChart) finChart.destroy();
+  finChart = new Chart($("finChart"), {
+    data:{ labels: mo.map(x=>mfmt(x.maand)), datasets:[
+      { type:"bar", label:"Verkoopsom", data:mo.map(x=>Number(x.verkoopsom)||0), backgroundColor:"#D2CBB6", order:2 },
+      { type:"bar", label:"Mijn commissie", data:mo.map(x=>Number(x.mijn_commissie)||0), backgroundColor:accent(), order:1 } ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:"bottom", labels:{ boxWidth:10, font:{size:11} } } },
+      scales:{ y:{ ticks:{ callback:v=>"€"+v }, grid:{display:false} }, x:{ grid:{display:false} } } }
+  });
+  $("finMonthTable").innerHTML =
+    `<thead><tr><th>Maand</th><th>Verkopen</th><th>Verkoopsom</th><th>Mijn commissie</th></tr></thead>
+     <tbody>${mo.map(x=>`<tr><td>${mfmt(x.maand)}</td><td>${x.verkopen}</td><td>${eur(x.verkoopsom)}</td>
+       <td style="font-weight:600;color:var(--good)">${eur(x.mijn_commissie)}</td></tr>`).join("")
+       || `<tr><td colspan="4" style="color:var(--muted);padding:14px">Nog geen definitieve verkopen om per maand te tonen.</td></tr>`}</tbody>`;
+
+  const lopend = rows.filter(r => r.status_label !== "Afgevallen");
+  const definitief = lopend.filter(r => r.status_label.startsWith("Definitief"));
+  const bekend = r => r.amount != null;
+  const somVan = (list, key) => list.reduce((s,r)=>s+(bekend(r)?Number(r[key]||0):0),0);
+  $("finKpis").innerHTML =
+    metric("Mondeling verkocht (of verder)", lopend.length) +
+    metric("Waarvan definitief", definitief.length) +
+    metric("Mijn verkoopsom totaal", eur(somVan(lopend,"amount"))) +
+    metric("Mijn commissie totaal", eur(somVan(lopend,"mijn_commissie"))) +
+    metric("Waarvan definitief (commissie)", eur(somVan(definitief,"mijn_commissie"))) +
+    metric("Afgevallen", rows.length - lopend.length);
+
+  const dt = d => d ? new Date(d).toLocaleDateString("nl-NL",{day:"2-digit",month:"short",year:"numeric"}) : "Nog niet bekend";
+  const vandaag = new Date().toISOString().slice(0,10);
+  const dtVoorwaarde = d => { if(!d) return "Nog niet bekend"; const label = dt(d);
+    return d < vandaag ? `${label} <span class="badge held" style="background:var(--bad-soft);color:var(--bad)">Verlopen</span>` : label; };
+  const statusKleur = s => s==="Afgevallen" ? "bad" : s.startsWith("Definitief") ? "good" : "";
+
+  $("finTable").innerHTML =
+    `<thead><tr><th>Kavel</th><th class="tl">Park</th><th class="tl">Status</th>
+      <th>Verkoopsom</th><th>Mijn commissie</th><th class="tl">Notarisdatum</th><th class="tl">Ontbindende voorwaarden</th><th></th></tr></thead>
+     <tbody>${rows.map(r=>`<tr>
+       <td style="text-align:left">${r.kavelnummer || "—"}</td>
+       <td style="text-align:left">${r.park}</td>
+       <td style="text-align:left" class="${statusKleur(r.status_label)}">${r.status_label}</td>
+       <td>${r.amount!=null ? eur(r.amount) : "Nog niet bekend"}</td>
+       <td style="font-weight:600;color:var(--good)">${r.mijn_commissie!=null ? eur(r.mijn_commissie) : "Nog niet bekend"}</td>
+       <td style="text-align:left">${dt(r.notary_date)}</td>
+       <td style="text-align:left">${dtVoorwaarde(r.rescission_date)}</td>
+       <td><a href="${r.pipedrive_url}" target="_blank" rel="noopener">Pipedrive ↗</a></td>
+     </tr>`).join("") || `<tr><td colspan="8" style="color:var(--muted);padding:14px">Nog geen deals mondeling verkocht of verder.</td></tr>`}</tbody>`;
 }
 
 /* ---------- PROGNOSE ---------- */
@@ -755,7 +815,7 @@ function drawAdTable(){
   });
   $("adTable").innerHTML =
     `<thead><tr>${ADCOLS.map(([key,label])=>
-      `<th data-key="${key}" style="cursor:pointer;user-select:none">${label}${s.key===key ? (s.dir<0?" ↓":" ↑") : ""}</th>`).join("")}</tr></thead>
+      `<th data-key="${key}" class="${key==='advertentie'||key==='status'?'tl':''}" style="cursor:pointer;user-select:none">${label}${s.key===key ? (s.dir<0?" ↓":" ↑") : ""}</th>`).join("")}</tr></thead>
      <tbody>${rows.map(a=>{
        const st = STATUSNL[a.status] || [a.status||"—","held"];
        const ok = Number(a.ongekwalificeerd_pct)||0;
@@ -823,8 +883,8 @@ function drawSalesChart(labels, omzet, aantal){
 /* ---------- appointments table (owner + makelaar) ---------- */
 function renderAppts(rows, showAgent){
   $("apptTable").innerHTML =
-    `<thead><tr><th>Datum</th>${showAgent?"<th>Makelaar</th>":""}<th>Park</th><th>Kavel</th><th>Status</th>
-      <th>Verkocht op</th><th>Notaris</th><th>Omzet</th><th></th></tr></thead>
+    `<thead><tr><th>Datum</th>${showAgent?"<th class=\"tl\">Makelaar</th>":""}<th class="tl">Park</th><th class="tl">Kavel</th><th class="tl">Status</th>
+      <th class="tl">Verkocht op</th><th class="tl">Notaris</th><th>Omzet</th><th></th></tr></thead>
      <tbody>${rows.map(x=>{
        const label = {sale:"Verkocht",lost:"Afgevallen",no_show:"Niet geweest"}[x.outcome] || "Gehouden";
        const cls = {sale:"sale",lost:"lost",no_show:"lost"}[x.outcome] || "held";
@@ -833,8 +893,8 @@ function renderAppts(rows, showAgent){
          <td style="text-align:left">${x.park.replace("Park ","")}</td>
          <td style="text-align:left">${x.kavelnummer || "—"}</td>
          <td style="text-align:left"><span class="badge ${cls}">${label}</span></td>
-         <td>${x.sale_date?dt(x.sale_date):"—"}</td>
-         <td>${x.notary_date?dt(x.notary_date):"—"}</td>
+         <td style="text-align:left">${x.sale_date?dt(x.sale_date):"—"}</td>
+         <td style="text-align:left">${x.notary_date?dt(x.notary_date):"—"}</td>
          <td style="font-weight:600">${x.sale_amount?eur(x.sale_amount):"—"}</td>
          <td><a href="${x.pipedrive_url}" target="_blank" rel="noopener">Pipedrive ↗</a></td></tr>`;
      }).join("")}</tbody>`;
@@ -1022,7 +1082,7 @@ async function toonVerlorenDeals(fase, reden){
   const rows = await rpc("lost_deals", { ...LOST_CTX.r, p_market:LOST_CTX.markt, p_fase:fase, p_reden:reden }) || [];
   $("lostDealsTitle").textContent = `Verloren deals · ${reden} (${rows.length})`;
   $("lostDealsTable").innerHTML =
-    `<thead><tr><th>Makelaar</th><th>Lead sinds</th><th>Reden (zoals ingevuld)</th><th></th></tr></thead>
+    `<thead><tr><th>Makelaar</th><th class="tl">Lead sinds</th><th class="tl">Reden (zoals ingevuld)</th><th></th></tr></thead>
      <tbody>${rows.map(x=>`<tr>
        <td style="text-align:left">${x.agent}</td>
        <td style="text-align:left">${x.lead_created?dt(x.lead_created):"—"}</td>
