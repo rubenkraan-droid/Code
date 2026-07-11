@@ -409,6 +409,7 @@ $("fPeriod").addEventListener("change", e=>{
   const show = e.target.value==="custom";
   $("fFrom").classList.toggle("hidden",!show); $("fTo").classList.toggle("hidden",!show);
   refresh();
+  if(activeTab==="advertenties") renderAds();
 });
 let refresh = ()=>{};
 ["fFrom","fTo","fPark","fAgent"].forEach(id=>$(id).addEventListener("change", ()=>{ refresh(); if(activeTab==="advertenties") renderAds(); }));
@@ -565,6 +566,7 @@ async function renderAds(){
       ADPARK = Number(b.dataset.park); renderAds();
     }));
   }
+  setBranding(pp);
   const r = periodRange();
   const [k, daily, ov] = await Promise.all([
     rpc("ad_kpis",  { ...r, p_park_id: pp }).then(x=>x?.[0]||{}),
