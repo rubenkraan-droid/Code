@@ -23,7 +23,6 @@
   h1{font-family:var(--serif);font-weight:500;font-size:22px;margin:0}
   .shell{display:grid;grid-template-columns:220px 1fr;min-height:100vh;transition:grid-template-columns .18s ease}
   .shell.collapsed{grid-template-columns:60px 1fr}
-  @media(max-width:860px){.shell{grid-template-columns:1fr}.side{flex-direction:row;flex-wrap:wrap;align-items:center;gap:10px 16px}}
   .side{background:var(--surface-2);border-right:1px solid var(--line);padding:22px 16px;
     display:flex;flex-direction:column;gap:20px}
   .shell.collapsed .side{padding:22px 10px}
@@ -104,6 +103,34 @@
   #gate button:hover{background:var(--accent-ink)}
   #gateMsg{font-size:13px;margin-top:14px;min-height:18px}
   .hidden{display:none}
+  /* ---------- mobiel ---------- */
+  @media(max-width:860px){
+    .shell,.shell.collapsed{grid-template-columns:1fr}
+    .side,.shell.collapsed .side{flex-direction:column;align-items:stretch;gap:10px;
+      padding:12px 14px;border-right:none;border-bottom:1px solid var(--line)}
+    #sideToggle{display:none}
+    .brand{padding:0 2px}
+    .shell.collapsed .brand{justify-content:flex-start}
+    .shell.collapsed .brand .name{display:block}
+    #tabs{flex-direction:row;overflow-x:auto;gap:6px;padding-bottom:2px;-webkit-overflow-scrolling:touch}
+    .tab,.shell.collapsed .tab{width:auto;flex:none;white-space:nowrap;justify-content:flex-start;padding:8px 13px}
+    .shell.collapsed .tab .lbl{display:inline}
+    .main{padding:18px 15px 48px;max-width:none}
+    .top{flex-direction:column;align-items:stretch;gap:10px;margin-bottom:14px}
+    h1{font-size:20px}
+    .who{flex-wrap:wrap;gap:6px 8px}
+    .who select{flex:1;margin-left:0}
+    .who button{margin-left:0}
+    .cards{grid-template-columns:1fr 1fr;gap:8px}
+    select,input{min-width:0}
+    .filters select{flex:1 1 44%}
+    .grid2{grid-template-columns:1fr}
+    th,td{padding:9px 8px}
+    .panel{overflow-x:auto}
+  }
+  @media(max-width:420px){
+    .cards{grid-template-columns:1fr}
+  }
 </style>
 </head>
 <body>
