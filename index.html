@@ -293,7 +293,7 @@
 
   <div id="tabPrognose" class="hidden">
     <div class="sec">Prognose: wat levert meer advertentiebudget op?
-      <span class="info" tabindex="0">i<span class="tip">Gebaseerd op de laatste maand met advertentie-uitgaven én verkopen. De prognose rekent lineair: in werkelijkheid stijgen de kosten per verkoop meestal licht naarmate je budget groeit.</span></span>
+      <span class="info" tabindex="0">i<span class="tip">Gebaseerd op de echte cijfers van de gekozen periode en park: advertentie-uitgaven uit Meta en verkopen (met verkoopsom en marge) uit Pipedrive. De prognose rekent lineair: in werkelijkheid stijgen de kosten per verkoop meestal licht naarmate je budget groeit.</span></span>
     </div>
     <div class="cards" id="progBasis"></div>
     <div class="chartbox" style="margin-bottom:14px;padding:20px 22px">
@@ -303,7 +303,7 @@
       <input type="range" id="progSlider" min="0" max="100" step="1" style="width:100%;accent-color:var(--accent)" />
     </div>
     <div class="cards" id="progOut"></div>
-    <p class="foot">De prognose is een rekenvoorbeeld op basis van je huidige kosten per verkoop, geen garantie.</p>
+    <p class="foot">De prognose is een rekenvoorbeeld op basis van je echte kosten per verkoop, geen garantie. Bij "Alle parken" worden uitgaven en verkopen van alle parken samengenomen; kies een specifiek park voor een zuiverdere berekening.</p>
   </div>
 
   <div id="tabResale" class="hidden">
@@ -470,14 +470,21 @@ function fillSelect(el, opts, allLabel){
   el.innerHTML = (allLabel?`<option value="all">${allLabel}</option>`:"")
     + opts.map(o=>`<option value="${o.value}">${o.label}</option>`).join("");
 }
+// bij filterwijziging (periode/park/agent) ook de actieve neventab opnieuw tekenen,
+// niet alleen de Resultaten (refresh); zo volgen Advertenties/Financiën/Prognose het filter
+function renderActieveTab(){
+  if(activeTab==="advertenties") renderAds();
+  else if(activeTab==="financien"){ const cv=currentView(); if(cv.role==="agent") renderFinanceAgent(cv.id); else renderFinance(); }
+  else if(activeTab==="prognose") renderPrognose();
+}
 $("fPeriod").addEventListener("change", e=>{
   const show = e.target.value==="custom";
   $("fFrom").classList.toggle("hidden",!show); $("fTo").classList.toggle("hidden",!show);
   refresh();
-  if(activeTab==="advertenties") renderAds();
+  renderActieveTab();
 });
 let refresh = ()=>{};
-["fFrom","fTo","fPark","fAgent"].forEach(id=>$(id).addEventListener("change", ()=>{ refresh(); if(activeTab==="advertenties") renderAds(); }));
+["fFrom","fTo","fPark","fAgent"].forEach(id=>$(id).addEventListener("change", ()=>{ refresh(); renderActieveTab(); }));
 
 /* ---------- zijbalk in-/uitklappen ---------- */
 const SHELL_EL = document.querySelector(".shell");
@@ -647,28 +654,41 @@ async function renderFinanceAgent(agentId){
      </tr>`).join("") || `<tr><td colspan="8" style="color:var(--muted);padding:14px">Nog geen deals mondeling verkocht of verder.</td></tr>`}</tbody>`;
 }
 
-/* ---------- PROGNOSE ---------- */
+/* ---------- PROGNOSE (echte data: Meta-spend + verkopen/verkoopsom/marge uit Pipedrive via ad_kpis) ---------- */
 let PROG = null;
 async function renderPrognose(){
   const v = currentView();
   const pp = v.role==="park" ? v.id : ($("fPark").value==="all" ? null : Number($("fPark").value));
-  const mo = await rpc("monthly_overview", { p_park_id: pp }) || [];
-  // basis = laatste maand met uitgaven én verkopen
-  const basis = [...mo].reverse().find(m => Number(m.spend)>0 && Number(m.sales)>0);
-  if(!basis){
-    $("progBasis").innerHTML = `<div class="metric"><div class="l">Nog niet genoeg data: er is een maand met zowel advertentie-uitgaven als verkopen nodig om te kunnen rekenen.</div></div>`;
-    $("progOut").innerHTML = ""; $("progSpendLabel").textContent = ""; return;
-  }
-  const spend = Number(basis.spend), sales = Number(basis.sales), rev = Number(basis.revenue);
-  PROG = { cpa: spend/sales, dealwaarde: rev/sales, basisSpend: spend };
-  const mfmt = d => new Date(d).toLocaleDateString("nl-NL",{month:"long",year:"numeric"});
-  $("progBasis").innerHTML =
-    metric("Basismaand", mfmt(basis.maand)) +
-    metric("Uitgaven toen", eur(spend)) +
-    metric("Verkopen toen", sales) +
-    metric("Kosten per verkoop", eur(PROG.cpa)) +
-    metric("Gem. verkoopprijs", eur(PROG.dealwaarde));
+  const parkNaam = pp==null ? "alle parken" : ((PARKS.find(p=>p.id===pp)||{}).name || "dit park");
+  const r = periodRange();
+  const k = (await rpc("ad_kpis", { ...r, p_park_id: pp }))?.[0] || {};
+  const spend = Number(k.spend)||0, sales = Number(k.sales)||0,
+        verkoopsom = Number(k.omzet)||0, marge = Number(k.marge)||0; // ad_kpis.omzet = som verkoopsom (amount)
+
+  // Zinnige prognose kan alleen als er in deze selectie zowel echte uitgaven als echte
+  // verkopen zijn. Anders: eerlijk melden waarom, geen verzonnen cijfers.
   const sl = $("progSlider");
+  if(spend<=0 || sales<=0){
+    PROG = null;
+    let uitleg;
+    if(spend<=0 && sales<=0) uitleg = `Nog geen advertentie-uitgaven én geen verkopen in deze selectie (${parkNaam}). Kies eventueel een andere periode.`;
+    else if(spend<=0)        uitleg = `Er zijn wel verkopen (${sales}), maar geen advertentie-uitgaven in deze selectie (${parkNaam}) — bijvoorbeeld omdat er nog geen Meta-koppeling is. Zonder uitgaven valt geen kosten-per-verkoop te berekenen.`;
+    else                     uitleg = `Er zijn wel advertentie-uitgaven (${eur(spend)}), maar nog geen verkopen gekoppeld in deze selectie (${parkNaam}). Zodra een lead uit deze periode tot verkoop leidt, verschijnt hier de prognose.`;
+    $("progBasis").innerHTML = `<div class="metric" style="grid-column:1/-1"><div class="l">${uitleg}</div></div>`;
+    $("progSpendLabel").textContent = "—";
+    $("progOut").innerHTML = "";
+    sl.value = 0; sl.disabled = true;
+    return;
+  }
+  sl.disabled = false;
+
+  PROG = { cpa: spend/sales, verkoopsomPer: verkoopsom/sales, margePer: marge/sales, basisSpend: spend };
+  $("progBasis").innerHTML =
+    metric("Advertentie-uitgaven", eur(spend)) +
+    metric("Verkopen", sales) +
+    metric("Kosten per verkoop", eur(PROG.cpa)) +
+    metric("Gem. verkoopsom", eur(PROG.verkoopsomPer)) +
+    metric("Gem. marge RecraVas", eur(PROG.margePer));
   sl.min = 0; sl.max = Math.max(Math.round(spend*3), 1000); sl.step = Math.max(Math.round(spend/40/50)*50, 50);
   sl.value = Math.round(spend);
   sl.oninput = updatePrognose;
@@ -679,13 +699,16 @@ function updatePrognose(){
   const budget = Number($("progSlider").value);
   $("progSpendLabel").textContent = eur(budget);
   const verkopen = budget / PROG.cpa;
-  const omzet = verkopen * PROG.dealwaarde;
-  const roas = budget>0 ? (omzet/budget).toFixed(2) : "0";
+  const verkoopsom = verkopen * PROG.verkoopsomPer;
+  const marge = verkopen * PROG.margePer;
+  const basisMarge = (PROG.basisSpend/PROG.cpa) * PROG.margePer;
+  const rendement = budget>0 ? (marge/budget).toFixed(2) : "0";
   $("progOut").innerHTML =
     `<div class="metric team"><div class="l">Verwachte verkopen</div><div class="v">${verkopen.toFixed(1)}</div></div>` +
-    `<div class="metric team"><div class="l">Verwachte omzet</div><div class="v">${eur(omzet)}</div></div>` +
-    `<div class="metric team"><div class="l">Verwachte ROAS</div><div class="v">${roas}</div></div>` +
-    `<div class="metric"><div class="l">Extra t.o.v. basismaand</div><div class="v">${eur(omzet - (PROG.basisSpend/PROG.cpa)*PROG.dealwaarde)}</div></div>`;
+    `<div class="metric team"><div class="l">Verwachte verkoopsom</div><div class="v">${eur(verkoopsom)}</div></div>` +
+    `<div class="metric team"><div class="l">Verwachte marge RecraVas</div><div class="v">${eur(marge)}</div></div>` +
+    `<div class="metric"><div class="l">Marge per advertentie-euro</div><div class="v">${rendement}</div></div>` +
+    `<div class="metric"><div class="l">Extra marge t.o.v. nu</div><div class="v">${eur(marge - basisMarge)}</div></div>`;
 }
 
 /* ---------- ADVERTENTIES ---------- */
