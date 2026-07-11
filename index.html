@@ -747,7 +747,7 @@ function updatePrognose(){
 let adChart;
 let ADROWS = [], ADSORT = { key:"spend", dir:-1 }, ADPARK = null;
 const parkAccent = id => { const p = PARKS.find(x=>x.id===id); return (p && p.accent_color) || accent(); };
-const STATUSNL = { active:["Actief","sale"], killed:["Gestopt","held"], draft:["Concept","held"], unknown:["Onbekend","held"], demo:["Demo","held"] };
+const STATUSNL = { active:["Actief","sale"], paused:["Gepauzeerd","held"], killed:["Gestopt","held"], draft:["Concept","held"], unknown:["Onbekend","held"], demo:["Demo","held"] };
 
 // Afspraken als losse "zwevende" punten (geen lijn) bovenop de grafiek, geteld op de dag dat de
 // lead is aangemaakt — ook als de afspraak pas weken later is ingepland. Dagen zonder afspraak
