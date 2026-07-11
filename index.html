@@ -133,19 +133,21 @@
     .cards{grid-template-columns:1fr}
   }
   /* best presterende advertenties */
-  .adbest{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
-  .adbest-card{position:relative;display:flex;gap:12px;align-items:center;background:var(--card);
-    border:1px solid var(--line);border-radius:12px;padding:10px;cursor:pointer;transition:border-color .15s}
-  .adbest-card:hover{border-color:var(--accent)}
-  .adbest-rank{position:absolute;top:6px;right:10px;font-family:Georgia,serif;font-size:15px;color:var(--muted)}
-  .adbest-thumb{width:64px;height:64px;border-radius:9px;overflow:hidden;flex:none;background:var(--line);
+  .adbest{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}
+  .adbest-card{position:relative;display:flex;flex-direction:column;gap:10px;background:var(--card);
+    border:1px solid var(--line);border-radius:14px;padding:12px;cursor:pointer;transition:border-color .15s,box-shadow .15s}
+  .adbest-card:hover{border-color:var(--accent);box-shadow:0 2px 14px rgba(0,0,0,.07)}
+  .adbest-rank{position:absolute;top:19px;left:20px;z-index:1;background:rgba(29,29,27,.62);color:#fff;
+    min-width:24px;height:24px;padding:0 7px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+    font-family:var(--serif);font-size:14px}
+  .adbest-thumb{width:100%;aspect-ratio:1/1;border-radius:10px;overflow:hidden;flex:none;background:var(--line);
     display:flex;align-items:center;justify-content:center}
   .adbest-thumb img{width:100%;height:100%;object-fit:cover;display:block}
-  .adbest-thumb.leeg::after{content:"▦";color:var(--muted);font-size:22px}
-  .adbest-info{min-width:0;padding-right:14px}
-  .adbest-naam{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .adbest-hoofd{font-family:Georgia,serif;font-size:18px;margin:2px 0;line-height:1.15}
-  .adbest-sub{font-size:11.5px;color:var(--muted)}
+  .adbest-thumb.leeg::after{content:"▦";color:var(--muted);font-size:38px}
+  .adbest-info{min-width:0}
+  .adbest-naam{font-size:14px;color:var(--ink);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .adbest-hoofd{font-family:var(--serif);font-size:21px;margin:3px 0;line-height:1.15;color:var(--ink)}
+  .adbest-sub{font-size:12px;color:var(--muted)}
 </style>
 </head>
 <body>
