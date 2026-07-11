@@ -1021,14 +1021,13 @@ async function toonVerlorenDeals(fase, reden){
   const rows = await rpc("lost_deals", { ...LOST_CTX.r, p_market:LOST_CTX.markt, p_fase:fase, p_reden:reden }) || [];
   $("lostDealsTitle").textContent = `Verloren deals · ${reden} (${rows.length})`;
   $("lostDealsTable").innerHTML =
-    `<thead><tr><th>Kavel</th><th>Makelaar</th><th>Lead sinds</th><th>Reden (zoals ingevuld)</th><th></th></tr></thead>
+    `<thead><tr><th>Makelaar</th><th>Lead sinds</th><th>Reden (zoals ingevuld)</th><th></th></tr></thead>
      <tbody>${rows.map(x=>`<tr>
-       <td style="text-align:left">${x.kavelnummer||"—"}</td>
        <td style="text-align:left">${x.agent}</td>
        <td style="text-align:left">${x.lead_created?dt(x.lead_created):"—"}</td>
        <td style="text-align:left">${x.lost_reason||"—"}</td>
        <td><a href="${x.pipedrive_url}" target="_blank" rel="noopener">Pipedrive ↗</a></td></tr>`).join("")
-       || `<tr><td colspan="5" style="color:var(--muted);padding:14px">Geen deals gevonden.</td></tr>`}</tbody>`;
+       || `<tr><td colspan="4" style="color:var(--muted);padding:14px">Geen deals gevonden.</td></tr>`}</tbody>`;
   $("lostDealsSec").classList.remove("hidden");
   $("lostDealsSec").scrollIntoView({ behavior:"smooth", block:"nearest" });
 }
