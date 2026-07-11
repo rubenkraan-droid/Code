@@ -132,6 +132,20 @@
   @media(max-width:420px){
     .cards{grid-template-columns:1fr}
   }
+  /* best presterende advertenties */
+  .adbest{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+  .adbest-card{position:relative;display:flex;gap:12px;align-items:center;background:var(--card);
+    border:1px solid var(--line);border-radius:12px;padding:10px;cursor:pointer;transition:border-color .15s}
+  .adbest-card:hover{border-color:var(--accent)}
+  .adbest-rank{position:absolute;top:6px;right:10px;font-family:Georgia,serif;font-size:15px;color:var(--muted)}
+  .adbest-thumb{width:64px;height:64px;border-radius:9px;overflow:hidden;flex:none;background:var(--line);
+    display:flex;align-items:center;justify-content:center}
+  .adbest-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .adbest-thumb.leeg::after{content:"▦";color:var(--muted);font-size:22px}
+  .adbest-info{min-width:0;padding-right:14px}
+  .adbest-naam{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .adbest-hoofd{font-family:Georgia,serif;font-size:18px;margin:2px 0;line-height:1.15}
+  .adbest-sub{font-size:11.5px;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -265,6 +279,12 @@
       <div id="adWarnBanner" class="hidden banner" style="background:var(--warn-soft);color:var(--warn);padding:10px 14px;border-radius:8px"></div>
       <div class="sec">Per advertentie · klik op een rij voor het dagverloop, op een kolomkop om te sorteren</div>
       <div class="panel"><div class="scroll"><table id="adTable"></table></div></div>
+    </div>
+    <div id="adBestSec" class="hidden" style="margin-top:26px">
+      <div class="sec"><span id="adBestTitle">Best presterende advertenties</span>
+        <span class="info" tabindex="0">i<span class="tip" id="adBestTip"></span></span>
+      </div>
+      <div id="adBestGrid" class="adbest"></div>
     </div>
     <div id="adDetailSec" class="hidden">
       <div class="sec"><span id="adDetailTitle"></span>
@@ -808,6 +828,7 @@ async function renderAds(){
 
   ADROWS = ov || [];
   drawAdTable();
+  renderBestAds();
   closeAdDetail();
   $("adOverviewSec").classList.toggle("hidden", !ADROWS.length);
   const geflagd = ADROWS.filter(a => a.leads>=ONGEKWALIFICEERD_MIN_LEADS && (Number(a.ongekwalificeerd_pct)||0)>=ONGEKWALIFICEERD_DREMPEL);
@@ -888,6 +909,59 @@ function drawAdTable(){
   document.querySelectorAll("#adTable tbody tr").forEach(tr => tr.addEventListener("click", () => {
     renderAdDetail(Number(tr.dataset.adid), tr.dataset.naam);
   }));
+}
+
+/* ---------- best presterende advertenties (met thumbnail) ----------
+   Rangschikking: als er verkopen zijn -> kosten per verkoop (laagste eerst);
+   anders als er afspraken zijn -> kosten per afspraak; anders -> meeste leads.
+   thumbnail_url en kost_per_sale komen uit ad_overview (ADROWS). */
+function renderBestAds(){
+  const rows = ADROWS || [];
+  // Kosten-per-X is alleen zinnig met echte uitgaven; advertenties zonder spend
+  // (bijv. handmatig getagde niet-Meta-bronnen) horen niet bovenaan met €0.
+  const salesKand = rows.filter(a => Number(a.sales) > 0 && Number(a.spend) > 0)
+    .map(a => ({ a, waarde: Number(a.kost_per_sale) || (Number(a.spend) / Number(a.sales)) })).sort((x,y) => x.waarde - y.waarde);
+  const afsprKand = rows.filter(a => Number(a.afspraken) > 0 && Number(a.spend) > 0)
+    .map(a => ({ a, waarde: Number(a.cpa) })).sort((x,y) => x.waarde - y.waarde);
+  const leadKand = rows.filter(a => Number(a.leads) > 0)
+    .map(a => ({ a, waarde: Number(a.leads) })).sort((x,y) => y.waarde - x.waarde);
+  let metric, kandidaten, subtitel, tip;
+  if(salesKand.length){
+    metric = "sale"; kandidaten = salesKand; subtitel = "op kosten per verkoop";
+    tip = "Gesorteerd op kosten per verkoop (uitgaven ÷ verkopen), laagste eerst.";
+  } else if(afsprKand.length){
+    metric = "afspraak"; kandidaten = afsprKand; subtitel = "op kosten per afspraak";
+    tip = "Nog geen verkopen gekoppeld, dus gesorteerd op kosten per afspraak (laagste eerst).";
+  } else {
+    metric = "leads"; kandidaten = leadKand; subtitel = "op aantal leads";
+    tip = "Nog geen verkopen of afspraken gekoppeld, dus gesorteerd op aantal leads (meeste eerst).";
+  }
+  const top = kandidaten.slice(0, 5);
+  $("adBestSec").classList.toggle("hidden", !top.length);
+  if(!top.length) return;
+  $("adBestTitle").textContent = `Best presterende advertenties · ${subtitel}`;
+  $("adBestTip").textContent = tip;
+  $("adBestGrid").innerHTML = top.map(({ a, waarde }, i) => {
+    const url = a.thumbnail_url;
+    let hoofd, sub;
+    if(metric === "sale"){ hoofd = `${eur(waarde)} <span style="font-size:12px;color:var(--muted)">/ verkoop</span>`;
+      sub = `${a.sales} verkopen · ${a.leads} leads · ${eur(a.spend)}`; }
+    else if(metric === "afspraak"){ hoofd = `${eur(waarde)} <span style="font-size:12px;color:var(--muted)">/ afspraak</span>`;
+      sub = `${a.afspraken} afspraken · ${a.leads} leads · ${eur(a.spend)}`; }
+    else { hoofd = `${a.leads} <span style="font-size:12px;color:var(--muted)">leads</span>`;
+      sub = `${eur(a.spend)} · CPL ${a.leads > 0 ? eur(a.cpl) : "—"}`; }
+    return `<div class="adbest-card" data-adid="${a.ad_id}" data-naam="${a.advertentie}">
+      <div class="adbest-rank">${i + 1}</div>
+      <div class="adbest-thumb${url ? "" : " leeg"}">${url ? `<img src="${url}" alt="" onerror="this.parentNode.classList.add('leeg');this.remove()">` : ""}</div>
+      <div class="adbest-info">
+        <div class="adbest-naam" title="${a.advertentie}">${a.advertentie}</div>
+        <div class="adbest-hoofd">${hoofd}</div>
+        <div class="adbest-sub">${sub}</div>
+      </div>
+    </div>`;
+  }).join("");
+  document.querySelectorAll("#adBestGrid .adbest-card").forEach(c => c.addEventListener("click", () =>
+    renderAdDetail(Number(c.dataset.adid), c.dataset.naam)));
 }
 
 /* ---------- monthly overview (all roles) ---------- */
