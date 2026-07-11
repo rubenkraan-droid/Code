@@ -335,18 +335,30 @@
   </div>
 
   <div id="tabResale" class="hidden">
-    <div class="sec">Resale</div>
-    <p class="foot" style="max-width:640px;margin-bottom:26px">Aan- en verkoop van bestaande woningen (Pipedrive-pijplijn Resale). Deze weergave wordt nog gevuld; hieronder de opzet.</p>
-
-    <div class="sec">Inkoop · leads voor woningverkoop
-      <span class="info" tabindex="0">i<span class="tip">Leads van eigenaren die hun woning via ons willen verkopen — de inkoopkant van Resale.</span></span>
+    <div class="sec">Resale · aan- en verkoop van bestaande woningen
+      <span class="info" tabindex="0">i<span class="tip">Pipedrive-pijplijn Resale. Fee = 2,5% van de woningwaarde (verkoopprijs boven €100.000), met een minimum van €2.500.</span></span>
     </div>
-    <div class="panel" style="margin-bottom:26px"><div style="padding:22px;color:var(--muted);font-size:13px">Nog geen data gekoppeld.</div></div>
+    <div class="cards" id="resaleKpis"></div>
 
-    <div class="sec">Verkoop · per specifieke woning
-      <span class="info" tabindex="0">i<span class="tip">Het verkooptraject van een concrete woning, zodat je per woning het onderscheid ziet.</span></span>
+    <div id="resaleTeamWrap" class="hidden">
+      <div class="sec" style="margin-top:22px">Teamgemiddelde · alle makelaars (zonder namen)</div>
+      <div class="cards" id="resaleTeam"></div>
     </div>
-    <div class="panel"><div style="padding:22px;color:var(--muted);font-size:13px">Nog geen data gekoppeld.</div></div>
+
+    <div id="resaleAgentWrap" class="hidden">
+      <div class="sec" style="margin-top:22px">Per makelaar · klik op het aantal leads voor de deals</div>
+      <div class="panel"><div class="scroll"><table id="resaleAgentTable"></table></div></div>
+    </div>
+
+    <div id="resaleMonthWrap" class="hidden">
+      <div class="sec" style="margin-top:22px">Per maand</div>
+      <div class="panel"><div class="scroll"><table id="resaleMonthTable"></table></div></div>
+    </div>
+
+    <div id="resaleLeadsWrap" class="hidden">
+      <div class="sec" style="margin-top:22px"><span id="resaleLeadsTitle">Leads</span></div>
+      <div class="panel"><div class="scroll"><table id="resaleLeadsTable"></table></div></div>
+    </div>
   </div>
   </main>
 </div>
@@ -462,7 +474,7 @@ async function applyRole(){
   document.querySelector('.tab[data-tab="advertenties"]').classList.toggle("hidden", agentV);
   document.querySelector('.tab[data-tab="financien"]').classList.toggle("hidden", parkV);
   document.querySelector('.tab[data-tab="prognose"]').classList.toggle("hidden", agentV);
-  document.querySelector('.tab[data-tab="resale"]').classList.toggle("hidden", agentV || parkV);
+  document.querySelector('.tab[data-tab="resale"]').classList.toggle("hidden", parkV);
   $("tabs").classList.remove("hidden");
   activeTab = "resultaten";
   document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active", x.dataset.tab==="resultaten"));
@@ -504,6 +516,7 @@ function renderActieveTab(){
   if(activeTab==="advertenties") renderAds();
   else if(activeTab==="financien"){ const cv=currentView(); if(cv.role==="agent") renderFinanceAgent(cv.id); else renderFinance(); }
   else if(activeTab==="prognose") renderPrognose();
+  else if(activeTab==="resale") renderResale();
 }
 $("fPeriod").addEventListener("change", e=>{
   const show = e.target.value==="custom";
@@ -539,6 +552,7 @@ function toonTab(tab, opts){
   if(tab==="advertenties") renderAds();
   if(tab==="financien"){ const cv=currentView(); if(cv.role==="agent") renderFinanceAgent(cv.id); else renderFinance(); }
   if(tab==="prognose") renderPrognose();
+  if(tab==="resale") renderResale();
 }
 // een verborgen tab (niet beschikbaar voor deze rol) is geen geldige bestemming
 function tabBeschikbaar(tab){
@@ -1319,6 +1333,74 @@ async function toonAgentLeads(agentId, agentNaam){
        || `<tr><td colspan="6" style="color:var(--muted);padding:14px">Geen leads gevonden.</td></tr>`}</tbody>`;
   $("lostDealsSec").classList.remove("hidden");
   $("lostDealsSec").scrollIntoView({ behavior:"smooth", block:"nearest" });
+}
+
+/* ---------- RESALE (rolbewust: eigenaar = totaal + per makelaar; makelaar = eigen + teamgemiddelde) ---------- */
+async function renderResale(){
+  const v = currentView();
+  const r = periodRange();
+  setBranding(null);
+  ["resaleTeamWrap","resaleAgentWrap","resaleMonthWrap","resaleLeadsWrap"].forEach(id=>$(id).classList.add("hidden"));
+
+  if(v.role==="agent"){
+    const s = (await rpc("resale_agent_stats", { p_agent_id:v.id, ...r }))?.[0] || {};
+    $("resaleKpis").innerHTML =
+      metric("Mijn leads", s.leads||0) + metric("Mijn afspraken", s.afspraken||0) +
+      metric("Mijn verkopen", s.verkopen||0) + metric("Closing %", (s.closing_pct||0)+"%") +
+      metric("Afval %", (s.afval_pct||0)+"%");
+    $("resaleTeam").innerHTML =
+      metricT("Leads per makelaar", s.team_avg_leads||0) + metricT("Afspraken per makelaar", s.team_avg_afspraken||0) +
+      metricT("Verkopen per makelaar", s.team_avg_verkopen||0) + metricT("Closing %", (s.team_closing_pct||0)+"%") +
+      metricT("Afval %", (s.team_afval_pct||0)+"%");
+    $("resaleTeamWrap").classList.remove("hidden");
+    await resaleLeadsToon(v.id, "Mijn leads");
+    return;
+  }
+
+  const f = (await rpc("resale_funnel", r))?.[0] || {};
+  $("resaleKpis").innerHTML =
+    metric("Leads", f.leads||0) + metric("Afspraken", f.afspraken||0) + metric("Verkopen", f.verkopen||0) +
+    metric("Closing %", (f.closing_pct||0)+"%") + metric("Afval %", (f.afval_pct||0)+"%") +
+    metric("Woningwaarde verkocht", eur(f.woningwaarde)) + metric("Fee-omzet", eur(f.fee_omzet));
+
+  const agents = await rpc("resale_agent_performance", r) || [];
+  $("resaleAgentTable").innerHTML =
+    `<thead><tr><th>Makelaar</th><th>Leads</th><th>Afspraken</th><th>Verkopen</th><th>Closing %</th><th>Afval %</th><th>Fee-omzet</th></tr></thead>
+     <tbody>${agents.map(a=>`<tr>
+       <td><span class="av"><span class="dot">${initials(a.agent)}</span>${a.agent}</span></td>
+       <td>${a.leads>0?`<span class="lead-link" data-agentid="${a.agent_id}" data-agent="${a.agent}" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px">${a.leads}</span>`:0}</td>
+       <td>${a.afspraken}</td><td>${a.verkopen}</td>
+       <td>${a.afspraken>0?a.closing_pct+"%":"—"}</td>
+       <td>${a.leads>0?a.afval_pct+"%":"—"}</td>
+       <td style="font-weight:600">${a.fee_omzet>0?eur(a.fee_omzet):"—"}</td></tr>`).join("")
+       || `<tr><td colspan="7" style="color:var(--muted);padding:14px">Nog geen resale-deals met makelaar.</td></tr>`}</tbody>`;
+  document.querySelectorAll("#resaleAgentTable .lead-link").forEach(el =>
+    el.addEventListener("click", () => resaleLeadsToon(el.dataset.agentid, `Leads · ${el.dataset.agent}`)));
+  $("resaleAgentWrap").classList.remove("hidden");
+
+  const mo = await rpc("resale_monthly", r) || [];
+  const mfmt = d => { const s=new Date(d).toLocaleDateString("nl-NL",{month:"long",year:"numeric"}); return s.charAt(0).toUpperCase()+s.slice(1); };
+  $("resaleMonthTable").innerHTML =
+    `<thead><tr><th style="text-align:left">Maand</th><th>Leads</th><th>Afspraken</th><th>Verkopen</th><th>Fee-omzet</th></tr></thead>
+     <tbody>${mo.map(m=>`<tr><td style="text-align:left">${mfmt(m.maand)}</td><td>${m.leads}</td><td>${m.afspraken}</td><td>${m.verkopen}</td>
+       <td style="font-weight:600">${Number(m.fee_omzet)>0?eur(m.fee_omzet):"—"}</td></tr>`).join("")}</tbody>`;
+  $("resaleMonthWrap").classList.remove("hidden");
+}
+async function resaleLeadsToon(agentId, titel){
+  const rows = await rpc("resale_leads", { p_agent_id: agentId?Number(agentId):null, ...periodRange() }) || [];
+  $("resaleLeadsTitle").textContent = `${titel} (${rows.length})`;
+  $("resaleLeadsTable").innerHTML =
+    `<thead><tr><th class="tl">Deal</th><th class="tl">Fase</th><th class="tl">Lead sinds</th><th class="tl">Afspraak</th><th class="tl">Verkocht</th><th>Woningwaarde</th><th></th></tr></thead>
+     <tbody>${rows.map(x=>`<tr>
+       <td style="text-align:left">#${x.deal_id}${x.titel?` · ${x.titel}`:""}</td>
+       <td style="text-align:left">${x.stage_name||"—"}</td>
+       <td style="text-align:left">${x.lead_created?dt(x.lead_created):"—"}</td>
+       <td style="text-align:left">${x.appointment_date?dt(x.appointment_date):"—"}</td>
+       <td style="text-align:left">${x.sale_date?dt(x.sale_date):"—"}</td>
+       <td>${x.woningwaarde?eur(x.woningwaarde):"—"}</td>
+       <td><a href="${x.pipedrive_url}" target="_blank" rel="noopener">Pipedrive ↗</a></td></tr>`).join("")
+       || `<tr><td colspan="7" style="color:var(--muted);padding:14px">Geen leads gevonden.</td></tr>`}</tbody>`;
+  $("resaleLeadsWrap").classList.remove("hidden");
 }
 
 boot();
