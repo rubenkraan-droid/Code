@@ -190,7 +190,7 @@
     <div class="panel" style="margin-bottom:26px"><table id="callTable"></table></div>
     <div class="sec">Omzet per park</div>
     <div class="chartbox" style="margin-bottom:26px"><canvas id="parkChart" height="200"></canvas></div>
-    <div class="sec">Waarom leads afvallen · verloren redenen uit Pipedrive</div>
+    <div class="sec">Waarom leads afvallen · verloren redenen uit Pipedrive · klik op een reden voor de deals</div>
     <div class="grid2">
       <div>
         <div class="sec" style="font-size:13px;color:var(--muted)">Voor de afspraak · wilde niet komen</div>
@@ -200,6 +200,13 @@
         <div class="sec" style="font-size:13px;color:var(--muted)">Na de afspraak · wilde niet kopen</div>
         <div class="panel"><div class="scroll" style="max-height:220px"><table id="reasonsAfter"></table></div></div>
       </div>
+    </div>
+    <div id="lostDealsSec" class="hidden">
+      <div class="sec"><span id="lostDealsTitle"></span>
+        <button onclick="$('lostDealsSec').classList.add('hidden')" style="margin-left:10px;border:1px solid var(--line-strong);background:var(--card);border-radius:7px;padding:3px 10px;font:inherit;font-size:12px;cursor:pointer">Sluiten ×</button>
+      </div>
+      <div class="panel"><div class="scroll"><table id="lostDealsTable"></table></div></div>
+      <p class="foot">Open de deal in Pipedrive om de notities van de makelaar te zien.</p>
     </div>
   </div>
 
@@ -792,9 +799,8 @@ function renderAppts(rows, showAgent){
     `<thead><tr><th>Datum</th>${showAgent?"<th>Makelaar</th>":""}<th>Park</th><th>Kavel</th><th>Status</th>
       <th>Verkocht op</th><th>Notaris</th><th>Omzet</th><th></th></tr></thead>
      <tbody>${rows.map(x=>{
-       const sold = x.outcome==="sale", lost = x.outcome==="lost";
-       const label = sold?"Verkocht":lost?"Afgevallen":"Gehouden";
-       const cls = sold?"sale":lost?"lost":"held";
+       const label = {sale:"Verkocht",lost:"Afgevallen",no_show:"Niet geweest"}[x.outcome] || "Gehouden";
+       const cls = {sale:"sale",lost:"lost",no_show:"lost"}[x.outcome] || "held";
        return `<tr><td>${dt(x.scheduled_at)}</td>
          ${showAgent?`<td style="text-align:left">${x.agent}</td>`:""}
          <td style="text-align:left">${x.park.replace("Park ","")}</td>
@@ -960,9 +966,12 @@ function drawChart(labels, datasets){
               y:{stacked:true,ticks:{callback:v=>"€"+(v/1000)+"k"}}}}
   });
 }
+let LOST_CTX = { r:null, markt:null };
 async function renderReasons(r){
   const parkVal = $("fPark").value;
   const markt = parkVal==="all" ? null : (Number(parkVal)===3 ? "Wielsche Dreef" : "France");
+  LOST_CTX = { r, markt };
+  $("lostDealsSec").classList.add("hidden");
   const rows = await rpc("lost_reasons", { ...r, p_market: markt }) || [];
   const tabel = (fase) => {
     const alle = rows.filter(x=>x.fase===fase);
@@ -971,11 +980,29 @@ async function renderReasons(r){
     // redenen met minder dan 1% aandeel weglaten, daarna op aantal top 5 tonen
     const rs = alle.filter(x=>x.aantal/tot >= 0.01).sort((a,b)=>b.aantal-a.aantal).slice(0,5);
     return `<thead><tr><th>Reden</th><th>Aantal</th><th>Aandeel</th></tr></thead><tbody>`
-      + rs.map(x=>`<tr><td style="text-align:left">${x.reden}</td><td>${x.aantal}</td>
+      + rs.map(x=>`<tr data-fase="${encodeURIComponent(fase)}" data-reden="${encodeURIComponent(x.reden)}" style="cursor:pointer">
+          <td style="text-align:left;color:var(--accent);font-weight:600">${x.reden}</td><td>${x.aantal}</td>
           <td>${Math.round(x.aantal/tot*100)}%</td></tr>`).join("") + `</tbody>`;
   };
   $("reasonsBefore").innerHTML = tabel("Voor afspraak (wilde niet komen)");
   $("reasonsAfter").innerHTML  = tabel("Na afspraak (wilde niet kopen)");
+  document.querySelectorAll("#reasonsBefore tbody tr[data-reden], #reasonsAfter tbody tr[data-reden]").forEach(tr =>
+    tr.addEventListener("click", () => toonVerlorenDeals(decodeURIComponent(tr.dataset.fase), decodeURIComponent(tr.dataset.reden))));
+}
+async function toonVerlorenDeals(fase, reden){
+  const rows = await rpc("lost_deals", { ...LOST_CTX.r, p_market:LOST_CTX.markt, p_fase:fase, p_reden:reden }) || [];
+  $("lostDealsTitle").textContent = `Verloren deals · ${reden} (${rows.length})`;
+  $("lostDealsTable").innerHTML =
+    `<thead><tr><th>Kavel</th><th>Makelaar</th><th>Lead sinds</th><th>Reden (zoals ingevuld)</th><th></th></tr></thead>
+     <tbody>${rows.map(x=>`<tr>
+       <td style="text-align:left">${x.kavelnummer||"—"}</td>
+       <td style="text-align:left">${x.agent}</td>
+       <td style="text-align:left">${x.lead_created?dt(x.lead_created):"—"}</td>
+       <td style="text-align:left">${x.lost_reason||"—"}</td>
+       <td><a href="${x.pipedrive_url}" target="_blank" rel="noopener">Pipedrive ↗</a></td></tr>`).join("")
+       || `<tr><td colspan="5" style="color:var(--muted);padding:14px">Geen deals gevonden.</td></tr>`}</tbody>`;
+  $("lostDealsSec").classList.remove("hidden");
+  $("lostDealsSec").scrollIntoView({ behavior:"smooth", block:"nearest" });
 }
 
 boot();
