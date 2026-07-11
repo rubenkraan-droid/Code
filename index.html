@@ -530,20 +530,26 @@ async function renderFinance(){
   const v = currentView();
   const pp = v.role==="owner" ? ($("fPark").value==="all" ? null : Number($("fPark").value)) : v.id;
   $("finSecTop").innerHTML = `Mondeling verkocht en verder <span class="info" tabindex="0">i<span class="tip">Alle deals vanaf mondeling akkoord (Informeel akkoord ontvangen) tot en met notaris gepasseerd. Omzet = totale courtage die RecraVas factureert; de makelaar krijgt 1,5% (max €3.500), marge = de rest. De totale courtage verschilt per park: Wielsche Dreef 1,5%, Frankrijk 5,5%.</span></span>`;
-  $("finSecMonth").innerHTML = `Omzet en winst per maand <span class="info" tabindex="0">i<span class="tip">Omzet = totale courtage die RecraVas factureert (percentage per park: Wielsche Dreef 1,5%, Frankrijk 5,5%). Winst = wat overblijft na uitbetaling aan de makelaar (1,5%, max €3.500 per verkoop).</span></span>`;
+  $("finSecMonth").innerHTML = `Omzet en winst per maand <span class="info" tabindex="0">i<span class="tip">Elke staaf is de courtage (omzet) van die maand, opgesplitst in het deel voor de makelaar en de marge (winst) voor RecraVas. Omzet = totale courtage die RecraVas factureert (percentage per park: Wielsche Dreef 1,5%, Frankrijk 5,5%). Winst = wat overblijft na uitbetaling aan de makelaar (1,5%, max €3.500 per verkoop). Verkoopsom staat bij de cijfers hierboven en in de tabel eronder.</span></span>`;
   const rows = await rpc("finance_deals", { p_park_id: pp }) || [];
 
   const mo = await rpc("finance_monthly", { p_park_id: pp }) || [];
   const mfmt = d => { const s=new Date(d).toLocaleDateString("nl-NL",{month:"long",year:"numeric"}); return s.charAt(0).toUpperCase()+s.slice(1); };
   if(finChart) finChart.destroy();
+  // Verkoopsom (honderdduizenden) valt qua schaal niet te vergelijken met courtage/marge
+  // (paar duizend). Daarom hier de COURTAGE per maand gestapeld: makelaarsdeel + marge RecraVas,
+  // samen = omzet. Verkoopsom staat al bij de KPI's en in de tabel eronder.
   finChart = new Chart($("finChart"), {
     data:{ labels: mo.map(x=>mfmt(x.maand)), datasets:[
-      { type:"bar", label:"Verkoopsom", data:mo.map(x=>Number(x.verkoopsom)||0), backgroundColor:"#D2CBB6", order:3 },
-      { type:"bar", label:"Omzet (courtage)", data:mo.map(x=>Number(x.omzet)||0), backgroundColor:accent(), order:2 },
-      { type:"bar", label:"Marge RecraVas", data:mo.map(x=>Number(x.marge_recraparcs)||0), backgroundColor:"#B8862E", order:1 } ]},
+      { type:"bar", label:"Courtage makelaar", data:mo.map(x=>Number(x.courtage_makelaar)||0), backgroundColor:"#D2CBB6", stack:"courtage", order:2 },
+      { type:"bar", label:"Marge RecraVas (winst)", data:mo.map(x=>Number(x.marge_recraparcs)||0), backgroundColor:"#B8862E", stack:"courtage", order:1 } ]},
     options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ position:"bottom", labels:{ boxWidth:10, font:{size:11} } } },
-      scales:{ y:{ ticks:{ callback:v=>"€"+v }, grid:{display:false} }, x:{ grid:{display:false} } } }
+      plugins:{ legend:{ position:"bottom", labels:{ boxWidth:10, font:{size:11} } },
+        tooltip:{ callbacks:{
+          label: item => `${item.dataset.label}: ${eur(item.raw)}`,
+          footer: items => `Omzet (courtage): ${eur(items.reduce((s,i)=>s+(Number(i.raw)||0),0))}` } } },
+      scales:{ x:{ stacked:true, grid:{display:false} },
+               y:{ stacked:true, beginAtZero:true, ticks:{ callback:v=>eur(v) }, grid:{display:false} } } }
   });
   $("finMonthTable").innerHTML =
     `<thead><tr><th>Maand</th><th>Verkopen</th><th>Verkoopsom</th><th>Omzet</th><th>Courtage makelaar</th><th>Marge RecraVas</th></tr></thead>
