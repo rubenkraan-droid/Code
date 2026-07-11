@@ -159,6 +159,7 @@
       <button class="tab" data-tab="advertenties" title="Advertenties"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M7 13h4M7 16h7"/></svg><span class="lbl">Advertenties</span></button>
       <button class="tab" data-tab="financien" title="Financiën"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5c0-1.4 1.2-2 2.5-2s2.5.7 2.5 1.8c0 2.4-5 1.3-5 3.7 0 1.1 1.2 1.8 2.5 1.8s2.5-.6 2.5-2"/></svg><span class="lbl">Financiën</span></button>
       <button class="tab" data-tab="prognose" title="Prognose"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 17l5-5 4 4 8-9M14 7h6v6"/></svg><span class="lbl">Prognose</span></button>
+      <button class="tab" data-tab="resale" title="Resale"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-7 9 7M5 10v9h5v-6h4v6h5v-9"/></svg><span class="lbl">Resale</span></button>
     </div>
   </aside>
   <main class="main">
@@ -304,6 +305,21 @@
     <div class="cards" id="progOut"></div>
     <p class="foot">De prognose is een rekenvoorbeeld op basis van je huidige kosten per verkoop, geen garantie.</p>
   </div>
+
+  <div id="tabResale" class="hidden">
+    <div class="sec">Resale</div>
+    <p class="foot" style="max-width:640px;margin-bottom:26px">Aan- en verkoop van bestaande woningen (Pipedrive-pijplijn Resale). Deze weergave wordt nog gevuld; hieronder de opzet.</p>
+
+    <div class="sec">Inkoop · leads voor woningverkoop
+      <span class="info" tabindex="0">i<span class="tip">Leads van eigenaren die hun woning via ons willen verkopen — de inkoopkant van Resale.</span></span>
+    </div>
+    <div class="panel" style="margin-bottom:26px"><div style="padding:22px;color:var(--muted);font-size:13px">Nog geen data gekoppeld.</div></div>
+
+    <div class="sec">Verkoop · per specifieke woning
+      <span class="info" tabindex="0">i<span class="tip">Het verkooptraject van een concrete woning, zodat je per woning het onderscheid ziet.</span></span>
+    </div>
+    <div class="panel"><div style="padding:22px;color:var(--muted);font-size:13px">Nog geen data gekoppeld.</div></div>
+  </div>
   </main>
 </div>
 </div>
@@ -418,12 +434,14 @@ async function applyRole(){
   document.querySelector('.tab[data-tab="advertenties"]').classList.toggle("hidden", agentV);
   document.querySelector('.tab[data-tab="financien"]').classList.toggle("hidden", parkV);
   document.querySelector('.tab[data-tab="prognose"]').classList.toggle("hidden", agentV);
+  document.querySelector('.tab[data-tab="resale"]').classList.toggle("hidden", agentV || parkV);
   $("tabs").classList.remove("hidden");
   activeTab = "resultaten";
   document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active", x.dataset.tab==="resultaten"));
   $("tabResultaten").classList.remove("hidden");
   $("tabAdvertenties").classList.add("hidden");
   $("tabPrognose").classList.add("hidden");
+  $("tabResale").classList.add("hidden");
   if(owner){
     $("title").textContent = "Master dashboard";
     $("subtitle").textContent = "Eigenaarweergave";
@@ -479,8 +497,9 @@ function toonTab(tab, opts){
   $("tabAdvertenties").classList.toggle("hidden", tab!=="advertenties");
   $("tabFinance").classList.toggle("hidden", tab!=="financien");
   $("tabPrognose").classList.toggle("hidden", tab!=="prognose");
+  $("tabResale").classList.toggle("hidden", tab!=="resale");
   $("fAgent").classList.toggle("hidden", tab!=="resultaten" || !currentView || currentView().role!=="owner");
-  $("fPark").classList.toggle("hidden", (currentView && currentView().role==="park") || tab==="advertenties" || tab==="financien");
+  $("fPark").classList.toggle("hidden", (currentView && currentView().role==="park") || tab==="advertenties" || tab==="financien" || tab==="resale");
   if(!opts.silent) localStorage.setItem("activeTab", tab);
   if(tab==="advertenties") renderAds();
   if(tab==="financien"){ const cv=currentView(); if(cv.role==="agent") renderFinanceAgent(cv.id); else renderFinance(); }
@@ -902,7 +921,8 @@ function renderAppts(rows, showAgent){
 
 /* ---------- LIVE PIPEDRIVE (echte leads) ---------- */
 async function renderLive(r, pp){
-  const stats = await rpc("live_lead_stats", { ...r, p_park_id: pp ?? null }) || [];
+  const statsAll = await rpc("live_lead_stats", { ...r, p_park_id: pp ?? null }) || [];
+  const stats = statsAll.filter(s=>s.markt!=="Resale"); // Resale heeft nu een eigen tab
   const kleur = {Frankrijk:"#2C5F52","Wielsche Dreef":"#B8862E",Resale:"#B5432E",Overig:"#A5A192"};
   $("liveCards").innerHTML = stats.map(s=>
     `<div class="metric" style="border-left:3px solid ${kleur[s.markt]||'#726F60'}">
@@ -913,9 +933,9 @@ async function renderLive(r, pp){
   const mfmt = d => { const s=new Date(d).toLocaleDateString("nl-NL",{month:"long",year:"numeric"}); return s.charAt(0).toUpperCase()+s.slice(1); };
   const toonOverig = mo.some(m=>Number(m.overig)>0);
   $("liveMonths").innerHTML =
-    `<thead><tr><th>Maand</th><th>Frankrijk</th><th>Wielsche Dreef</th><th>Resale</th>${toonOverig?"<th>Overig</th>":""}<th>Totaal</th></tr></thead>
+    `<thead><tr><th>Maand</th><th>Frankrijk</th><th>Wielsche Dreef</th>${toonOverig?"<th>Overig</th>":""}<th>Totaal</th></tr></thead>
      <tbody>${mo.map(m=>`<tr><td>${mfmt(m.maand)}</td><td>${m.frankrijk}</td><td>${m.wielsche_dreef}</td>
-       <td>${m.resale}</td>${toonOverig?`<td>${m.overig}</td>`:""}<td style="font-weight:600">${m.frankrijk+m.wielsche_dreef+m.resale+m.overig}</td></tr>`).join("")}</tbody>`;
+       ${toonOverig?`<td>${m.overig}</td>`:""}<td style="font-weight:600">${m.frankrijk+m.wielsche_dreef+m.overig}</td></tr>`).join("")}</tbody>`;
 }
 
 /* ---------- EIGENAAR ---------- */
