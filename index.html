@@ -148,6 +148,24 @@
   .adbest-naam{font-size:14px;color:var(--ink);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .adbest-hoofd{font-family:var(--serif);font-size:21px;margin:3px 0;line-height:1.15;color:var(--ink)}
   .adbest-sub{font-size:12px;color:var(--muted)}
+
+  /* ---------- afdrukken / PDF: alleen de actieve tab, netjes ---------- */
+  @media print {
+    @page { margin: 12mm; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    html, body { background:#fff !important; }
+    .side, #sideToggle, .who, .filters, #printBtn, #gate, .info { display:none !important; }
+    .shell { display:block !important; }
+    .main { margin:0 !important; padding:0 !important; width:100% !important; max-width:100% !important; }
+    .top { margin:0 0 12px !important; }
+    #printMeta { display:block !important; }
+    .cards { gap:8px !important; }
+    .metric, .panel, .chartbox, table, .adbest-card { break-inside: avoid; }
+    .sec { break-after: avoid; }
+    table { font-size: 11px !important; }
+    .adbest { grid-template-columns: repeat(4, 1fr) !important; }
+    a[href]::after { content:"" !important; }
+  }
 </style>
 </head>
 <body>
@@ -184,8 +202,10 @@
       <img id="parkLogo" class="hidden" alt="" style="height:40px;margin-bottom:8px;display:block" />
       <h1 id="title">Dashboard</h1>
       <p class="sub" id="subtitle"></p>
+      <p id="printMeta" style="display:none;color:var(--muted);font-size:12px;margin-top:4px"></p>
     </div>
     <div class="who">
+      <button id="printBtn" onclick="printDashboard()" title="Sla dit dashboard op als PDF" style="margin-right:10px;border:1px solid var(--line-strong);background:var(--card);border-radius:8px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer">↓ PDF</button>
       <a id="adLink" href="notion-dashboard.html" class="hidden" style="color:var(--accent);text-decoration:none;font-weight:600">Advertenties &#8599;</a>
       <span id="whoami" style="margin-left:12px"></span>
       <select id="viewAs"></select>
@@ -1421,6 +1441,19 @@ document.addEventListener("click", (e) => {
   if(el.dataset.resale === "1") resaleDealsToon(agentId, kind, naam);
   else toonAgentDeals(agentId, kind, naam);
 });
+
+/* ---------- dashboard als PDF: print de actieve tab ---------- */
+function printDashboard(){
+  const tabNaam = { resultaten:"Resultaten", advertenties:"Advertenties", financien:"Financiën", prognose:"Prognose", resale:"Resale" }[activeTab] || "Dashboard";
+  const per = $("fPeriod").selectedOptions[0]?.textContent || "";
+  const nu = new Date().toLocaleDateString("nl-NL");
+  $("printMeta").textContent = `${tabNaam} · periode: ${per} · afgedrukt op ${nu}`;
+  const rol = ($("subtitle").textContent||"").split("·")[0].trim() || "dashboard";
+  const oud = document.title;
+  document.title = `RecraVas · ${rol} · ${tabNaam} · ${new Date().toISOString().slice(0,10)}`;
+  window.addEventListener("afterprint", () => { document.title = oud; }, { once:true });
+  window.print();
+}
 
 boot();
 </script>
