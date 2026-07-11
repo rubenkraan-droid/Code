@@ -289,6 +289,20 @@
     <div class="panel"><div class="scroll"><table id="apptTable"></table></div></div>
     <p class="foot">Deal openen in Pipedrive via de link per regel. Pipedrive is de bron; het dashboard toont datum, verkoop, notaris en omzet.</p>
   </div>
+
+  <div id="inventorySec" class="hidden">
+    <div class="sec">Uitverkoop van het park
+      <span class="info" tabindex="0">i<span class="tip">Verkocht / gereserveerd / beschikbaar uit de kavelvoorraad. De prognose schat op basis van het recente verkooptempo (laatste 6 maanden) hoelang tot uitverkocht.</span></span>
+    </div>
+    <div class="cards" id="inventoryKpis"></div>
+  </div>
+
+  <div id="opvolgSec" class="hidden">
+    <div class="sec"><span id="opvolgTitle">Opvolgen · open leads zonder afspraak</span>
+      <span class="info" tabindex="0">i<span class="tip">Open leads (nog niet verloren) zonder afspraak, oudste eerst. Bovenaan de leads die het langst wachten — die als eerste opvolgen. Rood = 30+ dagen oud.</span></span>
+    </div>
+    <div class="panel"><div class="scroll"><table id="opvolgTable"></table></div></div>
+  </div>
   </div><!-- /tabResultaten -->
 
   <div id="tabAdvertenties" class="hidden">
@@ -299,8 +313,8 @@
     </div>
     <div class="chartbox" style="margin-bottom:26px"><canvas id="adChart" height="220"></canvas></div>
     <div id="adMonthSec" class="hidden">
-      <div class="sec">Per maand · advertentiebudget en resultaat
-        <span class="info" tabindex="0">i<span class="tip">Uitgaven tellen in de maand van de uitgave. Leads, afspraken en sales tellen bij de maand dat de lead binnenkwam — zo staat het budget van een maand naast het uiteindelijke resultaat van diezelfde leads.</span></span>
+      <div class="sec">Cohort-rendement · per lead-maand
+        <span class="info" tabindex="0">i<span class="tip">Elke rij is het cohort van leads dat in die maand binnenkwam, met de uitgaven van die maand en het uiteindelijke resultaat van dat cohort (afspraken/sales/omzet, ongeacht wanneer ze omsloegen). ROAS = omzet ÷ uitgaven. "Rijpheid" = gemiddelde leeftijd van de leads; een jong cohort moet nog omslaan, dus lage cijfers daar zijn normaal.</span></span>
       </div>
       <div class="panel" style="margin-bottom:26px"><div class="scroll"><table id="adMonthTable"></table></div></div>
     </div>
@@ -1102,14 +1116,16 @@ function renderAdMonths(rows){
   if(!rows.length) return;
   $("adMonthTable").innerHTML =
     `<thead><tr><th style="text-align:left">Maand</th><th>Uitgaven</th><th>Leads</th><th>CPL</th>
-       <th>Afspraken</th><th>CPA</th><th>Sales</th><th>Omzet</th><th>Kost/sale</th><th>ROAS</th></tr></thead>
-     <tbody>${rows.map(m=>`<tr>
+       <th>Afspraken</th><th>CPA</th><th>Sales</th><th>Omzet</th><th>Kost/sale</th><th>ROAS</th><th>Rijpheid</th></tr></thead>
+     <tbody>${rows.map(m=>{ const jong = Number(m.gem_leadleeftijd)<45;
+       return `<tr>
        <td style="text-align:left">${mfmt(m.maand)}</td>
        <td style="font-weight:600">${eur(m.spend)}</td>
        <td>${m.leads}</td><td>${m.leads>0?eur(m.cpl):"—"}</td>
        <td>${m.afspraken}</td><td>${m.afspraken>0?eur(m.cpa):"—"}</td>
        <td>${m.sales}</td><td style="font-weight:600">${Number(m.omzet)>0?eur(m.omzet):"—"}</td>
-       <td>${m.sales>0?eur(m.kost_per_sale):"—"}</td><td>${Number(m.roas)>0?Number(m.roas).toFixed(2):"—"}</td></tr>`).join("")}</tbody>`;
+       <td>${m.sales>0?eur(m.kost_per_sale):"—"}</td><td>${Number(m.roas)>0?Number(m.roas).toFixed(2):"—"}</td>
+       <td style="color:${jong?'var(--muted)':'inherit'}">${m.gem_leadleeftijd!=null?m.gem_leadleeftijd+" d"+(jong?" · rijpt nog":""):"—"}</td></tr>`;}).join("")}</tbody>`;
 }
 
 /* ---------- monthly overview (all roles) ---------- */
@@ -1250,6 +1266,8 @@ async function renderOwner(){
   drawChart(parkNames.map(n=>n.replace("Park ","")), datasets);
 
   renderReasons(r);
+  renderOpvolg(agentVal==="all"?null:Number(agentVal), parkVal==="all"?null:Number(parkVal), true);
+  if(parkVal==="all") $("inventorySec").classList.add("hidden"); else renderInventory(Number(parkVal));
 
   const mo = await rpc("monthly_overview", {
     p_agent_id: agentVal==="all"?null:Number(agentVal),
@@ -1292,6 +1310,8 @@ async function renderAgent(agentId){
   const det = await rpc("appointments_detail", {...r, p_agent_id:agentId, p_park_id:pp}) || [];
   $("apptTitle").textContent = `Mijn afspraken (${det.length})`;
   renderAppts(det, false);
+  $("inventorySec").classList.add("hidden");
+  renderOpvolg(agentId, pp, false);
 }
 
 /* ---------- RECREATIEONTWIKKELAAR: alleen parkgemiddelden ---------- */
@@ -1310,6 +1330,8 @@ async function renderPark(parkId){
     metric("Closing %",(f.appointments?Math.round(f.sales/f.appointments*100):0)+"%") +
     metric("No-show %",(f.no_show_pct||0)+"%");
   renderMonths(await rpc("monthly_overview", {p_park_id:parkId}) || [], {spend:false, leads:true});
+  $("opvolgSec").classList.add("hidden");
+  renderInventory(parkId);
 }
 
 /* ---------- shared render bits ---------- */
@@ -1462,6 +1484,41 @@ async function toonAdDeals(adId, kind, naam){
        || `<tr><td colspan="7" style="color:var(--muted);padding:14px">Geen deals gevonden.</td></tr>`}</tbody>`;
   $("adDealsSec").classList.remove("hidden");
   $("adDealsSec").scrollIntoView({ behavior:"smooth", block:"nearest" });
+}
+
+/* ---------- opvolglijst (open leads zonder afspraak, oudste eerst) ---------- */
+async function renderOpvolg(agentId, parkId, toonAgent){
+  const rows = await rpc("opvolg_leads", { p_agent_id: agentId==null?null:Number(agentId), p_park_id: parkId==null?null:Number(parkId) }) || [];
+  $("opvolgSec").classList.toggle("hidden", !rows.length);
+  if(!rows.length) return;
+  $("opvolgTitle").textContent = `Opvolgen · open leads zonder afspraak (${rows.length})`;
+  const lijst = rows.slice(0,50);
+  $("opvolgTable").innerHTML =
+    `<thead><tr><th class="tl">Deal</th>${toonAgent?'<th class="tl">Makelaar</th>':''}<th class="tl">Park</th><th class="tl">Fase</th><th class="tl">Lead sinds</th><th>Dagen oud</th><th></th></tr></thead>
+     <tbody>${lijst.map(x=>`<tr>
+       <td style="text-align:left">#${x.deal_id}${x.titel?` · ${x.titel}`:""}</td>
+       ${toonAgent?`<td style="text-align:left">${x.agent}</td>`:''}
+       <td style="text-align:left">${x.park}</td>
+       <td style="text-align:left">${x.stage_name||"—"}</td>
+       <td style="text-align:left">${x.lead_created?dt(x.lead_created):"—"}</td>
+       <td class="${x.dagen_oud>=30?'bad':''}">${x.dagen_oud}</td>
+       <td><a href="${x.pipedrive_url}" target="_blank" rel="noopener">Pipedrive ↗</a></td></tr>`).join("")}${rows.length>50?`<tr><td colspan="${toonAgent?7:6}" style="color:var(--muted);padding:10px">… en nog ${rows.length-50} meer (oudste 50 getoond)</td></tr>`:''}</tbody>`;
+}
+
+/* ---------- uitverkoopprognose van het park ---------- */
+async function renderInventory(parkId){
+  const s = (await rpc("park_sellthrough", { p_park_id: Number(parkId) }))?.[0];
+  const heeft = s && Number(s.totaal)>0;
+  $("inventorySec").classList.toggle("hidden", !heeft);
+  if(!heeft) return;
+  const prog = s.maanden_tot_uitverkocht;
+  const progTxt = prog==null ? "onvoldoende verkoopdata"
+    : (Number(prog)>=24 ? Math.round(prog/12)+" jaar" : Math.round(prog)+" mnd");
+  $("inventoryKpis").innerHTML =
+    metric("Verkocht", s.verkocht) + metric("Gereserveerd", s.gereserveerd) +
+    metric("Beschikbaar", s.beschikbaar) + metric("% verkocht", (s.verkocht_pct||0)+"%") +
+    metric("Verkooptempo", (Number(s.verkoop_per_maand)||0)+" /mnd") +
+    metric("Prognose uitverkocht", progTxt);
 }
 
 /* centrale click-handler: elke .deal-link (cel of card) opent de bijbehorende deals */
