@@ -883,7 +883,7 @@ async function renderOwner(){
   let agents = await rpc("owner_agent_performance", r) || [];
   if(agentVal!=="all") agents = agents.filter(a=>String(a.agent_id)===agentVal);
   $("agentTable").innerHTML =
-    `<thead><tr><th>Agent</th><th>Leads</th><th>Afspraken</th><th>Show %</th><th>Closing %</th><th>Sales</th><th>Omzet per afspraak</th><th>Omzet</th></tr></thead>
+    `<thead><tr><th>Agent</th><th>Leads</th><th>Afspraken</th><th>Show %</th><th>Shows</th><th>Closing %</th><th>Sales</th><th>Omzet per afspraak</th><th>Omzet</th></tr></thead>
      <tbody>${agents.map(a=>{
        const showPct = Math.round((100 - (a.no_show_pct||0))*10)/10;
        const scls = showPct>=90?"good":showPct<80?"bad":"";
@@ -892,7 +892,8 @@ async function renderOwner(){
          <td>${a.leads}</td>
          <td>${a.appointments}</td>
          <td class="${scls}">${a.appointments>0?showPct+"%":"—"}</td>
-         <td class="${cls}">${a.appointments>0?a.closing_rate_pct+"%":"—"}</td>
+         <td>${a.shows}</td>
+         <td class="${cls}">${a.shows>0?a.closing_rate_pct+"%":"—"}</td>
          <td>${a.sales}</td>
          <td>${eur(a.revenue_per_appt)}</td><td style="font-weight:600">${eur(a.revenue)}</td></tr>`;
      }).join("")}</tbody>`;
