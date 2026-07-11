@@ -936,7 +936,7 @@ async function renderOwner(){
     metric("Uitgaven",eur(f.spend)) + metric("Leads",f.leads||0) +
     metric("Afspraken",f.appointments||0) + metric("Sales",f.sales||0) +
     metric("Omzet",eur(f.revenue)) + metric("Omzet per afspraak",eur(perAppt)) +
-    metric("CPL",eur(f.cost_per_lead)) + metric("ROAS",Number(f.roas||0).toFixed(2)) +
+    metric("CPL",eur(f.cost_per_lead)) +
     metric("Closing %",(closing||0)+"%") + metric("Afval %",(f.afval_pct||0)+"%") +
     metric("No-show %",(f.no_show_pct||0)+"%");
 
@@ -1028,7 +1028,6 @@ async function renderPark(parkId){
   setBranding(parkId);
   const f = (await rpc("client_park_funnel", {p_park_id:parkId, ...r}))?.[0] || {};
   const perAppt = f.appointments ? Math.round(f.revenue/f.appointments) : 0;
-  const cps = f.sales ? Math.round(f.spend/f.sales) : 0;
   $("cardsTop").innerHTML =
     `<div class="metric"><div class="l">Advertentiekosten
        <span class="info" tabindex="0">i<span class="tip">Advertentiekosten van deze periode. Let op: een lead van nu leidt vaak pas weken tot maanden later tot een verkoop, dus deze kosten horen niet één-op-één bij de omzet van dezelfde periode.</span></span>
@@ -1037,8 +1036,6 @@ async function renderPark(parkId){
     metric("Sales",f.sales||0) + metric("Omzet",eur(f.revenue)) +
     metric("Omzet per afspraak (gem.)",eur(perAppt)) +
     metric("Closing %",(f.appointments?Math.round(f.sales/f.appointments*100):0)+"%") +
-    metric("Kosten per verkoop",eur(cps)) +
-    metric("ROAS",Number(f.roas||0).toFixed(2)) +
     metric("No-show %",(f.no_show_pct||0)+"%");
   renderMonths(await rpc("monthly_overview", {p_park_id:parkId}) || [], {spend:false, leads:true});
 }
