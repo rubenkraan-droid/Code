@@ -1160,7 +1160,7 @@ async function renderOwner(){
        const scls = showPct>=90?"good":showPct<80?"bad":"";
        const cls = a.closing_rate_pct>=40?"good":a.closing_rate_pct<30?"bad":"";
        return `<tr><td><span class="av"><span class="dot">${initials(a.agent)}</span>${a.agent}</span></td>
-         <td>${a.leads}</td>
+         <td>${a.leads>0 ? `<span class="lead-link" data-agentid="${a.agent_id}" data-agent="${a.agent}" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px">${a.leads}</span>` : 0}</td>
          <td>${a.appointments}</td>
          <td class="${scls}">${a.appointments>0?showPct+"%":"—"}</td>
          <td>${a.shows}</td>
@@ -1168,6 +1168,8 @@ async function renderOwner(){
          <td>${a.sales}</td>
          <td>${eur(a.revenue_per_appt)}</td><td style="font-weight:600">${eur(a.revenue)}</td></tr>`;
      }).join("")}</tbody>`;
+  document.querySelectorAll("#agentTable .lead-link").forEach(el =>
+    el.addEventListener("click", () => toonAgentLeads(el.dataset.agentid, el.dataset.agent)));
 
   const calls = await rpc("call_overview", { p_from:r.p_from, p_to:r.p_to, p_park_id:parkNum,
     p_agent_id: agentVal==="all"?null:Number(agentVal) }) || [];
@@ -1297,6 +1299,22 @@ async function toonVerlorenDeals(fase, reden){
        <td style="text-align:left">${x.lost_reason||"—"}</td>
        <td><a href="${x.pipedrive_url}" target="_blank" rel="noopener">Pipedrive ↗</a></td></tr>`).join("")
        || `<tr><td colspan="4" style="color:var(--muted);padding:14px">Geen deals gevonden.</td></tr>`}</tbody>`;
+  $("lostDealsSec").classList.remove("hidden");
+  $("lostDealsSec").scrollIntoView({ behavior:"smooth", block:"nearest" });
+}
+async function toonAgentLeads(agentId, agentNaam){
+  const rows = await rpc("agent_leads", { p_agent_id: Number(agentId), ...periodRange() }) || [];
+  $("lostDealsTitle").textContent = `Leads · ${agentNaam} (${rows.length})`;
+  $("lostDealsTable").innerHTML =
+    `<thead><tr><th class="tl">Deal</th><th class="tl">Fase</th><th class="tl">Lead sinds</th><th class="tl">Afspraak</th><th class="tl">Verkocht</th><th></th></tr></thead>
+     <tbody>${rows.map(x=>`<tr>
+       <td style="text-align:left">#${x.deal_id}${x.titel?` · ${x.titel}`:""}</td>
+       <td style="text-align:left">${x.stage_name||"—"}</td>
+       <td style="text-align:left">${x.lead_created?dt(x.lead_created):"—"}</td>
+       <td style="text-align:left">${x.appointment_date?dt(x.appointment_date):"—"}</td>
+       <td style="text-align:left">${x.sale_date?dt(x.sale_date):"—"}</td>
+       <td><a href="${x.pipedrive_url}" target="_blank" rel="noopener">Pipedrive ↗</a></td></tr>`).join("")
+       || `<tr><td colspan="6" style="color:var(--muted);padding:14px">Geen leads gevonden.</td></tr>`}</tbody>`;
   $("lostDealsSec").classList.remove("hidden");
   $("lostDealsSec").scrollIntoView({ behavior:"smooth", block:"nearest" });
 }
