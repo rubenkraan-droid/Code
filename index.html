@@ -275,6 +275,12 @@
       <span class="info" tabindex="0">i<span class="tip">Uitgaven en clicks komen uit Meta; leads komen uit Pipedrive. Een lead van nu leidt vaak pas weken tot maanden later tot een verkoop, dus de kosten van een periode horen niet één-op-één bij de omzet van dezelfde periode.</span></span>
     </div>
     <div class="chartbox" style="margin-bottom:26px"><canvas id="adChart" height="220"></canvas></div>
+    <div id="adMonthSec" class="hidden">
+      <div class="sec">Per maand · advertentiebudget en resultaat
+        <span class="info" tabindex="0">i<span class="tip">Uitgaven tellen in de maand van de uitgave. Leads, afspraken en sales tellen bij de maand dat de lead binnenkwam — zo staat het budget van een maand naast het uiteindelijke resultaat van diezelfde leads.</span></span>
+      </div>
+      <div class="panel" style="margin-bottom:26px"><div class="scroll"><table id="adMonthTable"></table></div></div>
+    </div>
     <div id="adOverviewSec">
       <div id="adWarnBanner" class="hidden banner" style="background:var(--warn-soft);color:var(--warn);padding:10px 14px;border-radius:8px"></div>
       <div class="sec">Per advertentie · klik op een rij voor het dagverloop, op een kolomkop om te sorteren</div>
@@ -795,10 +801,11 @@ async function renderAds(){
   }
   setBranding(pp);
   const r = periodRange();
-  const [k, daily, ov] = await Promise.all([
+  const [k, daily, ov, mnd] = await Promise.all([
     rpc("ad_kpis",  { ...r, p_park_id: pp }).then(x=>x?.[0]||{}),
     rpc("ad_daily", { ...r, p_park_id: pp }),
     rpc("ad_overview", { ...r, p_park_id: pp }),
+    rpc("ad_monthly", { p_park_id: pp, p_from: r.p_from, p_to: r.p_to }),
   ]);
 
   const spend=Number(k.spend)||0, leads=Number(k.leads)||0, afspr=Number(k.afspraken)||0,
@@ -829,6 +836,7 @@ async function renderAds(){
   ADROWS = ov || [];
   drawAdTable();
   renderBestAds();
+  renderAdMonths(mnd || []);
   closeAdDetail();
   $("adOverviewSec").classList.toggle("hidden", !ADROWS.length);
   const geflagd = ADROWS.filter(a => a.leads>=ONGEKWALIFICEERD_MIN_LEADS && (Number(a.ongekwalificeerd_pct)||0)>=ONGEKWALIFICEERD_DREMPEL);
@@ -963,6 +971,24 @@ function renderBestAds(){
   }).join("");
   document.querySelectorAll("#adBestGrid .adbest-card").forEach(c => c.addEventListener("click", () =>
     renderAdDetail(Number(c.dataset.adid), c.dataset.naam)));
+}
+
+/* ---------- advertentiebudget per maand (lead-geankerd) ---------- */
+function renderAdMonths(rows){
+  const mfmt = d => { const s = new Date(d).toLocaleDateString("nl-NL",{month:"long",year:"numeric"});
+    return s.charAt(0).toUpperCase()+s.slice(1); };
+  $("adMonthSec").classList.toggle("hidden", !rows.length);
+  if(!rows.length) return;
+  $("adMonthTable").innerHTML =
+    `<thead><tr><th style="text-align:left">Maand</th><th>Uitgaven</th><th>Leads</th><th>CPL</th>
+       <th>Afspraken</th><th>CPA</th><th>Sales</th><th>Omzet</th><th>Kost/sale</th><th>ROAS</th></tr></thead>
+     <tbody>${rows.map(m=>`<tr>
+       <td style="text-align:left">${mfmt(m.maand)}</td>
+       <td style="font-weight:600">${eur(m.spend)}</td>
+       <td>${m.leads}</td><td>${m.leads>0?eur(m.cpl):"—"}</td>
+       <td>${m.afspraken}</td><td>${m.afspraken>0?eur(m.cpa):"—"}</td>
+       <td>${m.sales}</td><td style="font-weight:600">${Number(m.omzet)>0?eur(m.omzet):"—"}</td>
+       <td>${m.sales>0?eur(m.kost_per_sale):"—"}</td><td>${Number(m.roas)>0?Number(m.roas).toFixed(2):"—"}</td></tr>`).join("")}</tbody>`;
 }
 
 /* ---------- monthly overview (all roles) ---------- */
