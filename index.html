@@ -216,6 +216,7 @@
     </div>
     <div class="chartbox" style="margin-bottom:26px"><canvas id="adChart" height="220"></canvas></div>
     <div id="adOverviewSec">
+      <div id="adWarnBanner" class="hidden banner" style="background:var(--warn-soft);color:var(--warn);padding:10px 14px;border-radius:8px"></div>
       <div class="sec">Per advertentie · klik op een rij voor het dagverloop, op een kolomkop om te sorteren</div>
       <div class="panel"><div class="scroll"><table id="adTable"></table></div></div>
     </div>
@@ -603,6 +604,10 @@ async function renderAds(){
   drawAdTable();
   closeAdDetail();
   $("adOverviewSec").classList.toggle("hidden", !ADROWS.length);
+  const geflagd = ADROWS.filter(a => a.leads>=ONGEKWALIFICEERD_MIN_LEADS && (Number(a.ongekwalificeerd_pct)||0)>=ONGEKWALIFICEERD_DREMPEL);
+  $("adWarnBanner").classList.toggle("hidden", !geflagd.length);
+  if(geflagd.length) $("adWarnBanner").innerHTML =
+    `<span>&#9888;</span><span>${geflagd.length===1?"1 advertentie heeft":geflagd.length+" advertenties hebben"} veel ongekwalificeerde leads: ${geflagd.map(a=>`${a.advertentie} (${a.ongekwalificeerd_pct}%)`).join(", ")} — overweeg uitzetten of targeting aanscherpen.</span>`;
   $("adFoot").textContent = ADROWS.length
     ? `${k.leads_met_ad ?? 0} van ${leads} leads in deze periode zijn aan een advertentie gekoppeld · uitgaven en clicks uit Meta, leads, afspraken, sales en omzet uit Pipedrive via het AD ID op de deal.`
     : "Nog geen advertentiedata voor deze selectie.";
@@ -644,8 +649,9 @@ async function renderAdDetail(adId, naam){
 const ADCOLS = [
   ["advertentie","Advertentie"], ["status","Status"], ["spend","Uitgaven"], ["clicks","Clicks"],
   ["cpc","CPC"], ["leads","Leads"], ["cpl","CPL"], ["afspraken","Afspraken"], ["cpa","CPA"],
-  ["sales","Sales"], ["omzet","Omzet"], ["roas","ROAS"],
+  ["ongekwalificeerd_pct","Ongekwalificeerd %"], ["sales","Sales"], ["omzet","Omzet"], ["roas","ROAS"],
 ];
+const ONGEKWALIFICEERD_MIN_LEADS = 5, ONGEKWALIFICEERD_DREMPEL = 30;
 function drawAdTable(){
   const s = ADSORT;
   const rows = [...ADROWS].sort((a,b)=>{
@@ -657,12 +663,17 @@ function drawAdTable(){
       `<th data-key="${key}" style="cursor:pointer;user-select:none">${label}${s.key===key ? (s.dir<0?" ↓":" ↑") : ""}</th>`).join("")}</tr></thead>
      <tbody>${rows.map(a=>{
        const st = STATUSNL[a.status] || [a.status||"—","held"];
-       return `<tr data-adid="${a.ad_id}" data-naam="${a.advertentie}" style="cursor:pointer"><td style="text-align:left">${a.advertentie}</td>
+       const ok = Number(a.ongekwalificeerd_pct)||0;
+       const vlag = a.leads>=ONGEKWALIFICEERD_MIN_LEADS && ok>=ONGEKWALIFICEERD_DREMPEL;
+       const okCls = ok>=ONGEKWALIFICEERD_DREMPEL?"bad":ok>=15?"":"good";
+       return `<tr data-adid="${a.ad_id}" data-naam="${a.advertentie}" style="cursor:pointer"><td style="text-align:left">${a.advertentie}
+           ${vlag ? `<span class="info" tabindex="0" style="background:var(--warn-soft);color:var(--warn)">!<span class="tip">Veel ongekwalificeerde leads (${ok}% van ${a.leads}) — vaak "geen budget" of "wil huren i.p.v. kopen". Overweeg deze advertentie uit te zetten of het targeting aan te scherpen.</span></span>` : ""}</td>
          <td style="text-align:left"><span class="badge ${st[1]}">${st[0]}</span></td>
          <td style="font-weight:600">${eur(a.spend)}</td><td>${a.clicks}</td>
          <td>${a.cpc ? "€"+Number(a.cpc).toLocaleString("nl-NL",{minimumFractionDigits:2,maximumFractionDigits:2}) : "—"}</td>
          <td>${a.leads}</td><td>${a.leads>0 ? eur(a.cpl) : "—"}</td>
          <td>${a.afspraken}</td><td>${a.afspraken>0 ? eur(a.cpa) : "—"}</td>
+         <td class="${okCls}">${a.leads>0 ? ok+"%" : "—"}</td>
          <td>${a.sales}</td><td>${a.omzet>0 ? eur(a.omzet) : "—"}</td>
          <td>${Number(a.roas)>0 ? Number(a.roas).toFixed(2) : "—"}</td></tr>`;
      }).join("")}</tbody>`;
