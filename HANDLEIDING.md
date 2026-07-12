@@ -51,9 +51,21 @@ De hoofdfunnel: leads → afspraken → verkopen, met closing %, afval % en no-s
   vallen eruit (die staan al gepland).
 
 ### Advertenties
-Per park. Uitgaven, clicks, leads, kosten per lead (CPL) en kosten per afspraak (CPA) per advertentie,
-een dagverloop-grafiek, een cohort-overzicht per lead-maand en de best presterende advertenties
-(met thumbnail). Advertenties met dezelfde naam-code worden als één advertentie getoond.
+Per park. Uitgaven, clicks, leads, kosten per lead (CPL), kosten per afspraak (CPA) en de
+conversie lead → afspraak (Conv. %) per advertentie, een dagverloop-grafiek, een cohort-overzicht
+per lead-maand, automatische inzichten (beste conversie, goedkoopste leads, budgetlekken,
+CPL-trend) en de best presterende advertenties (met thumbnail). Advertenties met dezelfde
+naam-code worden als één advertentie getoond.
+Elke advertentie heeft een instelbare **Fase** (awareness, Schwartz): Onb = Onbewust,
+Prob = Probleembewust, Opl = Oplossingsbewust, Prod = Productbewust, Meest = Meest bewust.
+Klik op de fase-pill om de fase en de notities te bewerken; filter met de fase-keuzelijst.
+
+### Archief
+De creative-library: alle advertenties met thumbnail en hun all-time resultaten (uitgaven, leads,
+CPL, afspraken, CPA, sales), filterbaar op fase en status. Klik op een advertentie om de notities
+in te vullen: werkte wel/niet, waarom (waarschijnlijk), en bij een gestopte advertentie de
+kill-reden. Die notities zijn ook zichtbaar in het Advertenties-tabblad (✕-icoontje = kill-reden)
+en zijn gekoppeld aan de advertentiecode, dus ze overleven het samenvoegen van kopieën.
 
 ### Prognose
 Vooruitblik op basis van de recente cijfers.
@@ -90,6 +102,9 @@ Aan- en verkoop van bestaande woningen (Pipedrive-pijplijn Resale). Zuivere funn
 | **Show %** | 100 % − no-show %. |
 | **CPL** | Advertentie-uitgaven ÷ leads. |
 | **CPA** | Advertentie-uitgaven ÷ afspraken. |
+| **Conv. %** | Afspraken ÷ leads per advertentie (kwaliteit van de leads). |
+| **Fase** | Awareness-fase van het publiek (Schwartz): Onbewust → Meest bewust. |
+| **Definitief** | Verkoop waarvan het koopcontract definitief is, naar de notaris is of gepasseerd. |
 | **ROAS** | Rendement op de advertentie-uitgaven. |
 | **Cohort** | De groep leads die in dezelfde maand binnenkwam; "rijpheid" = hoe oud die leads zijn. |
 
@@ -122,7 +137,10 @@ Riverte en Berkenstrand zijn bewust ongemapt en worden uit de funnel gehouden.
 
 **Bellen:** `call_overview`, `call_stats`, `call_attempts_to_reach`.
 
-**Advertenties:** `ad_kpis`, `ad_overview`, `ad_daily`, `ad_daily_detail`, `ad_monthly`, `ad_deals`.
+**Advertenties:** `ad_kpis`, `ad_overview`, `ad_daily`, `ad_daily_detail`, `ad_monthly`, `ad_deals`,
+`ad_archive` (creative-library), `set_ad_annotation` (fase + notities per advertentiecode).
+
+**Definitief:** `definitief_check`, `agent_definitief`, `monthly_definitief`.
 
 **Resale:** `resale_funnel`, `resale_agent_performance`, `resale_agent_stats`, `resale_monthly`,
 `resale_deals`.

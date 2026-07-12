@@ -83,6 +83,16 @@
   .donutmini{flex:none;width:46px;height:46px;position:relative}
   .donutmini .dv{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--ink)}
   .sec{font-size:11px;font-weight:700;margin:0 0 12px;text-transform:uppercase;letter-spacing:.045em;color:var(--muted)}
+  /* automatische inzichten */
+  .insights{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-bottom:24px}
+  .insight{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px 15px;box-shadow:var(--shadow);
+    display:flex;gap:11px;align-items:flex-start;font-size:13px;line-height:1.45;color:var(--muted)}
+  .insight .ic{flex:none;width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;background:var(--surface-2)}
+  .insight b{display:block;font-size:12.5px;margin-bottom:2px;color:var(--ink)}
+  .insight.good .ic{background:var(--good-soft)}
+  .insight.warn .ic{background:var(--warn-soft)}
+  .insight.bad .ic{background:var(--bad-soft)}
+  .insight.info .ic{background:#E4ECFB}
   .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:24px;box-shadow:var(--shadow)}
   .panel .scroll{max-height:440px;overflow-y:auto}
   table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
@@ -326,6 +336,12 @@
 
   <div id="ownerOnly" class="hidden">
     <div class="banner hide"><span>●</span><span>Alleen voor eigenaar · nooit zichtbaar voor makelaar of ontwikkelaar</span></div>
+    <div id="ownerInsightsSec" class="hidden">
+      <div class="sec">Automatische inzichten
+        <span class="info" tabindex="0">i<span class="tip">Automatisch berekende signalen uit de cijfers van de gekozen periode: uitschieters bij makelaars, definitief-status en opvolg-achterstand. Bedoeld als startpunt, niet als oordeel.</span></span>
+      </div>
+      <div id="ownerInsights" class="insights"></div>
+    </div>
     <div class="sec">Per agent</div>
     <div class="panel"><table id="agentTable"></table></div>
     <p id="definitiefNote" class="foot" style="margin-top:6px"></p>
@@ -360,7 +376,8 @@
   <div id="monthSec" class="hidden">
     <div class="sec">Per maand</div>
     <div class="chartbox" style="margin-bottom:14px"><canvas id="salesChart" height="220"></canvas></div>
-    <div class="panel"><table id="monthTable"></table></div>
+    <div class="panel" style="margin-bottom:8px"><table id="monthTable"></table></div>
+    <p id="monthDefNote" class="foot" style="margin:0 0 26px"></p>
   </div>
 
   <div id="apptSec" class="hidden">
@@ -387,6 +404,12 @@
   <div id="tabAdvertenties" class="hidden">
     <div id="adParkTabs" class="tabs hidden" style="margin-bottom:16px"></div>
     <div class="cards" id="adKpis"></div>
+    <div id="adInsightsSec" class="hidden">
+      <div class="sec">Automatische inzichten
+        <span class="info" tabindex="0">i<span class="tip">Automatisch berekende signalen over advertentiekwaliteit in de gekozen periode: beste conversie, goedkoopste leads, budgetlekken en de kosten-per-lead-trend (laatste 14 dagen t.o.v. de 14 dagen ervoor).</span></span>
+      </div>
+      <div id="adInsights" class="insights"></div>
+    </div>
     <div class="sec">Trend per dag
       <span class="info" tabindex="0">i<span class="tip">Uitgaven en clicks komen uit Meta; leads komen uit Pipedrive. Een lead van nu leidt vaak pas weken tot maanden later tot een verkoop, dus de kosten van een periode horen niet één-op-één bij de omzet van dezelfde periode.</span></span>
     </div>
@@ -861,7 +884,9 @@ async function renderFinance(){
 
   const dt = d => d ? new Date(d).toLocaleDateString("nl-NL",{day:"2-digit",month:"short",year:"numeric"}) : "Nog niet bekend";
   const vandaag = new Date().toISOString().slice(0,10);
-  const dtVoorwaarde = d => {
+  // definitieve verkoop: ontbindende voorwaarden zijn niet meer relevant -> toon "Definitief"
+  const dtVoorwaarde = (d, statusLabel) => {
+    if(String(statusLabel||"").startsWith("Definitief")) return `<span class="badge sale">Definitief</span>`;
     if(!d) return "Nog niet bekend";
     const label = dt(d);
     return d < vandaag ? `${label} <span class="badge held" style="background:var(--bad-soft);color:var(--bad)">Verlopen</span>` : label;
@@ -881,7 +906,7 @@ async function renderFinance(){
        <td>${r.courtage_makelaar!=null ? eur(r.courtage_makelaar) : "Nog niet bekend"}</td>
        <td>${r.marge_recraparcs!=null ? eur(r.marge_recraparcs) : "Nog niet bekend"}</td>
        <td style="text-align:left">${dt(r.notary_date)}</td>
-       <td style="text-align:left">${dtVoorwaarde(r.rescission_date)}</td>
+       <td style="text-align:left">${dtVoorwaarde(r.rescission_date, r.status_label)}</td>
        <td><a href="${r.pipedrive_url}" target="_blank" rel="noopener">Pipedrive ↗</a></td>
      </tr>`).join("") || `<tr><td colspan="10" style="color:var(--muted);padding:14px">Nog geen deals mondeling verkocht of verder in deze selectie.</td></tr>`}</tbody>`;
 }
@@ -926,7 +951,11 @@ async function renderFinanceAgent(agentId){
 
   const dt = d => d ? new Date(d).toLocaleDateString("nl-NL",{day:"2-digit",month:"short",year:"numeric"}) : "Nog niet bekend";
   const vandaag = new Date().toISOString().slice(0,10);
-  const dtVoorwaarde = d => { if(!d) return "Nog niet bekend"; const label = dt(d);
+  // definitieve verkoop: ontbindende voorwaarden zijn niet meer relevant -> toon "Definitief"
+  const dtVoorwaarde = (d, statusLabel) => {
+    if(String(statusLabel||"").startsWith("Definitief")) return `<span class="badge sale">Definitief</span>`;
+    if(!d) return "Nog niet bekend";
+    const label = dt(d);
     return d < vandaag ? `${label} <span class="badge held" style="background:var(--bad-soft);color:var(--bad)">Verlopen</span>` : label; };
   const statusKleur = s => s==="Afgevallen" ? "bad" : s.startsWith("Definitief") ? "good" : "";
 
@@ -940,7 +969,7 @@ async function renderFinanceAgent(agentId){
        <td>${r.amount!=null ? eur(r.amount) : "Nog niet bekend"}</td>
        <td style="font-weight:600;color:var(--good)">${r.mijn_commissie!=null ? eur(r.mijn_commissie) : "Nog niet bekend"}</td>
        <td style="text-align:left">${dt(r.notary_date)}</td>
-       <td style="text-align:left">${dtVoorwaarde(r.rescission_date)}</td>
+       <td style="text-align:left">${dtVoorwaarde(r.rescission_date, r.status_label)}</td>
        <td><a href="${r.pipedrive_url}" target="_blank" rel="noopener">Pipedrive ↗</a></td>
      </tr>`).join("") || `<tr><td colspan="8" style="color:var(--muted);padding:14px">Nog geen deals mondeling verkocht of verder.</td></tr>`}</tbody>`;
 }
@@ -1097,6 +1126,9 @@ async function renderAds(){
   renderBestAds();
   renderAdMonths(mnd || []);
   closeAdDetail();
+  const adIns = adInsightsBouw(ADROWS, dd);
+  $("adInsightsSec").classList.toggle("hidden", !adIns.length);
+  $("adInsights").innerHTML = adIns.join("");
   $("adOverviewSec").classList.toggle("hidden", !ADROWS.length);
   const ctx = ongekStats();
   const flags = ADROWS.map(a => ({ a, f: ongekFlag(a, ctx) }));
@@ -1149,9 +1181,11 @@ async function renderAdDetail(adId, naam){
 
 const ADCOLS = [
   ["advertentie","Advertentie"], ["status","Status"], ["awareness_stage","Fase"], ["spend","Uitgaven"], ["clicks","Clicks"],
-  ["cpc","CPC"], ["leads","Leads"], ["cpl","CPL"], ["afspraken","Afspraken"], ["cpa","CPA"],
+  ["cpc","CPC"], ["leads","Leads"], ["cpl","CPL"], ["afspraken","Afspraken"], ["cpa","CPA"], ["conv_pct","Conv. %"],
   ["ongekwalificeerd_pct","Ongekwalificeerd %"], ["sales","Sales"], ["omzet","Omzet"], ["roas","ROAS"],
 ];
+// conversie lead -> afspraak (kwaliteitsmaat per advertentie); niet in de RPC, dus hier afgeleid
+const convPct = a => Number(a.leads)>0 ? Math.round((Number(a.afspraken)||0)/Number(a.leads)*100) : null;
 // sorteervolgorde voor de Fase-kolom: op funnel-positie (koud -> warm), leeg onderaan
 const FASE_ORDER = Object.fromEntries(FASES.map((f,i)=>[f.key,i+1]));
 let ADFASE = "all"; // actieve fase-filter in de advertentietabel
@@ -1205,6 +1239,7 @@ function drawAdTable(){
     .filter(a => ADFASE==="all" || (ADFASE==="none" ? !a.awareness_stage : a.awareness_stage===ADFASE))
     .sort((a,b)=>{
       if(s.key==="awareness_stage") return (faseSortVal(a)-faseSortVal(b)) * s.dir;
+      if(s.key==="conv_pct") return ((convPct(a)||0)-(convPct(b)||0)) * s.dir;
       const av=a[s.key], bv=b[s.key];
       return (typeof av==="string" ? av.localeCompare(bv) : (Number(av)||0)-(Number(bv)||0)) * s.dir;
     });
@@ -1212,7 +1247,9 @@ function drawAdTable(){
     `<thead><tr>${ADCOLS.map(([key,label])=>{
       const arrow = s.key===key ? (s.dir<0?" ↓":" ↑") : "";
       const info = key==='awareness_stage'
-        ? ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">${FASE_UITLEG}</span></span>` : "";
+        ? ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">${FASE_UITLEG}</span></span>`
+        : key==='conv_pct'
+        ? ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">Conversie van lead naar afspraak (afspraken ÷ leads). Dé kwaliteitsmaat naast de prijs per lead: een goedkope lead die nooit een afspraak wordt, is alsnog duur.</span></span>` : "";
       const tl = (key==='advertentie'||key==='status'||key==='awareness_stage') ? 'tl' : '';
       return `<th data-key="${key}" class="${tl}" style="cursor:pointer;user-select:none">${label}${arrow}${info}</th>`;
     }).join("")}</tr></thead>
@@ -1241,6 +1278,7 @@ function drawAdTable(){
          <td>${a.cpc ? "€"+Number(a.cpc).toLocaleString("nl-NL",{minimumFractionDigits:2,maximumFractionDigits:2}) : "—"}</td>
          <td>${adLink(a.leads,'leads',a.ad_id,a.advertentie)}</td><td>${a.leads>0 ? eur(a.cpl) : "—"}</td>
          <td>${adLink(a.afspraken,'afspraken',a.ad_id,a.advertentie)}</td><td>${a.afspraken>0 ? eur(a.cpa) : "—"}</td>
+         <td>${convPct(a)!=null ? convPct(a)+"%" : "—"}</td>
          <td class="${okCls}">${a.leads>0 ? ok+"%"+relMark : "—"}</td>
          <td>${adLink(a.sales,'verkopen',a.ad_id,a.advertentie)}</td><td>${a.omzet>0 ? eur(a.omzet) : "—"}</td>
          <td>${Number(a.roas)>0 ? Number(a.roas).toFixed(2) : "—"}</td></tr>`;
@@ -1336,22 +1374,54 @@ function renderAdMonths(rows){
 }
 
 /* ---------- monthly overview (all roles) ---------- */
+// opts.def = map "YYYY-MM" -> aantal definitieve verkopen (uit monthly_definitief); null = kolom weglaten
 function renderMonths(rows, opts){
   const mfmt = d => { const s = new Date(d).toLocaleDateString("nl-NL",{month:"long",year:"numeric"});
     return s.charAt(0).toUpperCase()+s.slice(1); };
+  const mkey = d => String(d).slice(0,7);
+  const heeftDef = opts.def != null;
   $("monthTable").innerHTML =
     `<thead><tr><th>Maand</th>${opts.spend?"<th>Uitgaven</th>":""}${opts.leads?"<th>Leads</th>":""}
-      <th>Afspraken</th><th>Sales</th><th>Omzet</th><th>Omzet per afspraak</th><th>Closing %</th></tr></thead>
+      <th>Afspraken</th><th>Sales</th>${heeftDef?`<th>Definitief <span class="info" tabindex="0">i<span class="tip">Aantal verkopen van die maand waarvan de koopovereenkomst definitief is (koopcontract definitief, naar de notaris of gepasseerd).</span></span></th>`:""}<th>Omzet</th><th>Omzet per afspraak</th><th>Closing %</th></tr></thead>
      <tbody>${rows.map(x=>{
        const per = x.appointments ? Math.round(x.revenue/x.appointments) : 0;
        const cl  = x.appointments ? Math.round(x.sales/x.appointments*100) : 0;
+       let defCell = "";
+       if(heeftDef){
+         const dv = Number(opts.def[mkey(x.maand)])||0, s = Number(x.sales)||0;
+         defCell = s===0 ? `<td>—</td>`
+           : `<td class="${dv>=s?"good":"bad"}" style="font-weight:600">${dv} / ${s}</td>`;
+       }
        return `<tr><td>${mfmt(x.maand)}</td>
          ${opts.spend?`<td>${x.spend==null?"—":eur(x.spend)}</td>`:""}
          ${opts.leads?`<td>${x.leads}</td>`:""}
-         <td>${x.appointments}</td><td>${x.sales}</td>
+         <td>${x.appointments}</td><td>${x.sales}</td>${defCell}
          <td style="font-weight:600">${eur(x.revenue)}</td><td>${eur(per)}</td><td>${cl}%</td></tr>`;
      }).join("")}</tbody>`;
+  // infoblokje: over de meest recente maand mét verkopen
+  const note = $("monthDefNote");
+  if(note){
+    note.textContent = "";
+    if(heeftDef){
+      const laatste = [...rows].reverse().find(x=>Number(x.sales)>0);
+      if(laatste){
+        const dv = Number(opts.def[mkey(laatste.maand)])||0, s = Number(laatste.sales)||0;
+        note.textContent = dv>=s
+          ? `${mfmt(laatste.maand)}: alle verkopen uit deze maand zijn definitief.`
+          : `${mfmt(laatste.maand)}: nog niet alle verkopen uit deze maand zijn definitief (${dv} van ${s}).`;
+        note.style.color = dv>=s ? "var(--good)" : "var(--warn)";
+      }
+    }
+  }
   drawSalesChart(rows.map(x=>mfmt(x.maand)), rows.map(x=>Number(x.revenue)||0), rows.map(x=>Number(x.sales)||0));
+}
+// haalt monthly_definitief op en zet 'm om naar een map "YYYY-MM" -> aantal (null bij fout)
+async function defMaandMap(agentId, parkId){
+  const rows = await rpc("monthly_definitief", { p_agent_id: agentId, p_park_id: parkId });
+  if(!rows) return null;
+  const map = {};
+  rows.forEach(x => map[String(x.maand).slice(0,7)] = Number(x.definitief)||0);
+  return map;
 }
 let salesChart;
 function drawSalesChart(labels, omzet, aantal){
@@ -1484,13 +1554,19 @@ async function renderOwner(){
   drawChart(parkNames.map(n=>n.replace("Park ","")), datasets);
 
   renderReasons(r);
-  renderOpvolg(agentVal==="all"?null:Number(agentVal), parkVal==="all"?null:Number(parkVal), true);
+  const opvolgStale = await renderOpvolg(agentVal==="all"?null:Number(agentVal), parkVal==="all"?null:Number(parkVal), true);
+  const ownIns = ownerInsightsBouw(dc, agents, calls, opvolgStale);
+  $("ownerInsightsSec").classList.toggle("hidden", !ownIns.length);
+  $("ownerInsights").innerHTML = ownIns.join("");
   if(parkVal==="all") $("inventorySec").classList.add("hidden"); else renderInventory(Number(parkVal));
 
-  const mo = await rpc("monthly_overview", {
-    p_agent_id: agentVal==="all"?null:Number(agentVal),
-    p_park_id:  parkVal==="all"?null:Number(parkVal) }) || [];
-  renderMonths(mo, {spend:agentVal==="all", leads:true});
+  const [mo, defMap2] = await Promise.all([
+    rpc("monthly_overview", {
+      p_agent_id: agentVal==="all"?null:Number(agentVal),
+      p_park_id:  parkVal==="all"?null:Number(parkVal) }).then(x=>x||[]),
+    defMaandMap(agentVal==="all"?null:Number(agentVal), parkVal==="all"?null:Number(parkVal)),
+  ]);
+  renderMonths(mo, {spend:agentVal==="all", leads:true, def:defMap2});
 
   const det = await rpc("appointments_detail", { ...r,
     p_agent_id: agentVal==="all"?null:Number(agentVal),
@@ -1528,7 +1604,8 @@ async function renderAgent(agentId){
   $("cardsCallMe").innerHTML =
     metric("Gebeld",cs.gebeld||0) + metric("Gesprek",cs.gesprek||0) + metric("Ingepland",cs.ingepland||0) +
     metric("% gesprek van gebeld", cs.gebeld>0 ? Math.round(cs.gesprek/cs.gebeld*100)+"%" : "—");
-  renderMonths(await rpc("monthly_overview", {p_agent_id:agentId, p_park_id:pp}) || [], {spend:false, leads:false});
+  renderMonths(await rpc("monthly_overview", {p_agent_id:agentId, p_park_id:pp}) || [],
+    {spend:false, leads:false, def: await defMaandMap(agentId, pp)});
   const det = await rpc("appointments_detail", {...r, p_agent_id:agentId, p_park_id:pp}) || [];
   $("apptTitle").textContent = `Mijn afspraken (${det.length})`;
   renderAppts(det, false);
@@ -1557,7 +1634,8 @@ async function renderPark(parkId){
     {label:"Afspraken", value:f.appointments||0, color:accent(), sub:f.leads?`${Math.round((f.appointments||0)/f.leads*100)}% van leads`:""},
     {label:"Sales", value:f.sales||0, color:"#3FA06B", sub:`Closing ${closingP}%`},
   ], { big:(f.leads||0).toLocaleString("nl-NL"), cap:"Leads" });
-  renderMonths(await rpc("monthly_overview", {p_park_id:parkId}) || [], {spend:false, leads:true});
+  renderMonths(await rpc("monthly_overview", {p_park_id:parkId}) || [],
+    {spend:false, leads:true, def: await defMaandMap(null, parkId)});
   $("opvolgSec").classList.add("hidden");
   renderInventory(parkId);
 }
@@ -1718,7 +1796,7 @@ async function toonAdDeals(adId, kind, naam){
 async function renderOpvolg(agentId, parkId, toonAgent){
   const rows = await rpc("opvolg_leads", { p_agent_id: agentId==null?null:Number(agentId), p_park_id: parkId==null?null:Number(parkId) }) || [];
   $("opvolgSec").classList.toggle("hidden", !rows.length);
-  if(!rows.length) return;
+  if(!rows.length) return 0;
   $("opvolgTitle").textContent = `Opvolgen · "In contact", langst geleden gecontacteerd eerst (${rows.length})`;
   const lijst = rows;
   const cols = toonAgent?7:6;
@@ -1734,6 +1812,7 @@ async function renderOpvolg(agentId, parkId, toonAgent){
        <td style="text-align:left">${x.contact_type||"—"}</td>
        <td style="text-align:left">${x.contact_door}</td>
        <td><a href="${x.pipedrive_url}" target="_blank" rel="noopener">Pipedrive ↗</a></td></tr>`;}).join("")}</tbody>`;
+  return rows.filter(x => x.dagen_sinds_contact==null || x.dagen_sinds_contact>=30).length;
 }
 
 /* ---------- uitverkoopprognose van het park ---------- */
@@ -1780,6 +1859,67 @@ function renderFunnel(stages, center){
   $("funnelCenter").innerHTML = `<div class="big">${center.big}</div><div class="cap">${center.cap}</div>`;
   $("heroStats").innerHTML = stages.map(s=>
     `<div class="metric"><div class="mtxt"><div class="l"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${s.color};margin-right:7px;vertical-align:middle"></span>${s.label}</div><div class="v">${(Number(s.value)||0).toLocaleString("nl-NL")}</div>${s.sub?`<div class="l" style="margin:5px 0 0">${s.sub}</div>`:""}</div></div>`).join("");
+}
+
+/* ---------- automatische inzichten ---------- */
+const insight = (cls, icon, titel, tekst) =>
+  `<div class="insight ${cls}"><div class="ic">${icon}</div><div><b>${titel}</b>${tekst}</div></div>`;
+
+// advertentiekwaliteit: conversie, CPL, budgetlekken, CPL-trend, fase-dekking
+function adInsightsBouw(rows, dd){
+  const out = [];
+  const conv = rows.filter(a=>Number(a.leads)>=5)
+    .map(a=>({a, c:(Number(a.afspraken)||0)/Number(a.leads)})).sort((x,y)=>y.c-x.c)[0];
+  if(conv && conv.c>0) out.push(insight("good","🎯","Beste conversie",
+    `${esc(conv.a.advertentie)}: ${(conv.c*100).toFixed(0)}% van de ${conv.a.leads} leads werd een afspraak.`));
+  const cpl = rows.filter(a=>Number(a.leads)>=5 && Number(a.spend)>0)
+    .sort((x,y)=>Number(x.cpl)-Number(y.cpl))[0];
+  if(cpl) out.push(insight("good","💶","Goedkoopste leads",
+    `${esc(cpl.advertentie)} levert leads voor ${eur(cpl.cpl)} per stuk (${cpl.leads} leads).`));
+  const lek = rows.filter(a=>Number(a.spend)>=100 && Number(a.afspraken)===0)
+    .sort((x,y)=>Number(y.spend)-Number(x.spend))[0];
+  if(lek) out.push(insight("warn","⚠","Budget zonder afspraken",
+    `${esc(lek.advertentie)}: ${eur(lek.spend)} uitgegeven, ${lek.leads} leads, nog geen afspraak.`));
+  if(dd && dd.length>=21){
+    const cplVan = arr => { const s=arr.reduce((t,x)=>t+(Number(x.spend)||0),0), l=arr.reduce((t,x)=>t+(Number(x.leads)||0),0);
+      return l>0 ? s/l : null; };
+    const cl = cplVan(dd.slice(-14)), cp = cplVan(dd.slice(-28,-14));
+    if(cl!=null && cp!=null && cp>0){
+      const d = (cl-cp)/cp*100;
+      if(Math.abs(d)>=10) out.push(insight(d<0?"good":"warn", d<0?"↓":"↑",
+        "Kosten per lead "+(d<0?"dalen":"stijgen"),
+        `Laatste 14 dagen ${eur(cl)} per lead, daarvoor ${eur(cp)} (${d>0?"+":""}${Math.round(d)}%).`));
+    }
+  }
+  const zonderFase = rows.filter(a=>!a.awareness_stage).length;
+  if(rows.length && zonderFase>0) out.push(insight("info","♦","Fase-dekking",
+    `${zonderFase} van ${rows.length} advertenties heeft nog geen awareness-fase — vul ze aan voor scherpere rapportage.`));
+  return out;
+}
+
+// eigenaar-signalen: definitief-status, beste closer, no-show-signaal, sterkste beller, opvolg-achterstand
+function ownerInsightsBouw(dc, agents, calls, opvolgStale){
+  const out = [];
+  const ds = Number(dc.sales)||0, dd = Number(dc.definitief)||0;
+  if(ds>0) out.push(dd>=ds
+    ? insight("good","✓","Definitief", `Alle ${ds} verkopen in deze periode zijn definitief.`)
+    : insight("warn","…","Definitief", `${dd} van ${ds} verkopen definitief — nog niet alle koopovereenkomsten zijn rond.`));
+  const closer = agents.filter(a=>Number(a.shows)>=3 && Number(a.closing_rate_pct)>0)
+    .sort((x,y)=>Number(y.closing_rate_pct)-Number(x.closing_rate_pct))[0];
+  if(closer) out.push(insight("good","★","Beste closing",
+    `${esc(closer.agent)}: ${closer.closing_rate_pct}% closing bij ${closer.shows} gehouden afspraken.`));
+  const noshow = agents.filter(a=>Number(a.appointments)>=5)
+    .map(a=>({a, sp: Math.round((100-(a.no_show_pct||0))*10)/10}))
+    .filter(x=>x.sp<85).sort((x,y)=>x.sp-y.sp)[0];
+  if(noshow) out.push(insight("warn","!","No-show-signaal",
+    `${esc(noshow.a.agent)}: ${noshow.sp}% show bij ${noshow.a.appointments} afspraken — bel afspraken vooraf na.`));
+  const beller = (calls||[]).filter(c=>Number(c.gesprek)>=5 && c.gesprek_naar_afspraak_pct!=null)
+    .sort((x,y)=>Number(y.gesprek_naar_afspraak_pct)-Number(x.gesprek_naar_afspraak_pct))[0];
+  if(beller) out.push(insight("good","☎","Sterkste beller",
+    `${esc(beller.agent)}: ${beller.gesprek_naar_afspraak_pct}% van de gesprekken wordt een afspraak.`));
+  if(Number(opvolgStale)>0) out.push(insight("warn","⏰","Opvolg-achterstand",
+    `${opvolgStale} open leads zonder contact in 30+ dagen — zie de opvolglijst onderaan.`));
+  return out;
 }
 
 /* ---------- notitie/fase-bewerkpaneel (gedeeld) ---------- */

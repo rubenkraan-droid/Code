@@ -139,7 +139,30 @@ in this repo. `list_migrations` on the project is the source of truth, not git l
   above). Brevo was discussed as the SMTP provider (host `smtp-relay.brevo.com:587`, needs SPF/DKIM
   for `recraparcs.nl` specifically, not whatever domain Golden Bricks already verified).
 
-## Current state (bijgewerkt 2026-07-11, eind sessie)
+## Werkafspraken (hard, van Ruben 2026-07-12)
+
+- Vóór élke push: `git fetch` + rebase. **Nooit** force-push of harde reset.
+- Supabase-functies die een parallelle sessie mogelijk ook aanpast **niet herdeployen** — voeg bij
+  twijfel een NIEUWE RPC toe (zo is `monthly_definitief` bewust een aparte functie naast
+  `monthly_overview`).
+- Grote wijzigingen: lokaal committen, aan Ruben laten zien, pas pushen na expliciet akkoord.
+
+## Current state (bijgewerkt 2026-07-12, sessie redesign + archief)
+
+**Deze sessie (2026-07-12):** volledige redesign naar licht/koel kaart-design (bovenbalk met
+icoon-nav i.p.v. zijbalk, gradient-charts, hero-funnel-donut, mini-donuts op %-KPI's);
+**awareness-fase per advertentie** (Schwartz 5-fasen, afgekort; kolom "Fase" + filter) en
+**advertentienotities** (werkte wel/niet, waarom, kill-reden) in nieuwe tabel `ad_annotations`
+op **codeniveau** (primary key `code`, zelfde merge-sleutel als `ad_overview`), via RPC's
+`set_ad_annotation` en `ad_archive`; `ad_overview` uitgebreid met `code`/fase/notities-kolommen
+(drop+create, grants opnieuw gezet); nieuwe tab **Archief** (creative-library met thumbnails,
+all-time resultaten, fase/status-filter, klik = notitiepaneel); **Definitief-kolom + infotekst**
+in de per-maand-tabel (nieuwe RPC `monthly_definitief`, zelfde definitie als `definitief_check`:
+stage in ('B. Koopcontract defitief','Koopcontract naar notaris') of `notary_passed`);
+Financiën: "Definitief"-badge in de Ontbindende-Vw.-kolom; **Conv. %**-kolom (afspraken÷leads)
+in de advertentietabel; **automatische inzichten**-panelen (eigenaar-Resultaten + Advertenties).
+
+## Vorige stand (2026-07-11)
 
 Fullest handoff = Google Drive **Recraparcs / agent-dashboard** → doc "CONTEXT — RecraVas agent-dashboard".
 
