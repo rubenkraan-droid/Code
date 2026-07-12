@@ -1,0 +1,2087 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RecraVas Dashboard</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%232C5F52'/%3E%3Ctext x='50' y='72' font-size='62' text-anchor='middle' fill='white' font-family='Georgia,serif' font-weight='700'%3ER%3C/text%3E%3C/svg%3E" />
+<style>
+  :root{
+    --bg:#EEF1F7; --card:#FFFFFF; --surface-2:#F5F7FB;
+    --ink:#242A36; --muted:#7A8598; --faint:#AAB3C4;
+    --line:#E7ECF4; --line-strong:#D9E0EC;
+    --accent:#2C5F52; --accent-ink:#173D33; --accent-soft:#E4ECE7; --accent-soft-ink:#1F4A3E;
+    --good:#3FA06B; --good-soft:#E4F4EB;
+    --bad:#E0654B; --bad-soft:#FBE9E4;
+    --warn:#E0A23A; --warn-soft:#FBF1DE;
+    --blue:#5B8DEF; --teal:#33C2C0; --violet:#8B7CF0; --pink:#F16D9A; --amber:#F4A63B;
+    --serif: ui-serif, Charter, "Iowan Old Style", Georgia, "Times New Roman", serif;
+    --shadow:0 1px 2px rgba(20,40,80,.04), 0 6px 20px rgba(20,40,80,.05);
+    --shadow-hover:0 2px 6px rgba(20,40,80,.06), 0 14px 34px rgba(20,40,80,.10);
+    --r:16px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,Inter,Roboto,Arial,sans-serif;line-height:1.5;
+    -webkit-font-smoothing:antialiased}
+  h1{font-weight:700;font-size:21px;margin:0;letter-spacing:-.01em}
+  .shell{min-height:100vh;display:flex;flex-direction:column}
+  /* ---------- bovenbalk met icoon-navigatie ---------- */
+  .topbar{position:sticky;top:0;z-index:30;background:var(--card);border-bottom:1px solid var(--line);
+    box-shadow:0 1px 0 rgba(20,40,80,.02);display:flex;align-items:center;gap:18px;padding:11px 26px}
+  .brand{display:flex;align-items:center;gap:11px;flex:none}
+  .brand .mark{width:34px;height:34px;border-radius:10px;
+    background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 55%, #000 0%));
+    color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:17px;flex:none;
+    box-shadow:0 4px 10px color-mix(in srgb,var(--accent) 35%, transparent)}
+  .brand .name{font-size:14.5px;font-weight:700;line-height:1.15;white-space:nowrap}
+  .brand .name small{display:block;font-size:11px;font-weight:500;color:var(--muted)}
+  #sideToggle{border:none;background:none;color:var(--muted);cursor:pointer;padding:6px;border-radius:8px;flex:none;display:none}
+  #sideToggle:hover{background:var(--surface-2);color:var(--ink)}
+  .tabs{display:flex;flex-direction:row;gap:3px;flex:1;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{display:flex;align-items:center;gap:8px;border:none;background:none;font:inherit;font-size:13.5px;
+    padding:9px 13px;cursor:pointer;color:var(--muted);border-radius:10px;text-align:left;white-space:nowrap;
+    transition:background .15s,color .15s}
+  .tab svg{opacity:.85}
+  .tab:hover{background:var(--surface-2);color:var(--ink)}
+  .tab.active{color:#fff;font-weight:600;
+    background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 62%, #000));
+    box-shadow:0 4px 12px color-mix(in srgb,var(--accent) 30%, transparent)}
+  .tab.active svg{opacity:1}
+  .who{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:10px;flex:none;margin-left:auto}
+  .who button,.who a.btn{border:1px solid var(--line-strong);background:var(--card);border-radius:10px;
+    padding:7px 12px;font:inherit;font-size:13px;cursor:pointer;color:var(--ink);text-decoration:none}
+  .who button:hover,.who a.btn:hover{background:var(--surface-2)}
+  .who select{min-width:0}
+  .main{padding:24px 26px 64px;min-width:0;max-width:1240px;width:100%;margin:0 auto}
+  .top{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+  .sub{font-size:13px;color:var(--muted);margin:4px 0 0}
+  .filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px}
+  #adParkTabs.tabs{flex-direction:row;gap:6px;flex:none;border-bottom:1px solid var(--line);padding-bottom:0;overflow:visible}
+  #adParkTabs.tabs .tab{border-radius:10px 10px 0 0;border-bottom:2px solid transparent;padding:8px 15px;background:none;color:var(--muted);box-shadow:none}
+  #adParkTabs.tabs .tab.active{background:none;color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+  .info{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--line);color:var(--muted);font-size:11px;font-style:normal;margin-left:6px;cursor:help;position:relative;vertical-align:middle}
+  .info .tip{display:none;position:absolute;left:0;bottom:22px;width:250px;background:var(--ink);color:#fff;font-size:12px;font-weight:400;line-height:1.45;padding:10px 12px;border-radius:10px;z-index:20;text-align:left;text-transform:none;box-shadow:var(--shadow-hover);font-variant-numeric:normal}
+  .info{text-transform:none}
+  .info:hover .tip,.info:focus .tip{display:block}
+  select,input,textarea{font:inherit;font-size:13.5px;padding:9px 11px;border:1px solid var(--line-strong);
+    border-radius:10px;background:var(--card);color:var(--ink);min-width:150px}
+  select:focus,input:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 14%, transparent)}
+  .banner{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;margin:0 0 12px;color:var(--accent-ink)}
+  .banner.hide{color:var(--bad)}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:12px;margin-bottom:24px}
+  .metric{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px 17px;box-shadow:var(--shadow)}
+  .metric.hasdonut{display:flex;align-items:center;gap:13px}
+  .metric .mtxt{min-width:0}
+  .metric.team{background:linear-gradient(135deg,var(--accent-soft),color-mix(in srgb,var(--accent-soft) 55%, #fff));border-color:transparent}
+  .metric .l{font-size:12px;color:var(--muted);margin-bottom:5px;line-height:1.25}
+  .metric .v{font-family:var(--serif);font-size:25px;line-height:1.1;font-weight:500}
+  .metric.team .l,.metric.team .v{color:var(--accent-soft-ink)}
+  .metric.deal-link{transition:box-shadow .15s,transform .1s}
+  .metric.deal-link:hover{box-shadow:var(--shadow-hover);transform:translateY(-1px)}
+  .donutmini{flex:none;width:46px;height:46px;position:relative}
+  .donutmini .dv{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--ink)}
+  .sec{font-size:11px;font-weight:700;margin:0 0 12px;text-transform:uppercase;letter-spacing:.045em;color:var(--muted)}
+  /* automatische inzichten */
+  .insights{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-bottom:24px}
+  .insight{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px 15px;box-shadow:var(--shadow);
+    display:flex;gap:11px;align-items:flex-start;font-size:13px;line-height:1.45;color:var(--muted)}
+  .insight .ic{flex:none;width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;background:var(--surface-2)}
+  .insight b{display:block;font-size:12.5px;margin-bottom:2px;color:var(--ink)}
+  .insight.good .ic{background:var(--good-soft)}
+  .insight.warn .ic{background:var(--warn-soft)}
+  .insight.bad .ic{background:var(--bad-soft)}
+  .insight.info .ic{background:#E4ECFB}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:24px;box-shadow:var(--shadow)}
+  .panel .scroll{max-height:440px;overflow-y:auto}
+  table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+  th,td{padding:11px 13px;text-align:right;white-space:nowrap}
+  th:first-child,td:first-child{text-align:left;font-variant-numeric:normal}
+  th.tl,td.tl{text-align:left;font-variant-numeric:normal}
+  thead tr{background:var(--surface-2)}
+  thead th{position:sticky;top:0;background:var(--surface-2);text-transform:uppercase;font-size:10.5px;letter-spacing:.03em;z-index:1}
+  th{font-weight:700;color:var(--muted)}
+  tbody tr{border-top:1px solid var(--line)}
+  tbody tr:hover{background:var(--surface-2)}
+  .av{display:inline-flex;align-items:center;gap:8px}
+  .dot{width:28px;height:28px;border-radius:50%;
+    background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 22%, #fff),color-mix(in srgb,var(--accent) 42%, #fff));
+    color:var(--accent-ink);display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex:none}
+  .good{color:var(--good)}.bad{color:var(--bad)}
+  .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;line-height:1.4}
+  .badge.sale{background:var(--good-soft);color:var(--good)}
+  .badge.held{background:var(--surface-2);color:var(--muted)}
+  .badge.lost{background:var(--bad-soft);color:var(--bad)}
+  .badge.warn{background:var(--warn-soft);color:var(--warn)}
+  /* awareness-fase pills (koud -> warm) */
+  .fase{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+  .fase-onbewust{background:#ECEEF3;color:#6B7488}
+  .fase-probleembewust{background:#E4ECFB;color:#3F63B5}
+  .fase-oplossingsbewust{background:#DFF1EF;color:#1E8A86}
+  .fase-productbewust{background:var(--warn-soft);color:#C0871F}
+  .fase-meest_bewust{background:var(--good-soft);color:#2E8656}
+  .fase-leeg{background:var(--surface-2);color:var(--faint);font-weight:500}
+  td a{color:var(--accent);text-decoration:none;font-weight:600}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+  @media(max-width:720px){.grid2{grid-template-columns:1fr}}
+  .chartbox{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow)}
+  .inv{display:flex;gap:18px}.inv div{flex:1;text-align:center}
+  .inv .v{font-size:22px;font-weight:600}.inv .l{font-size:12px;color:var(--muted)}
+  .foot{font-size:12px;color:var(--faint);margin-top:8px}
+  /* hero-donut (funnel) */
+  .hero{display:grid;grid-template-columns:260px 1fr;gap:14px;margin-bottom:24px;align-items:stretch}
+  @media(max-width:720px){.hero{grid-template-columns:1fr}}
+  .donuthero{position:relative;display:flex;align-items:center;justify-content:center;min-height:210px}
+  .donutcenter{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+  .donutcenter .big{font-family:var(--serif);font-size:34px;line-height:1;font-weight:500}
+  .donutcenter .cap{font-size:12px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.04em}
+  .herostats{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-content:stretch}
+  @media(max-width:520px){.herostats{grid-template-columns:1fr}}
+  /* login */
+  #gate{max-width:380px;margin:12vh auto;background:var(--card);border:1px solid var(--line);
+    border-radius:var(--r);padding:28px 26px;text-align:center;box-shadow:var(--shadow)}
+  #gate h2{font-weight:700;font-size:19px;margin:0 0 6px}
+  #gate p{font-size:14px;color:var(--muted);margin:0 0 18px}
+  #gate input{width:100%;margin-bottom:12px}
+  #gate button{width:100%;background:var(--accent);color:#fff;border:0;border-radius:10px;
+    padding:11px;font:inherit;font-size:15px;font-weight:600;cursor:pointer}
+  #gate button:hover{background:var(--accent-ink)}
+  #gateMsg{font-size:13px;margin-top:14px;min-height:18px}
+  .hidden{display:none}
+  /* ---------- best presterende advertenties + archief ---------- */
+  .adbest{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}
+  .adbest-card{position:relative;display:flex;flex-direction:column;gap:10px;background:var(--card);
+    border:1px solid var(--line);border-radius:var(--r);padding:12px;cursor:pointer;box-shadow:var(--shadow);
+    transition:box-shadow .15s,transform .1s}
+  .adbest-card:hover{box-shadow:var(--shadow-hover);transform:translateY(-2px)}
+  .adbest-rank{position:absolute;top:19px;left:20px;z-index:1;background:rgba(20,28,42,.66);color:#fff;
+    min-width:24px;height:24px;padding:0 7px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+    font-family:var(--serif);font-size:14px}
+  .adbest-thumb{width:100%;aspect-ratio:1/1;border-radius:12px;overflow:hidden;flex:none;
+    background:linear-gradient(135deg,var(--surface-2),var(--line));display:flex;align-items:center;justify-content:center;position:relative}
+  .adbest-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .adbest-thumb.leeg::after{content:"▦";color:var(--faint);font-size:38px}
+  .adbest-info{min-width:0}
+  .adbest-naam{font-size:14px;color:var(--ink);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .adbest-hoofd{font-family:var(--serif);font-size:21px;margin:3px 0;line-height:1.15;color:var(--ink)}
+  .adbest-sub{font-size:12px;color:var(--muted)}
+  /* archief-kaart */
+  .arch{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px}
+  .arch-card{display:flex;flex-direction:column;gap:10px;background:var(--card);border:1px solid var(--line);
+    border-radius:var(--r);padding:12px;cursor:pointer;box-shadow:var(--shadow);transition:box-shadow .15s,transform .1s}
+  .arch-card:hover{box-shadow:var(--shadow-hover);transform:translateY(-2px)}
+  .arch-thumb{width:100%;aspect-ratio:1/1;border-radius:12px;overflow:hidden;flex:none;position:relative;
+    background:linear-gradient(135deg,var(--surface-2),var(--line));display:flex;align-items:center;justify-content:center}
+  .arch-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .arch-thumb.leeg::after{content:"▦";color:var(--faint);font-size:40px}
+  .arch-pills{position:absolute;top:8px;left:8px;right:8px;display:flex;gap:6px;flex-wrap:wrap;justify-content:space-between}
+  .arch-naam{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .arch-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:12px}
+  .arch-stats .s{background:var(--surface-2);border-radius:8px;padding:6px 7px;text-align:center}
+  .arch-stats .s b{display:block;font-size:13px;color:var(--ink);font-weight:700}
+  .arch-stats .s span{color:var(--muted);font-size:10.5px}
+  .arch-note{font-size:12px;color:var(--muted);line-height:1.4;border-top:1px solid var(--line);padding-top:8px}
+  .arch-note .kill{color:var(--bad);font-weight:600}
+  .arch-empty{color:var(--muted);padding:26px;text-align:center;grid-column:1/-1}
+  .worked-wel{color:var(--good);font-weight:700}
+  .worked-niet{color:var(--bad);font-weight:700}
+  /* notitie/fase-bewerkpaneel */
+  .overlay{position:fixed;inset:0;z-index:100;background:rgba(20,28,42,.42);backdrop-filter:blur(2px);
+    display:flex;align-items:center;justify-content:center;padding:20px}
+  .overlay.hidden{display:none}
+  .overlay .editpanel{width:100%;max-width:540px;margin:0;max-height:90vh;overflow-y:auto}
+  .editpanel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:20px 22px;
+    box-shadow:var(--shadow-hover);margin-bottom:24px}
+  .editpanel h3{margin:0 0 3px;font-size:16px;font-weight:700}
+  .editpanel .ep-sub{font-size:12px;color:var(--muted);margin:0 0 16px}
+  .ep-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:620px){.ep-grid{grid-template-columns:1fr}}
+  .ep-field{display:flex;flex-direction:column;gap:6px}
+  .ep-field.full{grid-column:1/-1}
+  .ep-field label{font-size:12px;font-weight:600;color:var(--muted)}
+  .ep-field select,.ep-field textarea{width:100%;min-width:0}
+  .ep-field textarea{resize:vertical;min-height:64px;line-height:1.45}
+  .ep-actions{display:flex;gap:10px;align-items:center;margin-top:16px}
+  .ep-actions .save{background:var(--accent);color:#fff;border:0;border-radius:10px;padding:9px 18px;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer}
+  .ep-actions .save:hover{background:var(--accent-ink)}
+  .ep-actions .save:disabled{opacity:.55;cursor:default}
+  .ep-actions .cancel{background:var(--card);border:1px solid var(--line-strong);border-radius:10px;padding:9px 16px;font:inherit;font-size:13.5px;cursor:pointer;color:var(--ink)}
+  .ep-actions .msg{font-size:12.5px;color:var(--good);font-weight:600}
+  /* ---------- mobiel ---------- */
+  @media(max-width:860px){
+    .topbar{flex-wrap:wrap;gap:10px 14px;padding:10px 15px}
+    .who{margin-left:auto;flex-wrap:wrap;gap:6px 8px}
+    #tabs{order:5;flex-basis:100%;width:100%}
+    .main{padding:18px 15px 48px}
+    .top{flex-direction:column;align-items:stretch;gap:10px;margin-bottom:14px}
+    h1{font-size:19px}
+    .hero{grid-template-columns:1fr}
+    .cards{grid-template-columns:1fr 1fr;gap:10px}
+    .who select{flex:1 1 auto}
+    select,input,textarea{min-width:0}
+    .filters select{flex:1 1 44%}
+    .grid2{grid-template-columns:1fr}
+    th,td{padding:9px 8px}
+    .panel{overflow-x:auto}
+  }
+  @media(max-width:420px){
+    .cards{grid-template-columns:1fr}
+    .herostats{grid-template-columns:1fr}
+  }
+  /* ---------- afdrukken / PDF: alleen de actieve tab, netjes ---------- */
+  @media print {
+    @page { margin: 12mm; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    html, body { background:#fff !important; }
+    .topbar, #tabs, #sideToggle, .who, .filters, #printBtn, #gate, .info, .editpanel { display:none !important; }
+    .main { margin:0 !important; padding:0 !important; width:100% !important; max-width:100% !important; }
+    .top { margin:0 0 12px !important; }
+    #printMeta { display:block !important; }
+    .cards { gap:8px !important; }
+    .metric, .panel, .chartbox, table, .adbest-card, .arch-card { break-inside: avoid; box-shadow:none !important; }
+    .sec { break-after: avoid; }
+    table { font-size: 11px !important; }
+    .adbest, .arch { grid-template-columns: repeat(4, 1fr) !important; }
+    a[href]::after { content:"" !important; }
+  }
+</style>
+</head>
+<body>
+
+<div id="gate" class="hidden">
+  <h2>RecraVas Dashboard</h2>
+  <p>Vul je e-mailadres in. Je ontvangt een inloglink in je mailbox.</p>
+  <input type="email" id="email" placeholder="jij@voorbeeld.nl" autocomplete="email" />
+  <button id="sendLink">Stuur inloglink</button>
+  <div id="gateMsg"></div>
+</div>
+
+<div id="app" class="hidden">
+<div class="shell">
+  <header class="topbar">
+    <button id="sideToggle" title="Menu" aria-label="Menu">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+    <div class="brand">
+      <div class="mark">R</div>
+      <div class="name">RecraVas<small>Dashboard</small></div>
+    </div>
+    <nav id="tabs" class="tabs">
+      <button class="tab active" data-tab="resultaten" title="Resultaten"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19h16M7 15v4M12 10v9M17 6v13"/></svg><span class="lbl">Resultaten</span></button>
+      <button class="tab" data-tab="advertenties" title="Advertenties"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M7 13h4M7 16h7"/></svg><span class="lbl">Advertenties</span></button>
+      <button class="tab" data-tab="archief" title="Archief · creative-library"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></svg><span class="lbl">Archief</span></button>
+      <button class="tab" data-tab="financien" title="Financiën"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5c0-1.4 1.2-2 2.5-2s2.5.7 2.5 1.8c0 2.4-5 1.3-5 3.7 0 1.1 1.2 1.8 2.5 1.8s2.5-.6 2.5-2"/></svg><span class="lbl">Financiën</span></button>
+      <button class="tab" data-tab="prognose" title="Prognose"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 17l5-5 4 4 8-9M14 7h6v6"/></svg><span class="lbl">Prognose</span></button>
+      <button class="tab" data-tab="resale" title="Resale"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-7 9 7M5 10v9h5v-6h4v6h5v-9"/></svg><span class="lbl">Resale</span></button>
+    </nav>
+    <div class="who">
+      <a id="helpBtn" class="btn" href="handleiding.html" target="_blank" rel="noopener" title="Handleiding & functie-overzicht">Handleiding</a>
+      <button id="printBtn" class="btn" onclick="printDashboard()" title="Sla dit dashboard op als PDF">↓ PDF</button>
+      <a id="adLink" href="notion-dashboard.html" class="hidden" style="color:var(--accent);text-decoration:none;font-weight:600">Advertenties &#8599;</a>
+      <span id="whoami"></span>
+      <select id="viewAs"></select>
+      <button id="logout">Uitloggen</button>
+    </div>
+  </header>
+  <main class="main">
+  <div class="top">
+    <div>
+      <img id="parkLogo" class="hidden" alt="" style="height:40px;margin-bottom:8px;display:block" />
+      <h1 id="title">Dashboard</h1>
+      <p class="sub" id="subtitle"></p>
+      <p id="printMeta" style="display:none;color:var(--muted);font-size:12px;margin-top:4px"></p>
+    </div>
+  </div>
+
+  <div class="filters">
+    <select id="fPeriod">
+      <option value="7">Laatste 7 dagen</option>
+      <option value="30">Laatste 30 dagen</option>
+      <option value="month">Deze maand</option>
+      <option value="year">Dit jaar</option>
+      <option value="all" selected>All-time</option>
+      <option value="custom">Aangepast…</option>
+    </select>
+    <input type="date" id="fFrom" class="hidden" />
+    <input type="date" id="fTo" class="hidden" />
+    <select id="fPark"></select>
+    <select id="fAgent"></select>
+  </div>
+
+  <div id="tabResultaten">
+  <div id="liveSec" class="hidden">
+    <div class="banner"><span style="color:var(--good)">●</span><span>Live uit Pipedrive · echte leads</span></div>
+    <div class="cards" id="liveCards"></div>
+    <div class="sec">Leads per maand uit Pipedrive</div>
+    <div class="panel"><table id="liveMonths"></table></div>
+  </div>
+
+  <div id="heroWrap" class="hero hidden">
+    <div class="chartbox donuthero">
+      <canvas id="funnelDonut" height="200"></canvas>
+      <div class="donutcenter" id="funnelCenter"></div>
+    </div>
+    <div class="herostats cards" id="heroStats" style="margin-bottom:0"></div>
+  </div>
+
+  <div class="cards" id="cardsTop"></div>
+
+  <div id="agentOnly" class="hidden">
+    <div class="sec" id="teamTitle">Teamgemiddelde (alle makelaars, zonder namen)</div>
+    <div class="cards" id="cardsTeam"></div>
+    <div class="sec" style="margin-top:18px">Mijn belactiviteit</div>
+    <div class="cards" id="cardsCallMe"></div>
+  </div>
+
+  <div id="ownerOnly" class="hidden">
+    <div class="banner hide"><span>●</span><span>Alleen voor eigenaar · nooit zichtbaar voor makelaar of ontwikkelaar</span></div>
+    <div id="ownerInsightsSec" class="hidden">
+      <div class="sec">Automatische inzichten
+        <span class="info" tabindex="0">i<span class="tip">Automatisch berekende signalen uit de cijfers van de gekozen periode: uitschieters bij makelaars, definitief-status en opvolg-achterstand. Bedoeld als startpunt, niet als oordeel.</span></span>
+      </div>
+      <div id="ownerInsights" class="insights"></div>
+    </div>
+    <div class="sec">Per agent</div>
+    <div class="panel"><table id="agentTable"></table></div>
+    <p id="definitiefNote" class="foot" style="margin-top:6px"></p>
+    <div class="sec">Gebeld · gesprek · ingepland
+      <span class="info" tabindex="0">i<span class="tip">Gesprek &#8594; afspraak % = van de deals waar deze makelaar een gesprek (activiteit) mee had, hoeveel procent ook daadwerkelijk als afspraak is ingepland.</span></span>
+    </div>
+    <div class="panel" style="margin-bottom:26px"><table id="callTable"></table></div>
+    <div class="sec">Omzet per park</div>
+    <div class="chartbox" style="margin-bottom:26px"><canvas id="parkChart" height="200"></canvas></div>
+    <div class="sec">Waarom leads afvallen · verloren redenen uit Pipedrive · klik op een reden voor de deals</div>
+    <div class="grid2">
+      <div>
+        <div class="sec" style="font-size:13px;color:var(--muted)">Voor de afspraak · wilde niet komen</div>
+        <div class="panel"><div class="scroll" style="max-height:220px"><table id="reasonsBefore"></table></div></div>
+      </div>
+      <div>
+        <div class="sec" style="font-size:13px;color:var(--muted)">Na de afspraak · wilde niet kopen</div>
+        <div class="panel"><div class="scroll" style="max-height:220px"><table id="reasonsAfter"></table></div></div>
+      </div>
+    </div>
+    <div id="lostDealsSec" class="hidden">
+      <div class="sec"><span id="lostDealsTitle"></span>
+        <button onclick="$('lostDealsSec').classList.add('hidden')" style="margin-left:10px;border:1px solid var(--line-strong);background:var(--card);border-radius:7px;padding:3px 10px;font:inherit;font-size:12px;cursor:pointer">Sluiten ×</button>
+      </div>
+      <div class="panel"><div class="scroll"><table id="lostDealsTable"></table></div></div>
+      <p class="foot">Open de deal in Pipedrive om de notities van de makelaar te zien.</p>
+    </div>
+  </div>
+
+  <div id="parkOnly" class="hidden"></div>
+
+  <div id="monthSec" class="hidden">
+    <div class="sec">Per maand</div>
+    <div class="chartbox" style="margin-bottom:14px"><canvas id="salesChart" height="220"></canvas></div>
+    <div class="panel" style="margin-bottom:8px"><table id="monthTable"></table></div>
+    <p id="monthDefNote" class="foot" style="margin:0 0 26px"></p>
+  </div>
+
+  <div id="apptSec" class="hidden">
+    <div class="sec" id="apptTitle">Afspraken</div>
+    <div class="panel"><div class="scroll"><table id="apptTable"></table></div></div>
+    <p class="foot">Deal openen in Pipedrive via de link per regel. Pipedrive is de bron; het dashboard toont datum, verkoop, notaris en omzet.</p>
+  </div>
+
+  <div id="inventorySec" class="hidden">
+    <div class="sec">Uitverkoop van het park
+      <span class="info" tabindex="0">i<span class="tip">Verkocht / gereserveerd / beschikbaar uit de kavelvoorraad. De prognose = beschikbaar ÷ het aantal woningen dat in de vórige kalendermaand is verkocht.</span></span>
+    </div>
+    <div class="cards" id="inventoryKpis"></div>
+  </div>
+
+  <div id="opvolgSec" class="hidden">
+    <div class="sec"><span id="opvolgTitle">Opvolgen</span>
+      <span class="info" tabindex="0">i<span class="tip">Alleen leads in de stage "In contact". Leads met een toekomstig agendapunt vallen eruit (die staan al gepland). Gesorteerd op het laatste contactmoment — de nieuwste van notitie óf e-mail: leads zonder contact bovenaan, daarna de langst geleden. "Type" en "Door" tonen wat het laatste contact was en van wie. Rood = 30+ dagen (of nooit).</span></span>
+    </div>
+    <div class="panel"><div class="scroll"><table id="opvolgTable"></table></div></div>
+  </div>
+  </div><!-- /tabResultaten -->
+
+  <div id="tabAdvertenties" class="hidden">
+    <div id="adParkTabs" class="tabs hidden" style="margin-bottom:16px"></div>
+    <div class="cards" id="adKpis"></div>
+    <div id="adInsightsSec" class="hidden">
+      <div class="sec">Automatische inzichten
+        <span class="info" tabindex="0">i<span class="tip">Automatisch berekende signalen over advertentiekwaliteit in de gekozen periode: beste conversie, goedkoopste leads, budgetlekken en de kosten-per-lead-trend (laatste 14 dagen t.o.v. de 14 dagen ervoor).</span></span>
+      </div>
+      <div id="adInsights" class="insights"></div>
+    </div>
+    <div class="sec">Trend per dag
+      <span class="info" tabindex="0">i<span class="tip">Uitgaven en clicks komen uit Meta; leads komen uit Pipedrive. Een lead van nu leidt vaak pas weken tot maanden later tot een verkoop, dus de kosten van een periode horen niet één-op-één bij de omzet van dezelfde periode.</span></span>
+    </div>
+    <div class="chartbox" style="margin-bottom:26px"><canvas id="adChart" height="220"></canvas></div>
+    <div id="adMonthSec" class="hidden">
+      <div class="sec">Cohort-rendement · per lead-maand
+        <span class="info" tabindex="0">i<span class="tip">Elke rij is het cohort van leads dat in die maand binnenkwam, met de uitgaven van die maand en het uiteindelijke resultaat van dat cohort (afspraken/sales/omzet, ongeacht wanneer ze omsloegen). ROAS = omzet ÷ uitgaven. Recente maanden moeten nog omslaan, dus lage cijfers daar zijn normaal.</span></span>
+      </div>
+      <div class="panel" style="margin-bottom:26px"><div class="scroll"><table id="adMonthTable"></table></div></div>
+    </div>
+    <div id="adOverviewSec">
+      <div id="adWarnBanner" class="hidden banner" style="background:var(--warn-soft);color:var(--warn);padding:10px 14px;border-radius:8px"></div>
+      <div class="sec" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <span style="flex:1;min-width:200px">Per advertentie · klik op een rij voor het dagverloop, op een aantal voor de deals, op een <b>fase-pill</b> voor de notities</span>
+        <select id="adFaseFilter" style="text-transform:none;font-weight:400;letter-spacing:0"></select>
+      </div>
+      <div class="panel"><div class="scroll"><table id="adTable"></table></div></div>
+    </div>
+    <div id="adDealsSec" class="hidden" style="margin-top:26px">
+      <div class="sec"><span id="adDealsTitle">Deals</span>
+        <button onclick="$('adDealsSec').classList.add('hidden')" style="margin-left:10px;border:1px solid var(--line);background:#fff;border-radius:7px;padding:3px 10px;font:inherit;font-size:12px;cursor:pointer">Sluiten ×</button>
+      </div>
+      <div class="panel" style="margin-bottom:26px"><div class="scroll"><table id="adDealsTable"></table></div></div>
+    </div>
+    <div id="adBestSec" class="hidden" style="margin-top:26px">
+      <div class="sec"><span id="adBestTitle">Best presterende advertenties</span>
+        <span class="info" tabindex="0">i<span class="tip" id="adBestTip"></span></span>
+      </div>
+      <div id="adBestGrid" class="adbest"></div>
+    </div>
+    <div id="adDetailSec" class="hidden">
+      <div class="sec"><span id="adDetailTitle"></span>
+        <button onclick="closeAdDetail()" style="margin-left:10px;border:1px solid var(--line);background:#fff;border-radius:7px;padding:3px 10px;font:inherit;font-size:12px;cursor:pointer">Sluiten ×</button>
+      </div>
+      <div class="chartbox" style="margin-bottom:14px"><canvas id="adDetailChart" height="200"></canvas></div>
+      <div class="panel" style="margin-bottom:26px"><div class="scroll"><table id="adDetailTable"></table></div></div>
+    </div>
+    <p class="foot" id="adFoot"></p>
+  </div>
+
+  <div id="tabFinance" class="hidden">
+    <div class="sec" id="finSecTop">Mondeling verkocht en verder
+      <span class="info" tabindex="0">i<span class="tip">Alle deals vanaf mondeling akkoord (Informeel akkoord ontvangen) tot en met notaris gepasseerd. Omzet = totale courtage die RecraVas factureert; de makelaar krijgt 1,5% (max €3.500), marge = de rest. De totale courtage verschilt per park: Wielsche Dreef 1,5%, Frankrijk 5,5%.</span></span>
+    </div>
+    <div class="cards" id="finKpis"></div>
+    <div class="sec" id="finSecMonth" style="margin-top:22px">Omzet en winst per maand
+      <span class="info" tabindex="0">i<span class="tip">Omzet = totale courtage die RecraVas factureert (percentage per park: Wielsche Dreef 1,5%, Frankrijk 5,5%). Winst = wat overblijft na uitbetaling aan de makelaar (1,5%, max €3.500 per verkoop). Gegroepeerd op de maand waarin de deal definitief werd.</span></span>
+    </div>
+    <div class="chartbox" style="margin-bottom:14px"><canvas id="finChart" height="220"></canvas></div>
+    <div class="panel" style="margin-bottom:26px"><table id="finMonthTable"></table></div>
+    <div class="sec">Per deal</div>
+    <div class="panel"><div class="scroll"><table id="finTable"></table></div></div>
+    <p class="foot">Notarisdatum en ontbindende voorwaarden komen uit de handmatige Pipedrive-velden; staat daar niets, dan toont het dashboard "Nog niet bekend".</p>
+  </div>
+
+  <div id="tabPrognose" class="hidden">
+    <div class="sec">Prognose: wat levert meer advertentiebudget op?
+      <span class="info" tabindex="0">i<span class="tip">Gebaseerd op de echte cijfers van de gekozen periode en park: advertentie-uitgaven uit Meta en verkopen (met verkoopsom en marge) uit Pipedrive. De prognose rekent lineair: in werkelijkheid stijgen de kosten per verkoop meestal licht naarmate je budget groeit.</span></span>
+    </div>
+    <div class="cards" id="progBasis"></div>
+    <div class="chartbox" style="margin-bottom:14px;padding:20px 22px">
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:6px">
+        <span>Advertentiebudget per maand</span><span id="progSpendLabel" style="font-weight:700;font-size:16px;color:var(--ink)"></span>
+      </div>
+      <input type="range" id="progSlider" min="0" max="100" step="1" style="width:100%;accent-color:var(--accent)" />
+    </div>
+    <div class="cards" id="progOut"></div>
+    <p class="foot">De prognose is een rekenvoorbeeld op basis van je echte kosten per verkoop, geen garantie. Bij "Alle parken" worden uitgaven en verkopen van alle parken samengenomen; kies een specifiek park voor een zuiverdere berekening.</p>
+  </div>
+
+  <div id="tabResale" class="hidden">
+    <div class="sec">Resale · aan- en verkoop van bestaande woningen
+      <span class="info" tabindex="0">i<span class="tip">Pipedrive-pijplijn Resale. Fee = 2,5% van de woningwaarde (verkoopprijs boven €100.000), met een minimum van €2.500.</span></span>
+    </div>
+    <div class="cards" id="resaleKpis"></div>
+
+    <div id="resaleTeamWrap" class="hidden">
+      <div class="sec" style="margin-top:22px">Teamgemiddelde · alle makelaars (zonder namen)</div>
+      <div class="cards" id="resaleTeam"></div>
+    </div>
+
+    <div id="resaleAgentWrap" class="hidden">
+      <div class="sec" style="margin-top:22px">Per makelaar · klik op het aantal leads voor de deals</div>
+      <div class="panel"><div class="scroll"><table id="resaleAgentTable"></table></div></div>
+    </div>
+
+    <div id="resaleMonthWrap" class="hidden">
+      <div class="sec" style="margin-top:22px">Per maand</div>
+      <div class="panel"><div class="scroll"><table id="resaleMonthTable"></table></div></div>
+    </div>
+
+    <div id="resaleLeadsWrap" class="hidden">
+      <div class="sec" style="margin-top:22px"><span id="resaleLeadsTitle">Leads</span></div>
+      <div class="panel"><div class="scroll"><table id="resaleLeadsTable"></table></div></div>
+    </div>
+  </div>
+
+  <div id="tabArchief" class="hidden">
+    <div id="archParkTabs" class="tabs hidden" style="margin-bottom:16px"></div>
+    <div class="sec" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span style="flex:1;min-width:220px">Creative-library · klik op een advertentie voor de notities (werkte wel/niet, waarom, kill-reden)</span>
+      <select id="archFaseFilter" style="text-transform:none;font-weight:400;letter-spacing:0"></select>
+      <select id="archStatusFilter" style="text-transform:none;font-weight:400;letter-spacing:0"></select>
+    </div>
+    <div id="archGrid" class="arch"></div>
+    <p class="foot" id="archFoot"></p>
+  </div>
+  </main>
+</div>
+</div>
+
+<!-- notitie/fase-bewerkpaneel (gedeeld door Advertenties + Archief) -->
+<div id="adEditOverlay" class="overlay hidden">
+  <div class="editpanel" role="dialog" aria-modal="true">
+    <h3 id="adEditTitle">Advertentie</h3>
+    <p class="ep-sub" id="adEditSub"></p>
+    <div class="ep-grid">
+      <div class="ep-field">
+        <label for="edFase">Fase · bewustzijn (Schwartz)</label>
+        <select id="edFase"></select>
+      </div>
+      <div class="ep-field">
+        <label for="edWerkte">Werkte deze advertentie?</label>
+        <select id="edWerkte">
+          <option value="">— niet ingevuld —</option>
+          <option value="wel">Werkte wel</option>
+          <option value="niet">Werkte niet</option>
+          <option value="onbekend">Nog onbekend</option>
+        </select>
+      </div>
+      <div class="ep-field full">
+        <label for="edWaarom">Waarom (waarschijnlijk)</label>
+        <textarea id="edWaarom" placeholder="Waarom werkte de advertentie wel of niet? (bijv. sterke hook, verkeerde doelgroep, prijs)"></textarea>
+      </div>
+      <div class="ep-field full">
+        <label for="edKill">Kill-reden · alleen bij een gestopte advertentie</label>
+        <textarea id="edKill" placeholder="Waarom is deze advertentie gestopt? (bijv. te hoge CPL, uitgeput publiek)"></textarea>
+      </div>
+    </div>
+    <div class="ep-actions">
+      <button class="save" id="edSave">Opslaan</button>
+      <button class="cancel" id="edCancel">Annuleren</button>
+      <span class="msg hidden" id="edMsg">Opgeslagen ✓</span>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ---------- config ---------- */
+const SUPABASE_URL = "https://ooqkpazyvohsrdvxfnug.supabase.co";
+const SUPABASE_KEY = "sb_publishable_fkVuhCNu_Q0Ze9x5VPee1g_jtzClD0O";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ---------- helpers ---------- */
+const $ = id => document.getElementById(id);
+const eur = n => "€"+Math.round(n||0).toLocaleString("nl-NL");
+const initials = n => n.slice(0,2).toUpperCase();
+const esc = s => String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const escAttr = s => esc(s).replace(/"/g,"&quot;");
+
+/* ---------- awareness-fase (Schwartz, afgekort) ---------- */
+const FASES = [
+  { key:"onbewust",         afk:"Onb",   label:"Onbewust" },
+  { key:"probleembewust",   afk:"Prob",  label:"Probleembewust" },
+  { key:"oplossingsbewust", afk:"Opl",   label:"Oplossingsbewust" },
+  { key:"productbewust",    afk:"Prod",  label:"Productbewust" },
+  { key:"meest_bewust",     afk:"Meest", label:"Meest bewust" },
+];
+const FASE_BY = Object.fromEntries(FASES.map(f=>[f.key,f]));
+// uitleg-popup bovenaan de Fase-kolom
+const FASE_UITLEG = "Awareness-fase (Eugene Schwartz), hoe bewust het publiek is: "
+  + FASES.map(f=>`${f.afk} = ${f.label}`).join(" · ")
+  + ". Van koud (Onbewust) naar warm (Meest bewust). Klik op een pill om de fase te wijzigen.";
+function fasePill(stage){
+  const f = FASE_BY[stage];
+  return f ? `<span class="fase fase-${f.key}" title="${f.label}">${f.afk}</span>`
+           : `<span class="fase fase-leeg" title="Nog geen fase ingesteld">—</span>`;
+}
+const WERKTE_LBL = { wel:"Werkte wel", niet:"Werkte niet", onbekend:"Nog onbekend" };
+
+/* ---------- mini-donut voor % stat-kaarten + gradient chart-vullingen ---------- */
+function donutMini(pct, color){
+  const p = Math.max(0, Math.min(100, Number(pct)||0));
+  const r = 15.9, c = 2*Math.PI*r, off = c*(1-p/100), col = color || "var(--accent)";
+  return `<div class="donutmini"><svg viewBox="0 0 40 40" width="46" height="46">
+    <circle cx="20" cy="20" r="${r}" fill="none" stroke="var(--line)" stroke-width="4"></circle>
+    <circle cx="20" cy="20" r="${r}" fill="none" stroke="${col}" stroke-width="4" stroke-linecap="round"
+      stroke-dasharray="${c.toFixed(2)}" stroke-dashoffset="${off.toFixed(2)}" transform="rotate(-90 20 20)"></circle>
+  </svg><div class="dv">${Math.round(p)}%</div></div>`;
+}
+const hexA = (hex, a) => {
+  const h = (hex||"").replace("#","");
+  if(h.length<6) return hex;
+  const n = parseInt(h,16);
+  return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
+};
+// verticale gradient-vulling voor Chart.js (returnt een functie die de chart-area gebruikt)
+const areaGrad = (hex, topA, botA) => (context) => {
+  const ch = context.chart, area = ch.chartArea;
+  if(!area) return hexA(hex, topA);
+  const g = ch.ctx.createLinearGradient(0, area.top, 0, area.bottom);
+  g.addColorStop(0, hexA(hex, topA));
+  g.addColorStop(1, hexA(hex, botA));
+  return g;
+};
+
+/* ---------- branding per park (logo + favicon) ---------- */
+const DEFAULT_FAVICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%232C5F52'/%3E%3Ctext x='50' y='72' font-size='62' text-anchor='middle' fill='white' font-family='Georgia,serif' font-weight='700'%3ER%3C/text%3E%3C/svg%3E";
+function setFavicon(href){
+  let l = document.querySelector('link[rel="icon"]');
+  if(!l){ l = document.createElement('link'); l.rel = 'icon'; document.head.appendChild(l); }
+  l.href = href;
+}
+const DEFAULT_ACCENT = "#2C5F52";
+const accent = () => (getComputedStyle(document.documentElement).getPropertyValue('--accent')||DEFAULT_ACCENT).trim();
+function setBranding(parkId){
+  const p = (typeof PARKS!=="undefined" ? PARKS : []).find(x=>x.id===parkId);
+  document.documentElement.style.setProperty('--accent', (p && p.accent_color) || DEFAULT_ACCENT);
+  if(p && p.logo_url){
+    $("parkLogo").src = p.logo_url;
+    $("parkLogo").alt = p.name;
+    $("parkLogo").classList.remove("hidden");
+    setFavicon(p.favicon_url || p.logo_url);
+  } else {
+    $("parkLogo").classList.add("hidden");
+    setFavicon(DEFAULT_FAVICON);
+  }
+}
+const dt = d => new Date(d).toLocaleDateString("nl-NL",{day:"2-digit",month:"short",year:"2-digit"});
+let PARKS = [], AGENTS = [];
+
+function periodRange(){
+  const v = $("fPeriod").value, today = new Date();
+  let from, to = today;
+  if(v==="all") from = new Date("2000-01-01");
+  else if(v==="month") from = new Date(today.getFullYear(), today.getMonth(), 1);
+  else if(v==="year") from = new Date(today.getFullYear(), 0, 1);
+  else if(v==="custom"){
+    from = new Date($("fFrom").value || Date.now()-2592e6);
+    to   = new Date($("fTo").value || Date.now());
+  } else { from = new Date(); from.setDate(from.getDate()-parseInt(v,10)); }
+  const iso = d => d.toISOString().slice(0,10);
+  return { p_from: iso(from), p_to: iso(to) };
+}
+const metric  = (l,v,sub) => {
+  const s = String(v).trim(), m = /^(-?\d+(?:[.,]\d+)?)\s*%$/.exec(s);
+  if(m){
+    const pct = parseFloat(m[1].replace(",","."));
+    return `<div class="metric hasdonut">${donutMini(pct)}<div class="mtxt"><div class="l">${l}</div><div class="v">${v}</div>${sub||""}</div></div>`;
+  }
+  return `<div class="metric"><div class="mtxt"><div class="l">${l}</div><div class="v">${v}</div>${sub||""}</div></div>`;
+};
+// subregel "x definitief" + info-knopje voor onder een sales-cijfer; ds = {sales, definitief}
+function defSub(ds){
+  const s = Number(ds && ds.sales)||0, d = Number(ds && ds.definitief)||0;
+  if(s===0) return "";
+  const ok = d>=s;
+  const tip = ok ? "Alle verkopen in deze selectie zijn definitief."
+                 : `Nog niet alle verkopen in deze selectie zijn definitief (${d} van ${s}).`;
+  return `<div class="l" style="margin:5px 0 0;color:${ok?'var(--good)':'var(--warn)'};font-weight:600">${d} definitief`
+    + ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">${tip}</span></span></div>`;
+}
+/* klikbare deals-cellen/cards: leads/afspraken/verkopen -> lijst met Pipedrive-links */
+const KINDLBL = { leads:"Leads", afspraken:"Afspraken", verkopen:"Verkopen" };
+const dcell = (waarde, kind, agentId, naam, resale) => Number(waarde)>0
+  ? `<td><span class="deal-link" data-kind="${kind}" data-agentid="${agentId==null?'':agentId}" data-naam="${String(naam||'').replace(/"/g,'')}" data-resale="${resale?1:0}" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px">${waarde}</span></td>`
+  : `<td>${waarde}</td>`;
+const metricDeal = (l,v,kind,agentId,naam,resale,parkId,sub) =>
+  `<div class="metric deal-link" style="cursor:pointer" data-kind="${kind}" data-agentid="${agentId==null?'':agentId}" data-naam="${String(naam||'').replace(/"/g,'')}" data-resale="${resale?1:0}" data-park="${parkId==null?'':parkId}"><div class="l">${l} <span style="font-size:11px;color:var(--muted)">↗</span></div><div class="v">${v}</div>${sub||""}</div>`;
+const adLink = (v,kind,adId,naam) => Number(v)>0
+  ? `<span class="ad-deal-link" data-adid="${adId}" data-kind="${kind}" data-naam="${String(naam||'').replace(/"/g,'')}" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px">${v}</span>`
+  : v;
+const metricT = (l,v) => `<div class="metric team"><div class="l">${l}</div><div class="v">${v}</div></div>`;
+async function rpc(fn, args){ const {data,error} = await sb.rpc(fn, args||{});
+  if(error){ console.error(fn, error); return null; } return data; }
+
+/* ---------- auth (dormant while preview mode is on) ---------- */
+$("sendLink").addEventListener("click", async () => {
+  const email = $("email").value.trim();
+  if(!email){ $("gateMsg").textContent = "Vul je e-mailadres in."; return; }
+  $("gateMsg").style.color = "var(--muted)";
+  $("gateMsg").textContent = "Versturen…";
+  const { error } = await sb.auth.signInWithOtp({
+    email, options:{ emailRedirectTo: location.href.split("#")[0] } });
+  $("gateMsg").style.color = error ? "var(--bad)" : "var(--good)";
+  $("gateMsg").textContent = error ? error.message
+    : "Gelukt. Check je mailbox en klik op de inloglink.";
+});
+$("logout").addEventListener("click", async () => { await sb.auth.signOut(); location.reload(); });
+
+/* TEMP: login uitgeschakeld (preview) — de rolkeuze simuleert de rollen.
+   Bij heractivering: eigen SMTP instellen in Supabase Auth i.v.m. e-maillimiet. */
+async function boot(){
+  $("whoami").textContent = "Bekijk als:";
+  $("logout").classList.add("hidden");
+  PARKS  = await rpc("owner_parks")  || [];
+  AGENTS = await rpc("owner_agents") || [];
+  $("viewAs").innerHTML =
+    `<option value="owner">Eigenaar (alles)</option>`
+    + `<optgroup label="Makelaar">${AGENTS.map(a=>`<option value="agent:${a.id}">${a.name}</option>`).join("")}</optgroup>`
+    + `<optgroup label="Recreatieontwikkelaar">${PARKS.map(p=>`<option value="park:${p.id}">${p.name}</option>`).join("")}</optgroup>`;
+  $("viewAs").classList.remove("hidden");
+  $("viewAs").addEventListener("change", applyRole);
+  $("app").classList.remove("hidden");
+  await applyRole();
+}
+
+function currentView(){
+  const v = $("viewAs").value;
+  if(v==="owner") return { role:"owner" };
+  const [role,id] = v.split(":");
+  return { role, id:Number(id) };
+}
+
+async function applyRole(){
+  const v = currentView();
+  const owner = v.role==="owner", agentV = v.role==="agent", parkV = v.role==="park";
+  $("ownerOnly").classList.toggle("hidden", !owner);
+  $("agentOnly").classList.toggle("hidden", !agentV);
+  $("parkOnly").classList.toggle("hidden", !parkV);
+  $("liveSec").classList.toggle("hidden", !owner);
+  $("adLink").classList.add("hidden");
+  $("monthSec").classList.remove("hidden");
+  $("apptSec").classList.toggle("hidden", parkV);
+  $("fPark").classList.toggle("hidden", parkV);
+  $("fAgent").classList.toggle("hidden", !owner);
+  // makelaar ziet Resultaten + Financiën (eigen commissie); geen advertenties/archief/prognose.
+  document.querySelector('.tab[data-tab="advertenties"]').classList.toggle("hidden", agentV);
+  document.querySelector('.tab[data-tab="archief"]').classList.toggle("hidden", agentV);
+  document.querySelector('.tab[data-tab="financien"]').classList.toggle("hidden", parkV);
+  document.querySelector('.tab[data-tab="prognose"]').classList.toggle("hidden", agentV);
+  document.querySelector('.tab[data-tab="resale"]').classList.toggle("hidden", parkV);
+  $("tabs").classList.remove("hidden");
+  activeTab = "resultaten";
+  document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active", x.dataset.tab==="resultaten"));
+  $("tabResultaten").classList.remove("hidden");
+  $("tabAdvertenties").classList.add("hidden");
+  $("tabArchief").classList.add("hidden");
+  $("tabPrognose").classList.add("hidden");
+  $("tabResale").classList.add("hidden");
+  if(owner){
+    $("title").textContent = "Master dashboard";
+    $("subtitle").textContent = "Eigenaarweergave";
+    fillSelect($("fPark"), PARKS.map(p=>({value:p.id,label:p.name})), "Alle parken");
+    fillSelect($("fAgent"), AGENTS.map(a=>({value:a.id,label:a.name})), "Alle agents");
+    $("fPark").value = "all"; $("fAgent").value = "all";
+    refresh = renderOwner;
+  } else if(agentV){
+    $("title").textContent = "Mijn resultaten";
+    $("subtitle").textContent = "Makelaarweergave · " + ((AGENTS.find(a=>a.id===v.id)||{}).name||"");
+    fillSelect($("fPark"), PARKS.map(p=>({value:p.id,label:p.name})), "Alle parken");
+    $("fPark").value = "all";
+    setBranding(null);
+    refresh = () => renderAgent(v.id);
+  } else {
+    $("title").textContent = "Park dashboard";
+    $("subtitle").textContent = "Parkweergave · " + ((PARKS.find(p=>p.id===v.id)||{}).name||"");
+    refresh = () => renderPark(v.id);
+  }
+  await refresh();
+  herstelTab();
+}
+
+/* ---------- filters wiring ---------- */
+function fillSelect(el, opts, allLabel){
+  el.innerHTML = (allLabel?`<option value="all">${allLabel}</option>`:"")
+    + opts.map(o=>`<option value="${o.value}">${o.label}</option>`).join("");
+}
+// bij filterwijziging (periode/park/agent) ook de actieve neventab opnieuw tekenen,
+// niet alleen de Resultaten (refresh); zo volgen Advertenties/Financiën/Prognose het filter
+function renderActieveTab(){
+  if(activeTab==="advertenties") renderAds();
+  else if(activeTab==="archief") renderArchief();
+  else if(activeTab==="financien"){ const cv=currentView(); if(cv.role==="agent") renderFinanceAgent(cv.id); else renderFinance(); }
+  else if(activeTab==="prognose") renderPrognose();
+  else if(activeTab==="resale") renderResale();
+}
+$("fPeriod").addEventListener("change", e=>{
+  const show = e.target.value==="custom";
+  $("fFrom").classList.toggle("hidden",!show); $("fTo").classList.toggle("hidden",!show);
+  refresh();
+  renderActieveTab();
+});
+let refresh = ()=>{};
+["fFrom","fTo","fPark","fAgent"].forEach(id=>$(id).addEventListener("change", ()=>{ refresh(); renderActieveTab(); }));
+
+/* ---------- zijbalk in-/uitklappen ---------- */
+const SHELL_EL = document.querySelector(".shell");
+if(localStorage.getItem("sideCollapsed") === "1") SHELL_EL.classList.add("collapsed");
+$("sideToggle").addEventListener("click", () => {
+  SHELL_EL.classList.toggle("collapsed");
+  localStorage.setItem("sideCollapsed", SHELL_EL.classList.contains("collapsed") ? "1" : "0");
+});
+
+/* ---------- tabs ---------- */
+let activeTab = "resultaten";
+function toonTab(tab, opts){
+  opts = opts || {};
+  activeTab = tab;
+  document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active", x.dataset.tab===tab));
+  $("tabResultaten").classList.toggle("hidden", tab!=="resultaten");
+  $("tabAdvertenties").classList.toggle("hidden", tab!=="advertenties");
+  $("tabArchief").classList.toggle("hidden", tab!=="archief");
+  $("tabFinance").classList.toggle("hidden", tab!=="financien");
+  $("tabPrognose").classList.toggle("hidden", tab!=="prognose");
+  $("tabResale").classList.toggle("hidden", tab!=="resale");
+  $("fAgent").classList.toggle("hidden", tab!=="resultaten" || !currentView || currentView().role!=="owner");
+  $("fPark").classList.toggle("hidden", (currentView && currentView().role==="park") || tab==="advertenties" || tab==="archief" || tab==="financien" || tab==="resale");
+  if(!opts.silent) localStorage.setItem("activeTab", tab);
+  if(tab==="advertenties") renderAds();
+  if(tab==="archief") renderArchief();
+  if(tab==="financien"){ const cv=currentView(); if(cv.role==="agent") renderFinanceAgent(cv.id); else renderFinance(); }
+  if(tab==="prognose") renderPrognose();
+  if(tab==="resale") renderResale();
+}
+// een verborgen tab (niet beschikbaar voor deze rol) is geen geldige bestemming
+function tabBeschikbaar(tab){
+  const btn = document.querySelector(`.tab[data-tab="${tab}"]`);
+  return btn && !btn.classList.contains("hidden") && !$("tabs").classList.contains("hidden");
+}
+// na een rolwissel/herlaad de laatst bekeken tab herstellen (indien geldig voor deze rol)
+function herstelTab(){
+  const saved = localStorage.getItem("activeTab");
+  if(saved && saved!=="resultaten" && tabBeschikbaar(saved)) toonTab(saved, {silent:true});
+}
+document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => toonTab(t.dataset.tab)));
+
+/* ---------- FINANCIEN ---------- */
+let finChart;
+async function renderFinance(){
+  const v = currentView();
+  const pp = v.role==="owner" ? ($("fPark").value==="all" ? null : Number($("fPark").value)) : v.id;
+  $("finSecTop").innerHTML = `Mondeling verkocht en verder <span class="info" tabindex="0">i<span class="tip">Alle deals vanaf mondeling akkoord (Informeel akkoord ontvangen) tot en met notaris gepasseerd. Omzet = totale courtage die RecraVas factureert; de makelaar krijgt 1,5% (max €3.500), marge = de rest. De totale courtage verschilt per park: Wielsche Dreef 1,5%, Frankrijk 5,5%.</span></span>`;
+  $("finSecMonth").innerHTML = `Omzet en winst per maand <span class="info" tabindex="0">i<span class="tip">Elke staaf is de courtage (omzet) van die maand, opgesplitst in het deel voor de makelaar en de marge (winst) voor RecraVas. Omzet = totale courtage die RecraVas factureert (percentage per park: Wielsche Dreef 1,5%, Frankrijk 5,5%). Winst = wat overblijft na uitbetaling aan de makelaar (1,5%, max €3.500 per verkoop). Verkoopsom staat bij de cijfers hierboven en in de tabel eronder.</span></span>`;
+  const rows = await rpc("finance_deals", { p_park_id: pp }) || [];
+
+  const mo = await rpc("finance_monthly", { p_park_id: pp }) || [];
+  const mfmt = d => { const s=new Date(d).toLocaleDateString("nl-NL",{month:"long",year:"numeric"}); return s.charAt(0).toUpperCase()+s.slice(1); };
+  if(finChart) finChart.destroy();
+  // Verkoopsom (honderdduizenden) valt qua schaal niet te vergelijken met courtage/marge
+  // (paar duizend). Daarom hier de COURTAGE per maand gestapeld: makelaarsdeel + marge RecraVas,
+  // samen = omzet. Verkoopsom staat al bij de KPI's en in de tabel eronder.
+  finChart = new Chart($("finChart"), {
+    data:{ labels: mo.map(x=>mfmt(x.maand)), datasets:[
+      { type:"bar", label:"Courtage makelaar", data:mo.map(x=>Number(x.courtage_makelaar)||0), backgroundColor:areaGrad("#B7C0D2",.95,.5), borderRadius:5, borderSkipped:false, stack:"courtage", order:2 },
+      { type:"bar", label:"Marge RecraVas (winst)", data:mo.map(x=>Number(x.marge_recraparcs)||0), backgroundColor:areaGrad(accent(),.95,.45), borderRadius:5, borderSkipped:false, stack:"courtage", order:1 } ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:"bottom", labels:{ boxWidth:10, font:{size:11} } },
+        tooltip:{ callbacks:{
+          label: item => `${item.dataset.label}: ${eur(item.raw)}`,
+          footer: items => `Omzet (courtage): ${eur(items.reduce((s,i)=>s+(Number(i.raw)||0),0))}` } } },
+      scales:{ x:{ stacked:true, grid:{display:false} },
+               y:{ stacked:true, beginAtZero:true, ticks:{ callback:v=>eur(v) }, grid:{display:false} } } }
+  });
+  $("finMonthTable").innerHTML =
+    `<thead><tr><th>Maand</th><th>Verkopen</th><th>Verkoopsom</th><th>Omzet</th><th>Courtage makelaar</th><th>Marge RecraVas</th></tr></thead>
+     <tbody>${mo.map(x=>`<tr><td>${mfmt(x.maand)}</td><td>${x.verkopen}</td><td>${eur(x.verkoopsom)}</td>
+       <td style="font-weight:600">${eur(x.omzet)}</td><td>${eur(x.courtage_makelaar)}</td><td style="font-weight:600;color:var(--good)">${eur(x.marge_recraparcs)}</td></tr>`).join("")
+       || `<tr><td colspan="6" style="color:var(--muted);padding:14px">Nog geen definitieve verkopen om per maand te tonen.</td></tr>`}</tbody>`;
+
+  const lopend = rows.filter(r => r.status_label !== "Afgevallen");
+  const definitief = lopend.filter(r => r.status_label.startsWith("Definitief"));
+  const bekend = r => r.amount != null;
+  const somVan = (list, key) => list.reduce((s,r)=>s+(bekend(r)?Number(r[key]||0):0),0);
+  const totVerkoopsom = somVan(lopend, "amount");
+  const totOmzet = somVan(lopend, "omzet");
+  const definitiefOmzet = somVan(definitief, "omzet");
+  const totCourtage = somVan(lopend, "courtage_makelaar");
+  const totMarge = somVan(lopend, "marge_recraparcs");
+
+  $("finKpis").innerHTML =
+    metric("Mondeling verkocht (of verder)", lopend.length) +
+    metric("Waarvan definitief", definitief.length) +
+    metric("Verkoopsom totaal", eur(totVerkoopsom)) +
+    metric("Omzet totaal", eur(totOmzet)) +
+    metric("Omzet definitief", eur(definitiefOmzet)) +
+    metric("Courtage makelaar", eur(totCourtage)) +
+    metric("Marge RecraVas", eur(totMarge)) +
+    metric("Afgevallen", rows.length - lopend.length);
+
+  const dt = d => d ? new Date(d).toLocaleDateString("nl-NL",{day:"2-digit",month:"short",year:"numeric"}) : "Nog niet bekend";
+  const vandaag = new Date().toISOString().slice(0,10);
+  // definitieve verkoop: ontbindende voorwaarden zijn niet meer relevant -> toon "Definitief"
+  const dtVoorwaarde = (d, statusLabel) => {
+    if(String(statusLabel||"").startsWith("Definitief")) return `<span class="badge sale">Definitief</span>`;
+    if(!d) return "Nog niet bekend";
+    const label = dt(d);
+    return d < vandaag ? `${label} <span class="badge held" style="background:var(--bad-soft);color:var(--bad)">Verlopen</span>` : label;
+  };
+  const statusKleur = s => s==="Afgevallen" ? "bad" : s.startsWith("Definitief") ? "good" : "";
+
+  $("finTable").innerHTML =
+    `<thead><tr><th>Kavel</th><th class="tl">Park</th><th class="tl">Makelaar</th><th class="tl">Status</th>
+      <th>Verkoopsom</th><th>Omzet</th><th>Courtage</th><th>Marge RecraVas</th><th class="tl">Notarisdatum</th><th class="tl">Ontbindende Vw.</th><th></th></tr></thead>
+     <tbody>${rows.map(r=>`<tr>
+       <td style="text-align:left">${r.kavelnummer || "—"}</td>
+       <td style="text-align:left">${r.park}</td>
+       <td style="text-align:left">${r.agent}</td>
+       <td style="text-align:left" class="${statusKleur(r.status_label)}">${r.status_label}</td>
+       <td>${r.amount!=null ? eur(r.amount) : "Nog niet bekend"}</td>
+       <td>${r.omzet!=null ? eur(r.omzet) : "Nog niet bekend"}</td>
+       <td>${r.courtage_makelaar!=null ? eur(r.courtage_makelaar) : "Nog niet bekend"}</td>
+       <td>${r.marge_recraparcs!=null ? eur(r.marge_recraparcs) : "Nog niet bekend"}</td>
+       <td style="text-align:left">${dt(r.notary_date)}</td>
+       <td style="text-align:left">${dtVoorwaarde(r.rescission_date, r.status_label)}</td>
+       <td><a href="${r.pipedrive_url}" target="_blank" rel="noopener">Pipedrive ↗</a></td>
+     </tr>`).join("") || `<tr><td colspan="10" style="color:var(--muted);padding:14px">Nog geen deals mondeling verkocht of verder in deze selectie.</td></tr>`}</tbody>`;
+}
+
+/* ---------- FINANCIEN per makelaar (eigen commissie; GEEN omzet-totaal/marge, AVG) ---------- */
+async function renderFinanceAgent(agentId){
+  const pp = $("fPark").value==="all" ? null : Number($("fPark").value);
+  $("finSecTop").innerHTML = `Mijn verkopen · mondeling akkoord en verder <span class="info" tabindex="0">i<span class="tip">Al jouw deals vanaf mondeling akkoord (Informeel akkoord ontvangen) tot en met notaris gepasseerd. Commissie = 1,5% van de verkoopsom, met een maximum van €3.500 per verkoop.</span></span>`;
+  $("finSecMonth").innerHTML = `Mijn commissie per maand`;
+  const rows = await rpc("finance_deals_agent", { p_agent_id: agentId, p_park_id: pp }) || [];
+  const mo = await rpc("finance_monthly_agent", { p_agent_id: agentId, p_park_id: pp }) || [];
+  const mfmt = d => { const s=new Date(d).toLocaleDateString("nl-NL",{month:"long",year:"numeric"}); return s.charAt(0).toUpperCase()+s.slice(1); };
+  if(finChart) finChart.destroy();
+  finChart = new Chart($("finChart"), {
+    data:{ labels: mo.map(x=>mfmt(x.maand)), datasets:[
+      { type:"bar", label:"Mijn commissie", data:mo.map(x=>Number(x.mijn_commissie)||0), backgroundColor:areaGrad(accent(),.95,.4), borderRadius:6, borderSkipped:false, yAxisID:"y", order:2 },
+      { type:"line", label:"Verkoopsom", data:mo.map(x=>Number(x.verkoopsom)||0), borderColor:"#B8862E", backgroundColor:"#B8862E", borderWidth:2, tension:0.3, pointRadius:3, yAxisID:"y1", order:1 } ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:"bottom", labels:{ boxWidth:10, font:{size:11} } } },
+      scales:{
+        y:{ position:"left", beginAtZero:true, ticks:{ callback:v=>"€"+Number(v).toLocaleString("nl-NL") }, grid:{display:false}, title:{display:true,text:"commissie",font:{size:10}} },
+        y1:{ position:"right", beginAtZero:true, ticks:{ callback:v=>"€"+Math.round(v/1000)+"k" }, grid:{display:false}, title:{display:true,text:"verkoopsom",font:{size:10}} },
+        x:{ grid:{display:false} } } }
+  });
+  $("finMonthTable").innerHTML =
+    `<thead><tr><th>Maand</th><th>Verkopen</th><th>Verkoopsom</th><th>Mijn commissie</th></tr></thead>
+     <tbody>${mo.map(x=>`<tr><td>${mfmt(x.maand)}</td><td>${x.verkopen}</td><td>${eur(x.verkoopsom)}</td>
+       <td style="font-weight:600;color:var(--good)">${eur(x.mijn_commissie)}</td></tr>`).join("")
+       || `<tr><td colspan="4" style="color:var(--muted);padding:14px">Nog geen definitieve verkopen om per maand te tonen.</td></tr>`}</tbody>`;
+
+  const lopend = rows.filter(r => r.status_label !== "Afgevallen");
+  const definitief = lopend.filter(r => r.status_label.startsWith("Definitief"));
+  const bekend = r => r.amount != null;
+  const somVan = (list, key) => list.reduce((s,r)=>s+(bekend(r)?Number(r[key]||0):0),0);
+  $("finKpis").innerHTML =
+    metric("Mondeling verkocht (of verder)", lopend.length) +
+    metric("Waarvan definitief", definitief.length) +
+    metric("Mijn verkoopsom totaal", eur(somVan(lopend,"amount"))) +
+    metric("Mijn commissie totaal", eur(somVan(lopend,"mijn_commissie"))) +
+    metric("Waarvan definitief (commissie)", eur(somVan(definitief,"mijn_commissie"))) +
+    metric("Afgevallen", rows.length - lopend.length);
+
+  const dt = d => d ? new Date(d).toLocaleDateString("nl-NL",{day:"2-digit",month:"short",year:"numeric"}) : "Nog niet bekend";
+  const vandaag = new Date().toISOString().slice(0,10);
+  // definitieve verkoop: ontbindende voorwaarden zijn niet meer relevant -> toon "Definitief"
+  const dtVoorwaarde = (d, statusLabel) => {
+    if(String(statusLabel||"").startsWith("Definitief")) return `<span class="badge sale">Definitief</span>`;
+    if(!d) return "Nog niet bekend";
+    const label = dt(d);
+    return d < vandaag ? `${label} <span class="badge held" style="background:var(--bad-soft);color:var(--bad)">Verlopen</span>` : label; };
+  const statusKleur = s => s==="Afgevallen" ? "bad" : s.startsWith("Definitief") ? "good" : "";
+
+  $("finTable").innerHTML =
+    `<thead><tr><th>Kavel</th><th class="tl">Park</th><th class="tl">Status</th>
+      <th>Verkoopsom</th><th>Mijn commissie</th><th class="tl">Notarisdatum</th><th class="tl">Ontbindende Vw.</th><th></th></tr></thead>
+     <tbody>${rows.map(r=>`<tr>
+       <td style="text-align:left">${r.kavelnummer || "—"}</td>
+       <td style="text-align:left">${r.park}</td>
+       <td style="text-align:left" class="${statusKleur(r.status_label)}">${r.status_label}</td>
+       <td>${r.amount!=null ? eur(r.amount) : "Nog niet bekend"}</td>
+       <td style="font-weight:600;color:var(--good)">${r.mijn_commissie!=null ? eur(r.mijn_commissie) : "Nog niet bekend"}</td>
+       <td style="text-align:left">${dt(r.notary_date)}</td>
+       <td style="text-align:left">${dtVoorwaarde(r.rescission_date, r.status_label)}</td>
+       <td><a href="${r.pipedrive_url}" target="_blank" rel="noopener">Pipedrive ↗</a></td>
+     </tr>`).join("") || `<tr><td colspan="8" style="color:var(--muted);padding:14px">Nog geen deals mondeling verkocht of verder.</td></tr>`}</tbody>`;
+}
+
+/* ---------- PROGNOSE (echte data: Meta-spend + verkopen/verkoopsom/marge uit Pipedrive via ad_kpis) ---------- */
+let PROG = null;
+async function renderPrognose(){
+  const v = currentView();
+  const pp = v.role==="park" ? v.id : ($("fPark").value==="all" ? null : Number($("fPark").value));
+  const parkNaam = pp==null ? "alle parken" : ((PARKS.find(p=>p.id===pp)||{}).name || "dit park");
+  const r = periodRange();
+  const k = (await rpc("ad_kpis", { ...r, p_park_id: pp }))?.[0] || {};
+  const spend = Number(k.spend)||0, sales = Number(k.sales)||0,
+        verkoopsom = Number(k.omzet)||0, marge = Number(k.marge)||0; // ad_kpis.omzet = som verkoopsom (amount)
+
+  // Zinnige prognose kan alleen als er in deze selectie zowel echte uitgaven als echte
+  // verkopen zijn. Anders: eerlijk melden waarom, geen verzonnen cijfers.
+  const sl = $("progSlider");
+  if(spend<=0 || sales<=0){
+    PROG = null;
+    let uitleg;
+    if(spend<=0 && sales<=0) uitleg = `Nog geen advertentie-uitgaven én geen verkopen in deze selectie (${parkNaam}). Kies eventueel een andere periode.`;
+    else if(spend<=0)        uitleg = `Er zijn wel verkopen (${sales}), maar geen advertentie-uitgaven in deze selectie (${parkNaam}) — bijvoorbeeld omdat er nog geen Meta-koppeling is. Zonder uitgaven valt geen kosten-per-verkoop te berekenen.`;
+    else                     uitleg = `Er zijn wel advertentie-uitgaven (${eur(spend)}), maar nog geen verkopen gekoppeld in deze selectie (${parkNaam}). Zodra een lead uit deze periode tot verkoop leidt, verschijnt hier de prognose.`;
+    $("progBasis").innerHTML = `<div class="metric" style="grid-column:1/-1"><div class="l">${uitleg}</div></div>`;
+    $("progSpendLabel").textContent = "—";
+    $("progOut").innerHTML = "";
+    sl.value = 0; sl.disabled = true;
+    return;
+  }
+  sl.disabled = false;
+
+  PROG = { cpa: spend/sales, verkoopsomPer: verkoopsom/sales, margePer: marge/sales, basisSpend: spend };
+  $("progBasis").innerHTML =
+    metric("Advertentie-uitgaven", eur(spend)) +
+    metric("Verkopen", sales) +
+    metric("Kosten per verkoop", eur(PROG.cpa)) +
+    metric("Gem. verkoopsom", eur(PROG.verkoopsomPer)) +
+    metric("Gem. marge RecraVas", eur(PROG.margePer));
+  sl.min = 0; sl.max = Math.max(Math.round(spend*3), 1000); sl.step = Math.max(Math.round(spend/40/50)*50, 50);
+  sl.value = Math.round(spend);
+  sl.oninput = updatePrognose;
+  updatePrognose();
+}
+function updatePrognose(){
+  if(!PROG) return;
+  const budget = Number($("progSlider").value);
+  $("progSpendLabel").textContent = eur(budget);
+  const verkopen = budget / PROG.cpa;
+  const verkoopsom = verkopen * PROG.verkoopsomPer;
+  const marge = verkopen * PROG.margePer;
+  const basisMarge = (PROG.basisSpend/PROG.cpa) * PROG.margePer;
+  const rendement = budget>0 ? (marge/budget).toFixed(2) : "0";
+  $("progOut").innerHTML =
+    `<div class="metric team"><div class="l">Verwachte verkopen</div><div class="v">${verkopen.toFixed(1)}</div></div>` +
+    `<div class="metric team"><div class="l">Verwachte verkoopsom</div><div class="v">${eur(verkoopsom)}</div></div>` +
+    `<div class="metric team"><div class="l">Verwachte marge RecraVas</div><div class="v">${eur(marge)}</div></div>` +
+    `<div class="metric"><div class="l">Marge per advertentie-euro</div><div class="v">${rendement}</div></div>` +
+    `<div class="metric"><div class="l">Extra marge t.o.v. nu</div><div class="v">${eur(marge - basisMarge)}</div></div>`;
+}
+
+/* ---------- ADVERTENTIES ---------- */
+let adChart;
+let ADROWS = [], ADSORT = { key:"spend", dir:-1 }, ADPARK = null;
+const parkAccent = id => { const p = PARKS.find(x=>x.id===id); return (p && p.accent_color) || accent(); };
+const STATUSNL = { active:["Actief","sale"], paused:["Gepauzeerd","held"], killed:["Gestopt","held"], draft:["Concept","held"], unknown:["Onbekend","held"], demo:["Demo","held"] };
+
+// Afspraken als losse "zwevende" punten (geen lijn) bovenop de grafiek, geteld op de dag dat de
+// lead is aangemaakt — ook als de afspraak pas weken later is ingepland. Dagen zonder afspraak
+// krijgen null (niet 0) zodat er geen punt getekend wordt.
+function adAfsprakenDataset(dd){
+  return { type:"line", label:"Afspraken",
+    data: dd.map(x => Number(x.afspraken)>0 ? Number(x.afspraken) : null),
+    showLine:false, pointStyle:"circle", pointRadius:6, pointHoverRadius:8,
+    borderColor:"#2C5F52", backgroundColor:"#2C5F52", yAxisID:"y1", order:0 };
+}
+function adChartOptions(dd){
+  return { responsive:true, maintainAspectRatio:false,
+    interaction:{ mode:"index", intersect:false },
+    plugins:{
+      legend:{ position:"bottom", labels:{ boxWidth:10, font:{size:11} } },
+      tooltip:{
+        filter: item => !(item.dataset.label==="Afspraken" && item.raw==null),
+        callbacks:{
+          label: item => {
+            if(item.dataset.label==="Uitgaven") return `Uitgaven: ${eur(item.raw)}`;
+            return `${item.dataset.label}: ${item.raw}`;
+          },
+          afterBody: items => {
+            const i = items[0].dataIndex, leads = Number(dd[i].leads)||0, spend = Number(dd[i].spend)||0;
+            return leads>0 ? [`Kosten per lead: ${eur(spend/leads)}`] : [];
+          }
+        }
+      }
+    },
+    scales:{ y:{ position:"left", ticks:{ callback:v=>"€"+v }, grid:{display:false} },
+      y1:{ position:"right", beginAtZero:true, ticks:{precision:0}, grid:{display:false}, title:{display:true,text:"leads / afspraken",font:{size:10}} },
+      x:{ grid:{display:false}, ticks:{ maxTicksLimit:15 } } } };
+}
+
+async function renderAds(){
+  const v = currentView();
+  let pp;
+  if(v.role==="park"){
+    pp = v.id;
+    $("adParkTabs").classList.add("hidden");
+  } else {
+    // eigenaar: altijd één park tegelijk, via sub-tabbladen (gemengd totaal zegt niets)
+    if(!ADPARK || !PARKS.find(p=>p.id===ADPARK)) ADPARK = (PARKS[0]||{}).id;
+    pp = ADPARK;
+    $("adParkTabs").innerHTML = PARKS.map(p=>
+      `<button class="tab ${p.id===ADPARK?"active":""}" data-park="${p.id}">${p.name}</button>`).join("");
+    $("adParkTabs").classList.remove("hidden");
+    document.querySelectorAll("#adParkTabs .tab").forEach(b=>b.addEventListener("click", ()=>{
+      ADPARK = Number(b.dataset.park); renderAds();
+    }));
+  }
+  setBranding(pp);
+  const r = periodRange();
+  const [k, daily, ov, mnd, dsAds] = await Promise.all([
+    rpc("ad_kpis",  { ...r, p_park_id: pp }).then(x=>x?.[0]||{}),
+    rpc("ad_daily", { ...r, p_park_id: pp }),
+    rpc("ad_overview", { ...r, p_park_id: pp }),
+    rpc("ad_monthly", { p_park_id: pp, p_from: r.p_from, p_to: r.p_to }),
+    rpc("definitief_stats", { ...r, p_agent_id:null, p_park_id: pp, p_anchor:'lead' }).then(x=>x?.[0]||{}),
+  ]);
+
+  const spend=Number(k.spend)||0, leads=Number(k.leads)||0, afspr=Number(k.afspraken)||0,
+        sales=Number(k.sales)||0, omzet=Number(k.omzet)||0, clicks=Number(k.clicks)||0;
+  $("adKpis").innerHTML =
+    metric("Totaal uitgaven", eur(spend)) +
+    metric("Clicks", clicks.toLocaleString("nl-NL")) +
+    metric("Leads", leads) +
+    metric("Kosten per lead", leads ? eur(spend/leads) : "—") +
+    metric("Afspraken", afspr) +
+    metric("Kosten per afspraak", afspr ? eur(spend/afspr) : "—") +
+    metric("Sales", sales, defSub(dsAds)) +
+    metric("Kosten per sale", sales ? eur(spend/sales) : "—") +
+    metric("Omzet", eur(omzet)) +
+    metric("ROAS", spend ? (omzet/spend).toFixed(2) : "—");
+
+  const dd = daily || [];
+  const dt2 = d => new Date(d).toLocaleDateString("nl-NL",{day:"numeric",month:"short"});
+  if(adChart) adChart.destroy();
+  adChart = new Chart($("adChart"), {
+    data:{ labels: dd.map(x=>dt2(x.dag)), datasets:[
+      { type:"bar", label:"Uitgaven", data:dd.map(x=>Number(x.spend)||0), backgroundColor:areaGrad(parkAccent(pp),.95,.4), borderRadius:6, borderSkipped:false, yAxisID:"y", order:3 },
+      { type:"line", label:"Leads", data:dd.map(x=>Number(x.leads)||0), borderColor:"#B8862E", backgroundColor:areaGrad("#B8862E",.28,0), fill:true, borderWidth:2, tension:0.35, pointRadius:2, yAxisID:"y1", order:1 },
+      adAfsprakenDataset(dd) ]},
+    options: adChartOptions(dd)
+  });
+
+  ADROWS = ov || [];
+  drawAdTable();
+  renderBestAds();
+  renderAdMonths(mnd || []);
+  closeAdDetail();
+  const adIns = adInsightsBouw(ADROWS, dd);
+  $("adInsightsSec").classList.toggle("hidden", !adIns.length);
+  $("adInsights").innerHTML = adIns.join("");
+  $("adOverviewSec").classList.toggle("hidden", !ADROWS.length);
+  const ctx = ongekStats();
+  const flags = ADROWS.map(a => ({ a, f: ongekFlag(a, ctx) }));
+  const uit = flags.filter(x => x.f.level===2), letop = flags.filter(x => x.f.level===1);
+  $("adWarnBanner").classList.toggle("hidden", !(uit.length||letop.length));
+  if(uit.length||letop.length){
+    const fmt = x => `${x.a.advertentie} (${x.f.pct}%${x.f.level===2?`, ondergrens ${Math.round(x.f.lb)}%`:""})`;
+    let html = "";
+    if(uit.length) html +=
+      `<div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--bad)">&#9888;</span><span><b>Overweeg uitzetten</b> — ${uit.map(fmt).join(", ")}: ook de voorzichtige ondergrens ligt hoog, dus dit is geen toeval.</span></div>`;
+    if(letop.length) html +=
+      `<div style="display:flex;gap:8px;align-items:flex-start;margin-top:${uit.length?6:0}px"><span>&#9888;</span><span><b>Let op</b> — ${letop.map(fmt).join(", ")}: verhoogd, houd de targeting in de gaten (nog te weinig leads voor een harde conclusie).</span></div>`;
+    $("adWarnBanner").innerHTML = html;
+  }
+  $("adFoot").textContent = ADROWS.length
+    ? `${k.leads_met_ad ?? 0} van ${leads} leads in deze periode zijn aan een advertentie gekoppeld · uitgaven en clicks uit Meta, leads, afspraken, sales en omzet uit Pipedrive via het AD ID op de deal.`
+    : "Nog geen advertentiedata voor deze selectie.";
+}
+
+let adDetailChart;
+function closeAdDetail(){
+  $("adDetailSec").classList.add("hidden");
+  if(adDetailChart){ adDetailChart.destroy(); adDetailChart = null; }
+}
+async function renderAdDetail(adId, naam){
+  const r = periodRange();
+  const dd = await rpc("ad_daily_detail", { p_ad_id: adId, ...r }) || [];
+  $("adDetailTitle").textContent = `Dagverloop · ${naam}`;
+  $("adDetailSec").classList.remove("hidden");
+  const dt2 = d => new Date(d).toLocaleDateString("nl-NL",{day:"numeric",month:"short"});
+  if(adDetailChart) adDetailChart.destroy();
+  adDetailChart = new Chart($("adDetailChart"), {
+    data:{ labels: dd.map(x=>dt2(x.dag)), datasets:[
+      { type:"bar", label:"Uitgaven", data:dd.map(x=>Number(x.spend)||0), backgroundColor:areaGrad(parkAccent(ADPARK),.95,.4), borderRadius:6, borderSkipped:false, yAxisID:"y", order:2 },
+      { type:"line", label:"Leads", data:dd.map(x=>Number(x.leads)||0), borderColor:"#B8862E", backgroundColor:areaGrad("#B8862E",.28,0), fill:true, borderWidth:2, tension:0.35, pointRadius:2, yAxisID:"y1", order:1 },
+      adAfsprakenDataset(dd) ]},
+    options: adChartOptions(dd)
+  });
+  // grafiek blijft chronologisch (oud -> nieuw); tabel toont nieuwste dag bovenaan
+  const met = dd.filter(x=>Number(x.spend)>0 || Number(x.leads)>0);
+  $("adDetailTable").innerHTML =
+    `<thead><tr><th>Dag</th><th>Uitgaven</th><th>Clicks</th><th>Leads</th><th>Kosten per lead</th></tr></thead>
+     <tbody>${[...met].reverse().map(x=>{
+       const l=Number(x.leads)||0, s=Number(x.spend)||0;
+       return `<tr><td>${dt2(x.dag)}</td><td style="font-weight:600">${eur(s)}</td><td>${x.clicks}</td>
+         <td>${l}</td><td>${l>0 ? eur(s/l) : "—"}</td></tr>`;
+     }).join("")}</tbody>`;
+  $("adDetailSec").scrollIntoView({ behavior:"smooth", block:"start" });
+}
+
+const ADCOLS = [
+  ["advertentie","Advertentie"], ["status","Status"], ["awareness_stage","Fase"], ["spend","Uitgaven"], ["clicks","Clicks"],
+  ["cpc","CPC"], ["leads","Leads"], ["cpl","CPL"], ["afspraken","Afspraken"], ["cpa","CPA"], ["conv_pct","Conv. %"],
+  ["ongekwalificeerd_pct","Ongekwalificeerd %"], ["sales","Sales"], ["omzet","Omzet"], ["roas","ROAS"],
+];
+// conversie lead -> afspraak (kwaliteitsmaat per advertentie); niet in de RPC, dus hier afgeleid
+const convPct = a => Number(a.leads)>0 ? Math.round((Number(a.afspraken)||0)/Number(a.leads)*100) : null;
+// sorteervolgorde voor de Fase-kolom: op funnel-positie (koud -> warm), leeg onderaan
+const FASE_ORDER = Object.fromEntries(FASES.map((f,i)=>[f.key,i+1]));
+let ADFASE = "all"; // actieve fase-filter in de advertentietabel
+// --- Afkeuren op ongekwalificeerde leads (twee niveaus) ------------------------
+// "Let op" (oranje) = zachte attentie op het rauwe percentage. "Overweeg uitzetten"
+// (rood) = statistisch onderbouwd via de Wilson-ondergrens (95%), die automatisch
+// corrigeert voor kleine aantallen: 2/5 (40%) haalt 'm niet, 6/15 (40%) wel.
+// Daarnaast een relatieve indicator (▲/▼) t.o.v. je eigen portfolio-gemiddelde.
+const ONGEK_MIN_LEADS      = 5;   // minimaal aantal leads voordat we iets flaggen
+const ONGEK_LETOP_PCT      = 30;  // rauw % -> oranje "let op"
+const ONGEK_UITZET_WILSON  = 20;  // Wilson-ondergrens (%) -> rood "overweeg uitzetten"
+const ONGEK_REL_FACTOR     = 1.5; // "let op" als rauw % ook >= dit maal je eigen gemiddelde ...
+const ONGEK_REL_MIN_PCT    = 15;  // ... en boven deze absolute vloer (tegen ruis bij lage baseline)
+const ONGEK_BASELINE_MIN_LEADS = 20; // portfolio-gemiddelde pas als referentie vanaf dit totaal aan leads
+
+// Wilson-score ondergrens (95%, z=1.96) van aandeel k/n, teruggegeven als percentage.
+function wilsonLower(k, n){
+  if(!n) return 0;
+  const z=1.96, p=k/n, z2=z*z;
+  const lo = (p + z2/(2*n) - z*Math.sqrt((p*(1-p) + z2/(4*n))/n)) / (1 + z2/n);
+  return Math.max(0, lo*100);
+}
+// Ruw aantal ongekwalificeerde leads: uit ad_overview (ongekwalificeerd_n), met
+// terugval op afleiding uit percentage × leads als de kolom (nog) ontbreekt.
+function ongekN(a){
+  if(a.ongekwalificeerd_n != null) return Number(a.ongekwalificeerd_n)||0;
+  return Math.round((Number(a.ongekwalificeerd_pct)||0)/100 * (Number(a.leads)||0));
+}
+// Gepoold portfolio-gemiddelde (som ongek / som leads) — robuuster dan gemiddelde van percentages.
+function ongekStats(){
+  let k=0, n=0;
+  for(const a of ADROWS){ n += Number(a.leads)||0; k += ongekN(a); }
+  return { basePct: n>0 ? k/n*100 : 0, totLeads: n };
+}
+// Niveau: 0 = geen, 1 = let op (oranje), 2 = overweeg uitzetten (rood).
+function ongekFlag(a, ctx){
+  const leads = Number(a.leads)||0, pct = Number(a.ongekwalificeerd_pct)||0;
+  if(leads < ONGEK_MIN_LEADS) return { level:0, pct, lb:0, base:ctx.basePct };
+  const lb = wilsonLower(ongekN(a), leads);
+  const relOn = ctx.totLeads >= ONGEK_BASELINE_MIN_LEADS && ctx.basePct > 0;
+  if(lb >= ONGEK_UITZET_WILSON) return { level:2, pct, lb, base:ctx.basePct };
+  if(pct >= ONGEK_LETOP_PCT)    return { level:1, pct, lb, base:ctx.basePct };
+  if(relOn && pct >= Math.max(ONGEK_REL_MIN_PCT, ctx.basePct*ONGEK_REL_FACTOR))
+    return { level:1, pct, lb, base:ctx.basePct };
+  return { level:0, pct, lb, base:ctx.basePct };
+}
+const faseSortVal = a => a.awareness_stage ? FASE_ORDER[a.awareness_stage] : 99;
+function drawAdTable(){
+  const s = ADSORT;
+  const rows = ADROWS
+    .filter(a => ADFASE==="all" || (ADFASE==="none" ? !a.awareness_stage : a.awareness_stage===ADFASE))
+    .sort((a,b)=>{
+      if(s.key==="awareness_stage") return (faseSortVal(a)-faseSortVal(b)) * s.dir;
+      if(s.key==="conv_pct") return ((convPct(a)||0)-(convPct(b)||0)) * s.dir;
+      const av=a[s.key], bv=b[s.key];
+      return (typeof av==="string" ? av.localeCompare(bv) : (Number(av)||0)-(Number(bv)||0)) * s.dir;
+    });
+  $("adTable").innerHTML =
+    `<thead><tr>${ADCOLS.map(([key,label])=>{
+      const arrow = s.key===key ? (s.dir<0?" ↓":" ↑") : "";
+      const info = key==='awareness_stage'
+        ? ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">${FASE_UITLEG}</span></span>`
+        : key==='conv_pct'
+        ? ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">Conversie van lead naar afspraak (afspraken ÷ leads). Dé kwaliteitsmaat naast de prijs per lead: een goedkope lead die nooit een afspraak wordt, is alsnog duur.</span></span>` : "";
+      const tl = (key==='advertentie'||key==='status'||key==='awareness_stage') ? 'tl' : '';
+      return `<th data-key="${key}" class="${tl}" style="cursor:pointer;user-select:none">${label}${arrow}${info}</th>`;
+    }).join("")}</tr></thead>
+     <tbody>${(()=>{ const ctx = ongekStats(); return rows.map(a=>{
+       const st = STATUSNL[a.status] || [a.status||"—","held"];
+       const ok = Number(a.ongekwalificeerd_pct)||0;
+       const f = ongekFlag(a, ctx);
+       const relOn = ctx.totLeads>=ONGEK_BASELINE_MIN_LEADS && ctx.basePct>0 && a.leads>0;
+       const relMark = relOn
+         ? (ok > ctx.basePct+0.5 ? ` <span title="boven je gemiddelde (${ctx.basePct.toFixed(1)}%)" style="color:var(--bad)">&#9650;</span>`
+          : ok < ctx.basePct-0.5 ? ` <span title="onder je gemiddelde (${ctx.basePct.toFixed(1)}%)" style="color:var(--good)">&#9660;</span>` : "")
+         : "";
+       const okCls = a.leads===0 ? "" : (f.level===2 ? "bad" : (relOn && ok<=ctx.basePct ? "good" : ""));
+       const icon = f.level===2
+         ? `<span class="info" tabindex="0" style="background:var(--bad-soft);color:var(--bad)">!<span class="tip">Overweeg uitzetten: ${ok}% van ${a.leads} leads ongekwalificeerd; ook de voorzichtige ondergrens (${Math.round(f.lb)}%) ligt hoog, dus geen toeval. Vaak "geen budget" of "wil huren i.p.v. kopen" — zet uit of scherp de targeting aan.</span></span>`
+         : f.level===1
+         ? `<span class="info" tabindex="0" style="background:var(--warn-soft);color:var(--warn)">!<span class="tip">Let op: ${ok}% van ${a.leads} leads ongekwalificeerd — verhoogd${ctx.basePct>0?` t.o.v. je gemiddelde van ${ctx.basePct.toFixed(1)}%`:""}. Houd de targeting in de gaten; nog te weinig leads voor een harde conclusie.</span></span>`
+         : "";
+       const kill = a.kill_reason
+         ? ` <span class="info" tabindex="0" style="background:var(--bad-soft);color:var(--bad)">✕<span class="tip">Kill-reden: ${esc(a.kill_reason)}</span></span>` : "";
+       return `<tr data-adid="${a.ad_id}" data-naam="${a.advertentie}" style="cursor:pointer"><td style="text-align:left">${a.advertentie}
+           ${icon}${kill}</td>
+         <td style="text-align:left"><span class="badge ${st[1]}">${st[0]}</span></td>
+         <td class="tl fase-cell" data-code="${escAttr(a.code)}" style="cursor:pointer" title="Klik om de fase/notities te wijzigen">${fasePill(a.awareness_stage)}</td>
+         <td style="font-weight:600">${eur(a.spend)}</td><td>${a.clicks}</td>
+         <td>${a.cpc ? "€"+Number(a.cpc).toLocaleString("nl-NL",{minimumFractionDigits:2,maximumFractionDigits:2}) : "—"}</td>
+         <td>${adLink(a.leads,'leads',a.ad_id,a.advertentie)}</td><td>${a.leads>0 ? eur(a.cpl) : "—"}</td>
+         <td>${adLink(a.afspraken,'afspraken',a.ad_id,a.advertentie)}</td><td>${a.afspraken>0 ? eur(a.cpa) : "—"}</td>
+         <td>${convPct(a)!=null ? convPct(a)+"%" : "—"}</td>
+         <td class="${okCls}">${a.leads>0 ? ok+"%"+relMark : "—"}</td>
+         <td>${adLink(a.sales,'verkopen',a.ad_id,a.advertentie)}</td><td>${a.omzet>0 ? eur(a.omzet) : "—"}</td>
+         <td>${Number(a.roas)>0 ? Number(a.roas).toFixed(2) : "—"}</td></tr>`;
+     }).join("") || `<tr><td colspan="${ADCOLS.length}" style="color:var(--muted);padding:14px">Geen advertenties in deze selectie.</td></tr>`; })()}</tbody>`;
+  document.querySelectorAll("#adTable th").forEach(th => th.addEventListener("click", () => {
+    const key = th.dataset.key;
+    if(ADSORT.key === key) ADSORT.dir *= -1; else ADSORT = { key, dir:-1 };
+    drawAdTable();
+  }));
+  document.querySelectorAll("#adTable tbody tr").forEach(tr => tr.addEventListener("click", () => {
+    renderAdDetail(Number(tr.dataset.adid), tr.dataset.naam);
+  }));
+  document.querySelectorAll("#adTable .fase-cell").forEach(el => el.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const row = ADROWS.find(r => r.code === el.dataset.code);
+    if(row) openAdEdit(row, "ad");
+  }));
+  document.querySelectorAll("#adTable .ad-deal-link").forEach(el => el.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toonAdDeals(Number(el.dataset.adid), el.dataset.kind, el.dataset.naam);
+  }));
+}
+
+/* ---------- best presterende advertenties (met thumbnail) ----------
+   Rangschikking: als er verkopen zijn -> kosten per verkoop (laagste eerst);
+   anders als er afspraken zijn -> kosten per afspraak; anders -> meeste leads.
+   thumbnail_url en kost_per_sale komen uit ad_overview (ADROWS). */
+function renderBestAds(){
+  const rows = ADROWS || [];
+  // Kosten-per-X is alleen zinnig met echte uitgaven; advertenties zonder spend
+  // (bijv. handmatig getagde niet-Meta-bronnen) horen niet bovenaan met €0.
+  const salesKand = rows.filter(a => Number(a.sales) > 0 && Number(a.spend) > 0)
+    .map(a => ({ a, waarde: Number(a.kost_per_sale) || (Number(a.spend) / Number(a.sales)) })).sort((x,y) => x.waarde - y.waarde);
+  const afsprKand = rows.filter(a => Number(a.afspraken) > 0 && Number(a.spend) > 0)
+    .map(a => ({ a, waarde: Number(a.cpa) })).sort((x,y) => x.waarde - y.waarde);
+  const leadKand = rows.filter(a => Number(a.leads) > 0)
+    .map(a => ({ a, waarde: Number(a.leads) })).sort((x,y) => y.waarde - x.waarde);
+  let metric, kandidaten, subtitel, tip;
+  if(salesKand.length){
+    metric = "sale"; kandidaten = salesKand; subtitel = "op kosten per verkoop";
+    tip = "Gesorteerd op kosten per verkoop (uitgaven ÷ verkopen), laagste eerst.";
+  } else if(afsprKand.length){
+    metric = "afspraak"; kandidaten = afsprKand; subtitel = "op kosten per afspraak";
+    tip = "Nog geen verkopen gekoppeld, dus gesorteerd op kosten per afspraak (laagste eerst).";
+  } else {
+    metric = "leads"; kandidaten = leadKand; subtitel = "op aantal leads";
+    tip = "Nog geen verkopen of afspraken gekoppeld, dus gesorteerd op aantal leads (meeste eerst).";
+  }
+  const top = kandidaten.slice(0, 5);
+  $("adBestSec").classList.toggle("hidden", !top.length);
+  if(!top.length) return;
+  $("adBestTitle").textContent = `Best presterende advertenties · ${subtitel}`;
+  $("adBestTip").textContent = tip;
+  $("adBestGrid").innerHTML = top.map(({ a, waarde }, i) => {
+    const url = a.thumbnail_url;
+    let hoofd, sub;
+    if(metric === "sale"){ hoofd = `${eur(waarde)} <span style="font-size:12px;color:var(--muted)">/ verkoop</span>`;
+      sub = `${a.sales} verkopen · ${a.leads} leads · ${eur(a.spend)}`; }
+    else if(metric === "afspraak"){ hoofd = `${eur(waarde)} <span style="font-size:12px;color:var(--muted)">/ afspraak</span>`;
+      sub = `${a.afspraken} afspraken · ${a.leads} leads · ${eur(a.spend)}`; }
+    else { hoofd = `${a.leads} <span style="font-size:12px;color:var(--muted)">leads</span>`;
+      sub = `${eur(a.spend)} · CPL ${a.leads > 0 ? eur(a.cpl) : "—"}`; }
+    return `<div class="adbest-card" data-adid="${a.ad_id}" data-naam="${a.advertentie}">
+      <div class="adbest-rank">${i + 1}</div>
+      <div class="adbest-thumb${url ? "" : " leeg"}">${url ? `<img src="${url}" alt="" onerror="this.parentNode.classList.add('leeg');this.remove()">` : ""}</div>
+      <div class="adbest-info">
+        <div class="adbest-naam" title="${a.advertentie}">${a.advertentie}</div>
+        <div class="adbest-hoofd">${hoofd}</div>
+        <div class="adbest-sub">${sub}</div>
+      </div>
+    </div>`;
+  }).join("");
+  document.querySelectorAll("#adBestGrid .adbest-card").forEach(c => c.addEventListener("click", () =>
+    renderAdDetail(Number(c.dataset.adid), c.dataset.naam)));
+}
+
+/* ---------- advertentiebudget per maand (lead-geankerd) ---------- */
+function renderAdMonths(rows){
+  const mfmt = d => { const s = new Date(d).toLocaleDateString("nl-NL",{month:"long",year:"numeric"});
+    return s.charAt(0).toUpperCase()+s.slice(1); };
+  $("adMonthSec").classList.toggle("hidden", !rows.length);
+  if(!rows.length) return;
+  $("adMonthTable").innerHTML =
+    `<thead><tr><th style="text-align:left">Maand</th><th>Uitgaven</th><th>Leads</th><th>CPL</th>
+       <th>Afspraken</th><th>CPA</th><th>Sales</th><th>Omzet</th><th>Kost/sale</th><th>ROAS</th></tr></thead>
+     <tbody>${rows.map(m=>`<tr>
+       <td style="text-align:left">${mfmt(m.maand)}</td>
+       <td style="font-weight:600">${eur(m.spend)}</td>
+       <td>${m.leads}</td><td>${m.leads>0?eur(m.cpl):"—"}</td>
+       <td>${m.afspraken}</td><td>${m.afspraken>0?eur(m.cpa):"—"}</td>
+       <td>${m.sales}</td><td style="font-weight:600">${Number(m.omzet)>0?eur(m.omzet):"—"}</td>
+       <td>${m.sales>0?eur(m.kost_per_sale):"—"}</td><td>${Number(m.roas)>0?Number(m.roas).toFixed(2):"—"}</td></tr>`).join("")}</tbody>`;
+}
+
+/* ---------- monthly overview (all roles) ---------- */
+// opts.def = map "YYYY-MM" -> aantal definitieve verkopen (uit monthly_definitief); null = kolom weglaten
+function renderMonths(rows, opts){
+  const mfmt = d => { const s = new Date(d).toLocaleDateString("nl-NL",{month:"long",year:"numeric"});
+    return s.charAt(0).toUpperCase()+s.slice(1); };
+  const mkey = d => String(d).slice(0,7);
+  const heeftDef = opts.def != null;
+  $("monthTable").innerHTML =
+    `<thead><tr><th>Maand</th>${opts.spend?"<th>Uitgaven</th>":""}${opts.leads?"<th>Leads</th>":""}
+      <th>Afspraken</th><th>Sales</th>${heeftDef?`<th>Definitief <span class="info" tabindex="0">i<span class="tip">Aantal verkopen van die maand waarvan de koopovereenkomst definitief is (koopcontract definitief, naar de notaris of gepasseerd).</span></span></th>`:""}<th>Omzet</th><th>Omzet per afspraak</th><th>Closing %</th></tr></thead>
+     <tbody>${rows.map(x=>{
+       const per = x.appointments ? Math.round(x.revenue/x.appointments) : 0;
+       const cl  = x.appointments ? Math.round(x.sales/x.appointments*100) : 0;
+       let defCell = "";
+       if(heeftDef){
+         const dv = Number(opts.def[mkey(x.maand)])||0, s = Number(x.sales)||0;
+         defCell = s===0 ? `<td>—</td>`
+           : `<td class="${dv>=s?"good":"bad"}" style="font-weight:600">${dv} / ${s}</td>`;
+       }
+       return `<tr><td>${mfmt(x.maand)}</td>
+         ${opts.spend?`<td>${x.spend==null?"—":eur(x.spend)}</td>`:""}
+         ${opts.leads?`<td>${x.leads}</td>`:""}
+         <td>${x.appointments}</td><td>${x.sales}</td>${defCell}
+         <td style="font-weight:600">${eur(x.revenue)}</td><td>${eur(per)}</td><td>${cl}%</td></tr>`;
+     }).join("")}</tbody>`;
+  // infoblokje: over de meest recente maand mét verkopen
+  const note = $("monthDefNote");
+  if(note){
+    note.textContent = "";
+    if(heeftDef){
+      const laatste = [...rows].reverse().find(x=>Number(x.sales)>0);
+      if(laatste){
+        const dv = Number(opts.def[mkey(laatste.maand)])||0, s = Number(laatste.sales)||0;
+        note.textContent = dv>=s
+          ? `${mfmt(laatste.maand)}: alle verkopen uit deze maand zijn definitief.`
+          : `${mfmt(laatste.maand)}: nog niet alle verkopen uit deze maand zijn definitief (${dv} van ${s}).`;
+        note.style.color = dv>=s ? "var(--good)" : "var(--warn)";
+      }
+    }
+  }
+  drawSalesChart(rows.map(x=>mfmt(x.maand)), rows.map(x=>Number(x.revenue)||0), rows.map(x=>Number(x.sales)||0));
+}
+// haalt monthly_definitief op en zet 'm om naar een map "YYYY-MM" -> aantal (null bij fout)
+async function defMaandMap(agentId, parkId){
+  const rows = await rpc("monthly_definitief", { p_agent_id: agentId, p_park_id: parkId });
+  if(!rows) return null;
+  const map = {};
+  rows.forEach(x => map[String(x.maand).slice(0,7)] = Number(x.definitief)||0);
+  return map;
+}
+let salesChart;
+function drawSalesChart(labels, omzet, aantal){
+  const el = $("salesChart"); if(!el) return;
+  if(salesChart) salesChart.destroy();
+  salesChart = new Chart(el, {
+    data:{ labels, datasets:[
+      { type:"bar", label:"Omzet", data:omzet, backgroundColor:areaGrad(accent(),.95,.4), borderRadius:6, borderSkipped:false, yAxisID:"y", order:2 },
+      { type:"line", label:"Aantal verkopen", data:aantal, borderColor:"#B8862E", backgroundColor:areaGrad("#B8862E",.25,0), fill:true,
+        borderWidth:2, tension:0.35, yAxisID:"y1", order:1 }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:"bottom", labels:{ boxWidth:10, font:{size:11} } } },
+      scales:{
+        y:{ position:"left", ticks:{ callback:v=>"€"+(v/1000)+"k" }, grid:{ display:false } },
+        y1:{ position:"right", beginAtZero:true, ticks:{ precision:0 }, grid:{ display:false }, title:{ display:true, text:"verkopen", font:{size:10} } },
+        x:{ grid:{ display:false } }
+      } }
+  });
+}
+
+/* ---------- appointments table (owner + makelaar) ---------- */
+function renderAppts(rows, showAgent){
+  $("apptTable").innerHTML =
+    `<thead><tr><th>Datum</th>${showAgent?"<th class=\"tl\">Makelaar</th>":""}<th class="tl">Park</th><th class="tl">Kavel</th><th class="tl">Status</th>
+      <th class="tl">Verkocht op</th><th class="tl">Notaris</th><th>Omzet</th><th></th></tr></thead>
+     <tbody>${rows.map(x=>{
+       const label = {sale:"Verkocht",lost:"Afgevallen",no_show:"Niet geweest"}[x.outcome] || "Geweest";
+       const cls = {sale:"sale",lost:"lost",no_show:"lost"}[x.outcome] || "held";
+       return `<tr><td>${dt(x.scheduled_at)}</td>
+         ${showAgent?`<td style="text-align:left">${x.agent}</td>`:""}
+         <td style="text-align:left">${x.park.replace("Park ","")}</td>
+         <td style="text-align:left">${x.kavelnummer || "—"}</td>
+         <td style="text-align:left"><span class="badge ${cls}">${label}</span></td>
+         <td style="text-align:left">${x.sale_date?dt(x.sale_date):"—"}</td>
+         <td style="text-align:left">${x.notary_date?dt(x.notary_date):"—"}</td>
+         <td style="font-weight:600">${x.sale_amount?eur(x.sale_amount):"—"}</td>
+         <td><a href="${x.pipedrive_url}" target="_blank" rel="noopener">Pipedrive ↗</a></td></tr>`;
+     }).join("")}</tbody>`;
+}
+
+/* ---------- LIVE PIPEDRIVE (echte leads) ---------- */
+async function renderLive(r, pp){
+  const statsAll = await rpc("live_lead_stats", { ...r, p_park_id: pp ?? null }) || [];
+  const stats = statsAll.filter(s=>s.markt!=="Resale"); // Resale heeft nu een eigen tab
+  const kleur = {Frankrijk:"#2C5F52","Wielsche Dreef":"#B8862E",Resale:"#B5432E",Overig:"#A5A192"};
+  $("liveCards").innerHTML = stats.map(s=>
+    `<div class="metric" style="border-left:3px solid ${kleur[s.markt]||'#726F60'}">
+       <div class="l">${s.markt}</div><div class="v">${s.leads}</div>
+       <div class="l" style="margin-top:6px">${s.open_deals} open · ${s.verloren} verloren${s.gekoppeld_ad>0?` · ${s.gekoppeld_ad} via ad`:""}</div>
+     </div>`).join("") || `<div class="metric"><div class="l">Geen leads in deze periode</div></div>`;
+  const mo = await rpc("live_lead_months", { p_park_id: pp ?? null }) || [];
+  const mfmt = d => { const s=new Date(d).toLocaleDateString("nl-NL",{month:"long",year:"numeric"}); return s.charAt(0).toUpperCase()+s.slice(1); };
+  const toonOverig = mo.some(m=>Number(m.overig)>0);
+  $("liveMonths").innerHTML =
+    `<thead><tr><th>Maand</th><th>Frankrijk</th><th>Wielsche Dreef</th>${toonOverig?"<th>Overig</th>":""}<th>Totaal</th></tr></thead>
+     <tbody>${mo.map(m=>`<tr><td>${mfmt(m.maand)}</td><td>${m.frankrijk}</td><td>${m.wielsche_dreef}</td>
+       ${toonOverig?`<td>${m.overig}</td>`:""}<td style="font-weight:600">${m.frankrijk+m.wielsche_dreef+m.overig}</td></tr>`).join("")}</tbody>`;
+}
+
+/* ---------- EIGENAAR ---------- */
+async function renderOwner(){
+  const r = periodRange();
+  const parkVal = $("fPark").value, agentVal = $("fAgent").value;
+  const parkNum = parkVal==="all" ? null : Number(parkVal);
+  renderLive(r, parkNum);
+  setBranding(parkNum);
+
+  let f;
+  if(parkVal==="all") f = (await rpc("owner_total_funnel", r))?.[0];
+  else f = (await rpc("client_park_funnel", {p_park_id:Number(parkVal), ...r}))?.[0];
+  f = f || {};
+  const dc = (await rpc("definitief_check", { ...r, p_park_id: parkVal==="all"?null:Number(parkVal) }))?.[0] || {};
+  const closing = f.closing_rate_pct ?? (f.appointments ? Math.round(f.sales/f.appointments*100) : 0);
+  const perAppt = f.appointments ? Math.round(f.revenue/f.appointments) : 0;
+  $("cardsTop").innerHTML =
+    metric("Uitgaven",eur(f.spend)) + metricDeal("Leads",f.leads||0,'leads',null,'',false,parkVal==="all"?null:Number(parkVal)) +
+    metricDeal("Afspraken",f.appointments||0,'afspraken',null,'',false,parkVal==="all"?null:Number(parkVal)) +
+    metricDeal("Sales",f.sales||0,'verkopen',null,'',false,parkVal==="all"?null:Number(parkVal),defSub(dc)) +
+    metric("Omzet",eur(f.revenue)) + metric("Omzet per afspraak",eur(perAppt)) +
+    metric("CPL",eur(f.cost_per_lead)) +
+    metric("Closing %",(closing||0)+"%") + metric("Afval %",(f.afval_pct||0)+"%") +
+    metric("No-show %",(f.no_show_pct||0)+"%");
+  renderFunnel([
+    {label:"Leads", value:f.leads||0, color:"#5B8DEF"},
+    {label:"Afspraken", value:f.appointments||0, color:accent(), sub:f.leads?`${Math.round((f.appointments||0)/f.leads*100)}% van leads`:""},
+    {label:"Sales", value:f.sales||0, color:"#3FA06B", sub:`Closing ${closing||0}%`, subHtml:defSub(dc)},
+  ], { big:(f.leads||0).toLocaleString("nl-NL"), cap:"Leads" });
+
+  let agents = await rpc("owner_agent_performance", r) || [];
+  if(agentVal!=="all") agents = agents.filter(a=>String(a.agent_id)===agentVal);
+  const defRows = await rpc("agent_definitief", r) || [];
+  const defMap = {}; defRows.forEach(x=>defMap[x.agent_id]=Number(x.definitief)||0);
+  $("agentTable").innerHTML =
+    `<thead><tr><th>Agent</th><th>Leads</th><th>Afspraken</th><th>Show %</th><th>Shows</th><th>Closing %</th><th>Sales</th><th>Definitief</th><th>Omzet per afspraak</th><th>Omzet</th></tr></thead>
+     <tbody>${agents.map(a=>{
+       const showPct = Math.round((100 - (a.no_show_pct||0))*10)/10;
+       const scls = showPct>=90?"good":showPct<80?"bad":"";
+       const cls = a.closing_rate_pct>=40?"good":a.closing_rate_pct<30?"bad":"";
+       return `<tr><td><span class="av"><span class="dot">${initials(a.agent)}</span>${a.agent}</span></td>
+         ${dcell(a.leads,'leads',a.agent_id,a.agent)}
+         ${dcell(a.appointments,'afspraken',a.agent_id,a.agent)}
+         <td class="${scls}">${a.appointments>0?showPct+"%":"—"}</td>
+         <td>${a.shows}</td>
+         <td class="${cls}">${a.shows>0?a.closing_rate_pct+"%":"—"}</td>
+         ${dcell(a.sales,'verkopen',a.agent_id,a.agent)}
+         <td>${defMap[a.agent_id]||0}</td>
+         <td>${eur(a.revenue_per_appt)}</td><td style="font-weight:600">${eur(a.revenue)}</td></tr>`;
+     }).join("")}</tbody>`;
+  const _ds = Number(dc.sales)||0, _dd = Number(dc.definitief)||0;
+  $("definitiefNote").textContent = _ds===0 ? "" : (_dd>=_ds ? "Alle verkopen zijn definitief." : "Nog niet alle koopovereenkomsten zijn definitief voor deze maand.");
+
+  const calls = await rpc("call_overview", { p_from:r.p_from, p_to:r.p_to, p_park_id:parkNum,
+    p_agent_id: agentVal==="all"?null:Number(agentVal) }) || [];
+  $("callTable").innerHTML =
+    `<thead><tr><th>Agent</th><th>Gebeld</th><th>Gesprek</th><th>Ingepland</th><th>% gesprek van gebeld</th><th>Gesprek &#8594; afspraak %</th></tr></thead>
+     <tbody>${calls.map(c=>`<tr><td style="text-align:left">${c.agent}</td><td>${c.gebeld}</td><td>${c.gesprek}</td>
+       <td>${c.ingepland}</td><td>${c.gebeld>0 ? Math.round(c.gesprek/c.gebeld*100)+"%" : "—"}</td>
+       <td>${c.gesprek_naar_afspraak_pct!=null ? c.gesprek_naar_afspraak_pct+"%" : "—"}</td></tr>`).join("")
+       || `<tr><td colspan="6" style="color:var(--muted);padding:14px">Nog geen belactiviteiten gelogd.</td></tr>`}</tbody>`;
+
+  const pa = await rpc("owner_park_agent", r) || [];
+  const parkNames = [...new Set(pa.map(x=>x.park))];
+  const agentNames = [...new Set(pa.map(x=>x.agent))];
+  const palette = ["#2C5F52","#B8862E","#B5432E","#726F60","#4B7A3E"];
+  const datasets = agentNames.map((ag,i)=>({
+    label:ag, backgroundColor:palette[i%palette.length],
+    data: parkNames.map(pn => Number((pa.find(x=>x.park===pn&&x.agent===ag)||{}).revenue)||0)
+  }));
+  drawChart(parkNames.map(n=>n.replace("Park ","")), datasets);
+
+  renderReasons(r);
+  const opvolgStale = await renderOpvolg(agentVal==="all"?null:Number(agentVal), parkVal==="all"?null:Number(parkVal), true);
+  const ownIns = ownerInsightsBouw(dc, agents, calls, opvolgStale);
+  $("ownerInsightsSec").classList.toggle("hidden", !ownIns.length);
+  $("ownerInsights").innerHTML = ownIns.join("");
+  if(parkVal==="all") $("inventorySec").classList.add("hidden"); else renderInventory(Number(parkVal));
+
+  const [mo, defMap2] = await Promise.all([
+    rpc("monthly_overview", {
+      p_agent_id: agentVal==="all"?null:Number(agentVal),
+      p_park_id:  parkVal==="all"?null:Number(parkVal) }).then(x=>x||[]),
+    defMaandMap(agentVal==="all"?null:Number(agentVal), parkVal==="all"?null:Number(parkVal)),
+  ]);
+  renderMonths(mo, {spend:agentVal==="all", leads:true, def:defMap2});
+
+  const det = await rpc("appointments_detail", { ...r,
+    p_agent_id: agentVal==="all"?null:Number(agentVal),
+    p_park_id:  parkVal==="all"?null:Number(parkVal) }) || [];
+  $("apptTitle").textContent = `Alle afspraken (${det.length})`;
+  renderAppts(det, true);
+}
+
+/* ---------- MAKELAAR: eigen cijfers + teamgemiddelde, geen collega's ---------- */
+async function renderAgent(agentId){
+  const r = periodRange();
+  const parkVal = $("fPark").value;
+  const pp = parkVal==="all" ? null : Number(parkVal);
+  setBranding(pp);
+  $("teamTitle").textContent = "Teamgemiddelde (alle makelaars, zonder namen"
+    + (pp ? " · " + ((PARKS.find(p=>p.id===pp)||{}).name||"") : "") + ")";
+  const [s, dsAgent] = await Promise.all([
+    rpc("agent_stats", {p_agent_id:agentId, p_park_id:pp, ...r}).then(x=>x?.[0]||{}),
+    rpc("definitief_stats", { ...r, p_agent_id:agentId, p_park_id:pp, p_anchor:'sale' }).then(x=>x?.[0]||{}),
+  ]);
+  $("cardsTop").innerHTML =
+    metricDeal("Mijn afspraken",s.appointments||0,'afspraken',agentId,'') +
+    metricDeal("Mijn sales",s.sales||0,'verkopen',agentId,'',false,null,defSub(dsAgent)) +
+    metric("Mijn omzet",eur(s.revenue)) + metric("Mijn commissie",eur(s.mijn_commissie)) +
+    metric("Omzet per afspraak",eur(s.revenue_per_appt)) +
+    metric("Closing %",(s.closing_rate_pct||0)+"%") + metric("Afval %",(s.afval_pct||0)+"%") +
+    metric("No-show %",(s.no_show_pct||0)+"%");
+  renderFunnel([
+    {label:"Afspraken", value:s.appointments||0, color:accent()},
+    {label:"Sales", value:s.sales||0, color:"#3FA06B", sub:`Closing ${s.closing_rate_pct||0}%`, subHtml:defSub(dsAgent)},
+  ], { big:(s.appointments||0).toLocaleString("nl-NL"), cap:"Afspraken" });
+  $("cardsTeam").innerHTML =
+    metricT("Omzet per afspraak",eur(s.team_revenue_per_appt)) +
+    metricT("Closing %",(s.team_closing_rate_pct||0)+"%") +
+    metricT("Afval %",(s.team_afval_pct||0)+"%") +
+    metricT("Afspraken per makelaar",s.team_avg_appointments||0) +
+    metricT("Omzet per makelaar",eur(s.team_avg_revenue));
+  const cs = (await rpc("call_overview", {p_from:r.p_from, p_to:r.p_to, p_park_id:pp, p_agent_id:agentId}))?.[0] || {};
+  $("cardsCallMe").innerHTML =
+    metric("Gebeld",cs.gebeld||0) + metric("Gesprek",cs.gesprek||0) + metric("Ingepland",cs.ingepland||0) +
+    metric("% gesprek van gebeld", cs.gebeld>0 ? Math.round(cs.gesprek/cs.gebeld*100)+"%" : "—");
+  renderMonths(await rpc("monthly_overview", {p_agent_id:agentId, p_park_id:pp}) || [],
+    {spend:false, leads:false, def: await defMaandMap(agentId, pp)});
+  const det = await rpc("appointments_detail", {...r, p_agent_id:agentId, p_park_id:pp}) || [];
+  $("apptTitle").textContent = `Mijn afspraken (${det.length})`;
+  renderAppts(det, false);
+  $("inventorySec").classList.add("hidden");
+  renderOpvolg(agentId, pp, false);
+}
+
+/* ---------- RECREATIEONTWIKKELAAR: alleen parkgemiddelden ---------- */
+async function renderPark(parkId){
+  const r = periodRange();
+  setBranding(parkId);
+  const [f, dsPark] = await Promise.all([
+    rpc("client_park_funnel", {p_park_id:parkId, ...r}).then(x=>x?.[0]||{}),
+    rpc("definitief_stats", { ...r, p_agent_id:null, p_park_id:parkId, p_anchor:'sale' }).then(x=>x?.[0]||{}),
+  ]);
+  const perAppt = f.appointments ? Math.round(f.revenue/f.appointments) : 0;
+  $("cardsTop").innerHTML =
+    `<div class="metric"><div class="l">Advertentiekosten
+       <span class="info" tabindex="0">i<span class="tip">Advertentiekosten van deze periode. Let op: een lead van nu leidt vaak pas weken tot maanden later tot een verkoop, dus deze kosten horen niet één-op-één bij de omzet van dezelfde periode.</span></span>
+     </div><div class="v">${eur(f.spend)}</div></div>` +
+    metric("Leads",f.leads||0) + metric("Afspraken",f.appointments||0) +
+    metric("Sales",f.sales||0,defSub(dsPark)) + metric("Omzet",eur(f.revenue)) +
+    metric("Omzet per afspraak (gem.)",eur(perAppt)) +
+    metric("Closing %",(f.appointments?Math.round(f.sales/f.appointments*100):0)+"%") +
+    metric("No-show %",(f.no_show_pct||0)+"%");
+  const closingP = f.appointments?Math.round(f.sales/f.appointments*100):0;
+  renderFunnel([
+    {label:"Leads", value:f.leads||0, color:"#5B8DEF"},
+    {label:"Afspraken", value:f.appointments||0, color:accent(), sub:f.leads?`${Math.round((f.appointments||0)/f.leads*100)}% van leads`:""},
+    {label:"Sales", value:f.sales||0, color:"#3FA06B", sub:`Closing ${closingP}%`, subHtml:defSub(dsPark)},
+  ], { big:(f.leads||0).toLocaleString("nl-NL"), cap:"Leads" });
+  renderMonths(await rpc("monthly_overview", {p_park_id:parkId}) || [],
+    {spend:false, leads:true, def: await defMaandMap(null, parkId)});
+  $("opvolgSec").classList.add("hidden");
+  renderInventory(parkId);
+}
+
+/* ---------- shared render bits ---------- */
+let chart;
+function drawChart(labels, datasets){
+  if(chart) chart.destroy();
+  chart = new Chart($("parkChart"), {
+    type:"bar", data:{labels, datasets},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:"bottom",labels:{boxWidth:10,font:{size:11}}}},
+      scales:{x:{stacked:true,grid:{display:false}},
+              y:{stacked:true,ticks:{callback:v=>"€"+(v/1000)+"k"}}}}
+  });
+}
+let LOST_CTX = { r:null, markt:null };
+async function renderReasons(r){
+  const parkVal = $("fPark").value;
+  const markt = parkVal==="all" ? null : (Number(parkVal)===3 ? "Wielsche Dreef" : "France");
+  LOST_CTX = { r, markt };
+  $("lostDealsSec").classList.add("hidden");
+  const rows = await rpc("lost_reasons", { ...r, p_market: markt }) || [];
+  const tabel = (fase) => {
+    const alle = rows.filter(x=>x.fase===fase);
+    const tot = alle.reduce((s,x)=>s+Number(x.aantal),0);
+    if(!tot) return `<tbody><tr><td style="color:var(--muted);padding:14px">Nog geen verloren deals in deze periode</td></tr></tbody>`;
+    // redenen met minder dan 1% aandeel weglaten, daarna op aantal top 5 tonen
+    const rs = alle.filter(x=>x.aantal/tot >= 0.01).sort((a,b)=>b.aantal-a.aantal).slice(0,5);
+    return `<thead><tr><th>Reden</th><th>Aantal</th><th>Aandeel</th></tr></thead><tbody>`
+      + rs.map(x=>`<tr data-fase="${encodeURIComponent(fase)}" data-reden="${encodeURIComponent(x.reden)}" style="cursor:pointer">
+          <td style="text-align:left;color:var(--accent);font-weight:600">${x.reden}</td><td>${x.aantal}</td>
+          <td>${Math.round(x.aantal/tot*100)}%</td></tr>`).join("") + `</tbody>`;
+  };
+  $("reasonsBefore").innerHTML = tabel("Voor afspraak (wilde niet komen)");
+  $("reasonsAfter").innerHTML  = tabel("Na afspraak (wilde niet kopen)");
+  document.querySelectorAll("#reasonsBefore tbody tr[data-reden], #reasonsAfter tbody tr[data-reden]").forEach(tr =>
+    tr.addEventListener("click", () => toonVerlorenDeals(decodeURIComponent(tr.dataset.fase), decodeURIComponent(tr.dataset.reden))));
+}
+async function toonVerlorenDeals(fase, reden){
+  const rows = await rpc("lost_deals", { ...LOST_CTX.r, p_market:LOST_CTX.markt, p_fase:fase, p_reden:reden }) || [];
+  $("lostDealsTitle").textContent = `Verloren deals · ${reden} (${rows.length})`;
+  $("lostDealsTable").innerHTML =
+    `<thead><tr><th>Makelaar</th><th class="tl">Lead sinds</th><th class="tl">Reden (zoals ingevuld)</th><th></th></tr></thead>
+     <tbody>${rows.map(x=>`<tr>
+       <td style="text-align:left">${x.agent}</td>
+       <td style="text-align:left">${x.lead_created?dt(x.lead_created):"—"}</td>
+       <td style="text-align:left">${x.lost_reason||"—"}</td>
+       <td><a href="${x.pipedrive_url}" target="_blank" rel="noopener">Pipedrive ↗</a></td></tr>`).join("")
+       || `<tr><td colspan="4" style="color:var(--muted);padding:14px">Geen deals gevonden.</td></tr>`}</tbody>`;
+  $("lostDealsSec").classList.remove("hidden");
+  $("lostDealsSec").scrollIntoView({ behavior:"smooth", block:"nearest" });
+}
+async function toonAgentDeals(agentId, kind, naam, parkId){
+  const rows = await rpc("agent_deals", { p_agent_id: agentId==null?null:Number(agentId), ...periodRange(), p_kind: kind, p_park_id: parkId==null?null:Number(parkId) }) || [];
+  $("lostDealsTitle").textContent = `${KINDLBL[kind]||"Deals"}${naam?` · ${naam}`:""} (${rows.length})`;
+  $("lostDealsTable").innerHTML =
+    `<thead><tr><th class="tl">Deal</th><th class="tl">Fase</th><th class="tl">Lead sinds</th><th class="tl">Afspraak</th><th class="tl">Verkocht</th><th>Verkoopsom</th><th></th></tr></thead>
+     <tbody>${rows.map(x=>`<tr>
+       <td style="text-align:left">#${x.deal_id}${x.titel?` · ${x.titel}`:""}</td>
+       <td style="text-align:left">${x.stage_name||"—"}</td>
+       <td style="text-align:left">${x.lead_created?dt(x.lead_created):"—"}</td>
+       <td style="text-align:left">${x.appointment_date?dt(x.appointment_date):"—"}</td>
+       <td style="text-align:left">${x.sale_date?dt(x.sale_date):"—"}</td>
+       <td>${x.bedrag>0?eur(x.bedrag):"—"}</td>
+       <td><a href="${x.pipedrive_url}" target="_blank" rel="noopener">Pipedrive ↗</a></td></tr>`).join("")
+       || `<tr><td colspan="7" style="color:var(--muted);padding:14px">Geen deals gevonden.</td></tr>`}</tbody>`;
+  $("lostDealsSec").classList.remove("hidden");
+  $("lostDealsSec").scrollIntoView({ behavior:"smooth", block:"nearest" });
+}
+
+/* ---------- RESALE (rolbewust: eigenaar = totaal + per makelaar; makelaar = eigen + teamgemiddelde) ---------- */
+async function renderResale(){
+  const v = currentView();
+  const r = periodRange();
+  setBranding(null);
+  ["resaleTeamWrap","resaleAgentWrap","resaleMonthWrap","resaleLeadsWrap"].forEach(id=>$(id).classList.add("hidden"));
+
+  if(v.role==="agent"){
+    const s = (await rpc("resale_agent_stats", { p_agent_id:v.id, ...r }))?.[0] || {};
+    $("resaleKpis").innerHTML =
+      metricDeal("Mijn leads", s.leads||0,'leads',v.id,'',true) + metricDeal("Mijn afspraken", s.afspraken||0,'afspraken',v.id,'',true) +
+      metricDeal("Mijn verkopen", s.verkopen||0,'verkopen',v.id,'',true) + metric("Closing %", (s.closing_pct||0)+"%") +
+      metric("Afval %", (s.afval_pct||0)+"%");
+    $("resaleTeam").innerHTML =
+      metricT("Leads per makelaar", s.team_avg_leads||0) + metricT("Afspraken per makelaar", s.team_avg_afspraken||0) +
+      metricT("Verkopen per makelaar", s.team_avg_verkopen||0) + metricT("Closing %", (s.team_closing_pct||0)+"%") +
+      metricT("Afval %", (s.team_afval_pct||0)+"%");
+    $("resaleTeamWrap").classList.remove("hidden");
+    await resaleDealsToon(v.id, 'leads', '');
+    return;
+  }
+
+  const f = (await rpc("resale_funnel", r))?.[0] || {};
+  $("resaleKpis").innerHTML =
+    metric("Leads", f.leads||0) + metric("Afspraken", f.afspraken||0) + metric("Verkopen", f.verkopen||0) +
+    metric("Closing %", (f.closing_pct||0)+"%") + metric("Afval %", (f.afval_pct||0)+"%") +
+    metric("Woningwaarde verkocht", eur(f.woningwaarde)) + metric("Fee-omzet", eur(f.fee_omzet));
+
+  const agents = await rpc("resale_agent_performance", r) || [];
+  $("resaleAgentTable").innerHTML =
+    `<thead><tr><th>Makelaar</th><th>Leads</th><th>Afspraken</th><th>Verkopen</th><th>Closing %</th><th>Afval %</th><th>Fee-omzet</th></tr></thead>
+     <tbody>${agents.map(a=>`<tr>
+       <td><span class="av"><span class="dot">${initials(a.agent)}</span>${a.agent}</span></td>
+       ${dcell(a.leads,'leads',a.agent_id,a.agent,true)}
+       ${dcell(a.afspraken,'afspraken',a.agent_id,a.agent,true)}${dcell(a.verkopen,'verkopen',a.agent_id,a.agent,true)}
+       <td>${a.afspraken>0?a.closing_pct+"%":"—"}</td>
+       <td>${a.leads>0?a.afval_pct+"%":"—"}</td>
+       <td style="font-weight:600">${a.fee_omzet>0?eur(a.fee_omzet):"—"}</td></tr>`).join("")
+       || `<tr><td colspan="7" style="color:var(--muted);padding:14px">Nog geen resale-deals met makelaar.</td></tr>`}</tbody>`;
+  $("resaleAgentWrap").classList.remove("hidden");
+
+  const mo = await rpc("resale_monthly", r) || [];
+  const mfmt = d => { const s=new Date(d).toLocaleDateString("nl-NL",{month:"long",year:"numeric"}); return s.charAt(0).toUpperCase()+s.slice(1); };
+  $("resaleMonthTable").innerHTML =
+    `<thead><tr><th style="text-align:left">Maand</th><th>Leads</th><th>Afspraken</th><th>Verkopen</th><th>Fee-omzet</th></tr></thead>
+     <tbody>${mo.map(m=>`<tr><td style="text-align:left">${mfmt(m.maand)}</td><td>${m.leads}</td><td>${m.afspraken}</td><td>${m.verkopen}</td>
+       <td style="font-weight:600">${Number(m.fee_omzet)>0?eur(m.fee_omzet):"—"}</td></tr>`).join("")}</tbody>`;
+  $("resaleMonthWrap").classList.remove("hidden");
+}
+async function resaleDealsToon(agentId, kind, naam){
+  const rows = await rpc("resale_deals", { p_agent_id: agentId==null?null:Number(agentId), ...periodRange(), p_kind: kind }) || [];
+  $("resaleLeadsTitle").textContent = `${KINDLBL[kind]||"Deals"}${naam?` · ${naam}`:""} (${rows.length})`;
+  $("resaleLeadsTable").innerHTML =
+    `<thead><tr><th class="tl">Deal</th><th class="tl">Fase</th><th class="tl">Lead sinds</th><th class="tl">Afspraak</th><th class="tl">Verkocht</th><th>Woningwaarde</th><th></th></tr></thead>
+     <tbody>${rows.map(x=>`<tr>
+       <td style="text-align:left">#${x.deal_id}${x.titel?` · ${x.titel}`:""}</td>
+       <td style="text-align:left">${x.stage_name||"—"}</td>
+       <td style="text-align:left">${x.lead_created?dt(x.lead_created):"—"}</td>
+       <td style="text-align:left">${x.appointment_date?dt(x.appointment_date):"—"}</td>
+       <td style="text-align:left">${x.sale_date?dt(x.sale_date):"—"}</td>
+       <td>${x.woningwaarde?eur(x.woningwaarde):"—"}</td>
+       <td><a href="${x.pipedrive_url}" target="_blank" rel="noopener">Pipedrive ↗</a></td></tr>`).join("")
+       || `<tr><td colspan="7" style="color:var(--muted);padding:14px">Geen deals gevonden.</td></tr>`}</tbody>`;
+  $("resaleLeadsWrap").classList.remove("hidden");
+  $("resaleLeadsWrap").scrollIntoView({ behavior:"smooth", block:"nearest" });
+}
+
+async function toonAdDeals(adId, kind, naam){
+  const rows = await rpc("ad_deals", { p_ad_id: Number(adId), ...periodRange(), p_kind: kind }) || [];
+  $("adDealsTitle").textContent = `${KINDLBL[kind]||"Deals"} · ${naam} (${rows.length})`;
+  $("adDealsTable").innerHTML =
+    `<thead><tr><th class="tl">Deal</th><th class="tl">Fase</th><th class="tl">Lead sinds</th><th class="tl">Afspraak</th><th class="tl">Verkocht</th><th>Verkoopsom</th><th></th></tr></thead>
+     <tbody>${rows.map(x=>`<tr>
+       <td style="text-align:left">#${x.deal_id}${x.titel?` · ${x.titel}`:""}</td>
+       <td style="text-align:left">${x.stage_name||"—"}</td>
+       <td style="text-align:left">${x.lead_created?dt(x.lead_created):"—"}</td>
+       <td style="text-align:left">${x.appointment_date?dt(x.appointment_date):"—"}</td>
+       <td style="text-align:left">${x.sale_date?dt(x.sale_date):"—"}</td>
+       <td>${x.bedrag>0?eur(x.bedrag):"—"}</td>
+       <td><a href="${x.pipedrive_url}" target="_blank" rel="noopener">Pipedrive ↗</a></td></tr>`).join("")
+       || `<tr><td colspan="7" style="color:var(--muted);padding:14px">Geen deals gevonden.</td></tr>`}</tbody>`;
+  $("adDealsSec").classList.remove("hidden");
+  $("adDealsSec").scrollIntoView({ behavior:"smooth", block:"nearest" });
+}
+
+/* ---------- opvolglijst (open leads zonder afspraak, oudste eerst) ---------- */
+async function renderOpvolg(agentId, parkId, toonAgent){
+  const rows = await rpc("opvolg_leads", { p_agent_id: agentId==null?null:Number(agentId), p_park_id: parkId==null?null:Number(parkId) }) || [];
+  $("opvolgSec").classList.toggle("hidden", !rows.length);
+  if(!rows.length) return 0;
+  $("opvolgTitle").textContent = `Opvolgen · "In contact", langst geleden gecontacteerd eerst (${rows.length})`;
+  const lijst = rows;
+  const cols = toonAgent?7:6;
+  $("opvolgTable").innerHTML =
+    `<thead><tr><th class="tl">Deal</th>${toonAgent?'<th class="tl">Makelaar</th>':''}<th class="tl">Park</th><th class="tl">Laatste contact</th><th>Dagen sinds</th><th class="tl">Type</th><th class="tl">Door</th><th></th></tr></thead>
+     <tbody>${lijst.map(x=>{ const stale = x.dagen_sinds_contact==null || x.dagen_sinds_contact>=30;
+       return `<tr>
+       <td style="text-align:left">#${x.deal_id}${x.titel?` · ${x.titel}`:""}</td>
+       ${toonAgent?`<td style="text-align:left">${x.agent}</td>`:''}
+       <td style="text-align:left">${x.park}</td>
+       <td style="text-align:left">${x.laatste_contact?dt(x.laatste_contact):"nog geen contact"}</td>
+       <td class="${stale?'bad':''}">${x.dagen_sinds_contact==null?"—":x.dagen_sinds_contact}</td>
+       <td style="text-align:left">${x.contact_type||"—"}</td>
+       <td style="text-align:left">${x.contact_door}</td>
+       <td><a href="${x.pipedrive_url}" target="_blank" rel="noopener">Pipedrive ↗</a></td></tr>`;}).join("")}</tbody>`;
+  return rows.filter(x => x.dagen_sinds_contact==null || x.dagen_sinds_contact>=30).length;
+}
+
+/* ---------- uitverkoopprognose van het park ---------- */
+async function renderInventory(parkId){
+  const s = (await rpc("park_sellthrough", { p_park_id: Number(parkId) }))?.[0];
+  const heeft = s && Number(s.totaal)>0;
+  $("inventorySec").classList.toggle("hidden", !heeft);
+  if(!heeft) return;
+  const prog = s.maanden_tot_uitverkocht;
+  const progTxt = prog==null ? "onvoldoende verkoopdata"
+    : (Number(prog)>=24 ? Math.round(prog/12)+" jaar" : Math.round(prog)+" mnd");
+  $("inventoryKpis").innerHTML =
+    metric("Verkocht", s.verkocht) + metric("Gereserveerd", s.gereserveerd) +
+    metric("Beschikbaar", s.beschikbaar) + metric("% verkocht", (s.verkocht_pct||0)+"%") +
+    metric("Vorige maand verkocht", (Number(s.verkoop_per_maand)||0)) +
+    metric("Prognose uitverkocht", progTxt);
+}
+
+/* centrale click-handler: elke .deal-link (cel of card) opent de bijbehorende deals */
+document.addEventListener("click", (e) => {
+  const el = e.target.closest(".deal-link");
+  if(!el) return;
+  const kind = el.dataset.kind || "leads";
+  const agentId = el.dataset.agentid ? Number(el.dataset.agentid) : null;
+  const naam = el.dataset.naam || "";
+  const parkId = el.dataset.park ? Number(el.dataset.park) : null;
+  if(el.dataset.resale === "1") resaleDealsToon(agentId, kind, naam);
+  else toonAgentDeals(agentId, kind, naam, parkId);
+});
+
+/* ---------- hero-donut (funnel) bovenaan Resultaten ---------- */
+let funnelChart;
+function renderFunnel(stages, center){
+  $("heroWrap").classList.remove("hidden");
+  if(funnelChart) funnelChart.destroy();
+  funnelChart = new Chart($("funnelDonut"), {
+    type:"doughnut",
+    data:{ labels: stages.map(s=>s.label),
+      datasets:[{ data: stages.map(s=>Number(s.value)||0), backgroundColor: stages.map(s=>s.color),
+        borderColor:"#fff", borderWidth:3, hoverOffset:5 }] },
+    options:{ responsive:true, maintainAspectRatio:false, cutout:"68%",
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:i=>`${i.label}: ${Number(i.raw).toLocaleString("nl-NL")}` } } } }
+  });
+  $("funnelCenter").innerHTML = `<div class="big">${center.big}</div><div class="cap">${center.cap}</div>`;
+  $("heroStats").innerHTML = stages.map(s=>
+    `<div class="metric"><div class="mtxt"><div class="l"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${s.color};margin-right:7px;vertical-align:middle"></span>${s.label}</div><div class="v">${(Number(s.value)||0).toLocaleString("nl-NL")}</div>${s.sub?`<div class="l" style="margin:5px 0 0">${s.sub}</div>`:""}${s.subHtml||""}</div></div>`).join("");
+}
+
+/* ---------- automatische inzichten ---------- */
+const insight = (cls, icon, titel, tekst) =>
+  `<div class="insight ${cls}"><div class="ic">${icon}</div><div><b>${titel}</b>${tekst}</div></div>`;
+
+// advertentiekwaliteit: conversie, CPL, budgetlekken, CPL-trend, fase-dekking
+function adInsightsBouw(rows, dd){
+  const out = [];
+  const conv = rows.filter(a=>Number(a.leads)>=5)
+    .map(a=>({a, c:(Number(a.afspraken)||0)/Number(a.leads)})).sort((x,y)=>y.c-x.c)[0];
+  if(conv && conv.c>0) out.push(insight("good","🎯","Beste conversie",
+    `${esc(conv.a.advertentie)}: ${(conv.c*100).toFixed(0)}% van de ${conv.a.leads} leads werd een afspraak.`));
+  const cpl = rows.filter(a=>Number(a.leads)>=5 && Number(a.spend)>0)
+    .sort((x,y)=>Number(x.cpl)-Number(y.cpl))[0];
+  if(cpl) out.push(insight("good","💶","Goedkoopste leads",
+    `${esc(cpl.advertentie)} levert leads voor ${eur(cpl.cpl)} per stuk (${cpl.leads} leads).`));
+  const lek = rows.filter(a=>Number(a.spend)>=100 && Number(a.afspraken)===0)
+    .sort((x,y)=>Number(y.spend)-Number(x.spend))[0];
+  if(lek) out.push(insight("warn","⚠","Budget zonder afspraken",
+    `${esc(lek.advertentie)}: ${eur(lek.spend)} uitgegeven, ${lek.leads} leads, nog geen afspraak.`));
+  if(dd && dd.length>=21){
+    const cplVan = arr => { const s=arr.reduce((t,x)=>t+(Number(x.spend)||0),0), l=arr.reduce((t,x)=>t+(Number(x.leads)||0),0);
+      return l>0 ? s/l : null; };
+    const cl = cplVan(dd.slice(-14)), cp = cplVan(dd.slice(-28,-14));
+    if(cl!=null && cp!=null && cp>0){
+      const d = (cl-cp)/cp*100;
+      if(Math.abs(d)>=10) out.push(insight(d<0?"good":"warn", d<0?"↓":"↑",
+        "Kosten per lead "+(d<0?"dalen":"stijgen"),
+        `Laatste 14 dagen ${eur(cl)} per lead, daarvoor ${eur(cp)} (${d>0?"+":""}${Math.round(d)}%).`));
+    }
+  }
+  const zonderFase = rows.filter(a=>!a.awareness_stage).length;
+  if(rows.length && zonderFase>0) out.push(insight("info","♦","Fase-dekking",
+    `${zonderFase} van ${rows.length} advertenties heeft nog geen awareness-fase — vul ze aan voor scherpere rapportage.`));
+  return out;
+}
+
+// eigenaar-signalen: definitief-status, beste closer, no-show-signaal, sterkste beller, opvolg-achterstand
+function ownerInsightsBouw(dc, agents, calls, opvolgStale){
+  const out = [];
+  const ds = Number(dc.sales)||0, dd = Number(dc.definitief)||0;
+  if(ds>0) out.push(dd>=ds
+    ? insight("good","✓","Definitief", `Alle ${ds} verkopen in deze periode zijn definitief.`)
+    : insight("warn","…","Definitief", `${dd} van ${ds} verkopen definitief — nog niet alle koopovereenkomsten zijn rond.`));
+  const closer = agents.filter(a=>Number(a.shows)>=3 && Number(a.closing_rate_pct)>0)
+    .sort((x,y)=>Number(y.closing_rate_pct)-Number(x.closing_rate_pct))[0];
+  if(closer) out.push(insight("good","★","Beste closing",
+    `${esc(closer.agent)}: ${closer.closing_rate_pct}% closing bij ${closer.shows} gehouden afspraken.`));
+  const noshow = agents.filter(a=>Number(a.appointments)>=5)
+    .map(a=>({a, sp: Math.round((100-(a.no_show_pct||0))*10)/10}))
+    .filter(x=>x.sp<85).sort((x,y)=>x.sp-y.sp)[0];
+  if(noshow) out.push(insight("warn","!","No-show-signaal",
+    `${esc(noshow.a.agent)}: ${noshow.sp}% show bij ${noshow.a.appointments} afspraken — bel afspraken vooraf na.`));
+  const beller = (calls||[]).filter(c=>Number(c.gesprek)>=5 && c.gesprek_naar_afspraak_pct!=null)
+    .sort((x,y)=>Number(y.gesprek_naar_afspraak_pct)-Number(x.gesprek_naar_afspraak_pct))[0];
+  if(beller) out.push(insight("good","☎","Sterkste beller",
+    `${esc(beller.agent)}: ${beller.gesprek_naar_afspraak_pct}% van de gesprekken wordt een afspraak.`));
+  if(Number(opvolgStale)>0) out.push(insight("warn","⏰","Opvolg-achterstand",
+    `${opvolgStale} open leads zonder contact in 30+ dagen — zie de opvolglijst onderaan.`));
+  return out;
+}
+
+/* ---------- notitie/fase-bewerkpaneel (gedeeld) ---------- */
+let EDIT_CTX = null;
+function openAdEdit(row, source){
+  EDIT_CTX = { code: row.code, source: source || "ad" };
+  $("adEditTitle").textContent = row.advertentie || row.code;
+  $("adEditSub").textContent = "Code: " + row.code + (row.status ? " · " + (STATUSNL[row.status]||[row.status])[0] : "");
+  $("edFase").value   = row.awareness_stage || "";
+  $("edWerkte").value = row.werkte || "";
+  $("edWaarom").value = row.waarom || "";
+  $("edKill").value   = row.kill_reason || "";
+  $("edMsg").classList.add("hidden");
+  $("edSave").disabled = false;
+  $("adEditOverlay").classList.remove("hidden");
+}
+function closeAdEdit(){ $("adEditOverlay").classList.add("hidden"); EDIT_CTX = null; }
+async function saveAdEdit(){
+  if(!EDIT_CTX) return;
+  $("edSave").disabled = true;
+  const args = {
+    p_code: EDIT_CTX.code,
+    p_awareness_stage: $("edFase").value || null,
+    p_werkte: $("edWerkte").value || null,
+    p_waarom: $("edWaarom").value.trim() || null,
+    p_kill_reason: $("edKill").value.trim() || null,
+  };
+  const { error } = await sb.rpc("set_ad_annotation", args);
+  if(error){
+    $("edMsg").textContent = "Opslaan mislukt: " + error.message;
+    $("edMsg").style.color = "var(--bad)";
+    $("edMsg").classList.remove("hidden");
+    $("edSave").disabled = false;
+    return;
+  }
+  // lokale datasets meteen bijwerken zodat beide tabs kloppen zonder herladen
+  const patch = a => { if(a && a.code===EDIT_CTX.code){
+    a.awareness_stage = args.p_awareness_stage; a.werkte = args.p_werkte;
+    a.waarom = args.p_waarom; a.kill_reason = args.p_kill_reason; } };
+  ADROWS.forEach(patch); ARCHROWS.forEach(patch);
+  const src = EDIT_CTX.source;
+  closeAdEdit();
+  if(src==="arch") drawArchGrid(); else drawAdTable();
+}
+
+/* ---------- ARCHIEF · creative-library ---------- */
+let ARCHROWS = [], ARCHPARK = null, ARCHFASE = "all", ARCHSTATUS = "all";
+async function renderArchief(){
+  const v = currentView();
+  let pp;
+  if(v.role==="park"){ pp = v.id; $("archParkTabs").classList.add("hidden"); }
+  else {
+    if(!ARCHPARK || !PARKS.find(p=>p.id===ARCHPARK)) ARCHPARK = (PARKS[0]||{}).id;
+    pp = ARCHPARK;
+    $("archParkTabs").innerHTML = PARKS.map(p=>
+      `<button class="tab ${p.id===ARCHPARK?"active":""}" data-park="${p.id}">${p.name}</button>`).join("");
+    $("archParkTabs").classList.remove("hidden");
+    document.querySelectorAll("#archParkTabs .tab").forEach(b=>b.addEventListener("click", ()=>{
+      ARCHPARK = Number(b.dataset.park); renderArchief();
+    }));
+  }
+  setBranding(pp);
+  ARCHROWS = await rpc("ad_archive", { p_park_id: pp }) || [];
+  // status-filter vullen met de statussen die in dit park voorkomen
+  const statuses = [...new Set(ARCHROWS.map(a=>a.status).filter(Boolean))];
+  if(ARCHSTATUS!=="all" && !statuses.includes(ARCHSTATUS)) ARCHSTATUS = "all";
+  $("archStatusFilter").innerHTML = `<option value="all">Alle statussen</option>`
+    + statuses.map(s=>`<option value="${s}" ${s===ARCHSTATUS?"selected":""}>${(STATUSNL[s]||[s])[0]}</option>`).join("");
+  drawArchGrid();
+}
+function drawArchGrid(){
+  const rows = ARCHROWS
+    .filter(a => ARCHFASE==="all" || (ARCHFASE==="none" ? !a.awareness_stage : a.awareness_stage===ARCHFASE))
+    .filter(a => ARCHSTATUS==="all" || a.status===ARCHSTATUS);
+  $("archFoot").textContent = ARCHROWS.length
+    ? `${rows.length} van ${ARCHROWS.length} advertenties · thumbnail en status uit Meta, resultaten all-time uit Pipedrive.`
+    : "Nog geen advertenties voor deze selectie.";
+  if(!rows.length){ $("archGrid").innerHTML = `<div class="arch-empty">Geen advertenties met deze fase/status.</div>`; return; }
+  const werkteTxt = w => w==='wel' ? '✓ werkte' : w==='niet' ? '✕ werkte niet' : '· nog onbekend';
+  $("archGrid").innerHTML = rows.map(a=>{
+    const st = STATUSNL[a.status] || [a.status||"—","held"];
+    const werkte = a.werkte ? `<span class="worked-${a.werkte}">${werkteTxt(a.werkte)}</span>` : "";
+    const heeftNote = a.werkte || a.waarom || a.kill_reason;
+    const note = heeftNote
+      ? `<div class="arch-note">${werkte}${a.waarom?` ${esc(a.waarom)}`:""}${a.kill_reason?`<div class="kill">Kill: ${esc(a.kill_reason)}</div>`:""}</div>`
+      : `<div class="arch-note" style="color:var(--faint)">Nog geen notitie · klik om toe te voegen</div>`;
+    return `<div class="arch-card" data-code="${escAttr(a.code)}">
+      <div class="arch-thumb${a.thumbnail_url?"":" leeg"}">
+        ${a.thumbnail_url?`<img src="${escAttr(a.thumbnail_url)}" alt="" loading="lazy" onerror="this.parentNode.classList.add('leeg');this.remove()">`:""}
+        <div class="arch-pills">
+          <span class="badge ${st[1]}">${st[0]}</span>
+          ${a.awareness_stage?fasePill(a.awareness_stage):""}
+        </div>
+      </div>
+      <div class="arch-naam" title="${escAttr(a.advertentie)}">${esc(a.advertentie)}</div>
+      <div class="arch-stats">
+        <div class="s"><b>${eur(a.spend)}</b><span>uitgaven</span></div>
+        <div class="s"><b>${a.leads}</b><span>leads</span></div>
+        <div class="s"><b>${a.leads>0?eur(a.cpl):"—"}</b><span>CPL</span></div>
+        <div class="s"><b>${a.afspraken}</b><span>afspraken</span></div>
+        <div class="s"><b>${a.afspraken>0?eur(a.cpa):"—"}</b><span>CPA</span></div>
+        <div class="s"><b>${a.sales}</b><span>sales</span></div>
+      </div>
+      ${note}
+    </div>`;
+  }).join("");
+  document.querySelectorAll("#archGrid .arch-card").forEach(c => c.addEventListener("click", ()=>{
+    const row = ARCHROWS.find(r=>r.code===c.dataset.code);
+    if(row) openAdEdit(row, "arch");
+  }));
+}
+
+/* ---------- filters + modal-bediening initialiseren ---------- */
+function fillFaseFilter(el, allLabel){
+  el.innerHTML = `<option value="all">${allLabel}</option>`
+    + FASES.map(f=>`<option value="${f.key}">${f.afk} · ${f.label}</option>`).join("")
+    + `<option value="none">— zonder fase —</option>`;
+}
+fillFaseFilter($("adFaseFilter"), "Alle fases");
+$("adFaseFilter").addEventListener("change", e=>{ ADFASE = e.target.value; drawAdTable(); });
+fillFaseFilter($("archFaseFilter"), "Alle fases");
+$("archFaseFilter").addEventListener("change", e=>{ ARCHFASE = e.target.value; drawArchGrid(); });
+$("archStatusFilter").addEventListener("change", e=>{ ARCHSTATUS = e.target.value; drawArchGrid(); });
+$("edFase").innerHTML = `<option value="">— geen fase —</option>`
+  + FASES.map(f=>`<option value="${f.key}">${f.afk} · ${f.label}</option>`).join("");
+$("edSave").addEventListener("click", saveAdEdit);
+$("edCancel").addEventListener("click", closeAdEdit);
+$("adEditOverlay").addEventListener("click", e=>{ if(e.target.id==="adEditOverlay") closeAdEdit(); });
+document.addEventListener("keydown", e=>{ if(e.key==="Escape" && !$("adEditOverlay").classList.contains("hidden")) closeAdEdit(); });
+
+/* ---------- dashboard als PDF: print de actieve tab ---------- */
+function printDashboard(){
+  const tabNaam = { resultaten:"Resultaten", advertenties:"Advertenties", archief:"Archief", financien:"Financiën", prognose:"Prognose", resale:"Resale" }[activeTab] || "Dashboard";
+  const per = $("fPeriod").selectedOptions[0]?.textContent || "";
+  const nu = new Date().toLocaleDateString("nl-NL");
+  $("printMeta").textContent = `${tabNaam} · periode: ${per} · afgedrukt op ${nu}`;
+  const rol = ($("subtitle").textContent||"").split("·")[0].trim() || "dashboard";
+  const oud = document.title;
+  document.title = `RecraVas · ${rol} · ${tabNaam} · ${new Date().toISOString().slice(0,10)}`;
+  window.addEventListener("afterprint", () => { document.title = oud; }, { once:true });
+  window.print();
+}
+
+boot();
+</script>
+</body>
+</html>
