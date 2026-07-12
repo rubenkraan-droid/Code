@@ -292,7 +292,7 @@
 
   <div id="inventorySec" class="hidden">
     <div class="sec">Uitverkoop van het park
-      <span class="info" tabindex="0">i<span class="tip">Verkocht / gereserveerd / beschikbaar uit de kavelvoorraad. De prognose schat op basis van het recente verkooptempo (laatste 6 maanden) hoelang tot uitverkocht.</span></span>
+      <span class="info" tabindex="0">i<span class="tip">Verkocht / gereserveerd / beschikbaar uit de kavelvoorraad. De prognose = beschikbaar ÷ het aantal woningen dat in de vórige kalendermaand is verkocht.</span></span>
     </div>
     <div class="cards" id="inventoryKpis"></div>
   </div>
@@ -1520,7 +1520,7 @@ async function renderInventory(parkId){
   $("inventoryKpis").innerHTML =
     metric("Verkocht", s.verkocht) + metric("Gereserveerd", s.gereserveerd) +
     metric("Beschikbaar", s.beschikbaar) + metric("% verkocht", (s.verkocht_pct||0)+"%") +
-    metric("Verkooptempo", (Number(s.verkoop_per_maand)||0)+" /mnd") +
+    metric("Vorige maand verkocht", (Number(s.verkoop_per_maand)||0)) +
     metric("Prognose uitverkocht", progTxt);
 }
 
