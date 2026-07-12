@@ -314,7 +314,7 @@
     <div class="chartbox" style="margin-bottom:26px"><canvas id="adChart" height="220"></canvas></div>
     <div id="adMonthSec" class="hidden">
       <div class="sec">Cohort-rendement · per lead-maand
-        <span class="info" tabindex="0">i<span class="tip">Elke rij is het cohort van leads dat in die maand binnenkwam, met de uitgaven van die maand en het uiteindelijke resultaat van dat cohort (afspraken/sales/omzet, ongeacht wanneer ze omsloegen). ROAS = omzet ÷ uitgaven. "Rijpheid" = gemiddelde leeftijd van de leads; een jong cohort moet nog omslaan, dus lage cijfers daar zijn normaal.</span></span>
+        <span class="info" tabindex="0">i<span class="tip">Elke rij is het cohort van leads dat in die maand binnenkwam, met de uitgaven van die maand en het uiteindelijke resultaat van dat cohort (afspraken/sales/omzet, ongeacht wanneer ze omsloegen). ROAS = omzet ÷ uitgaven. Recente maanden moeten nog omslaan, dus lage cijfers daar zijn normaal.</span></span>
       </div>
       <div class="panel" style="margin-bottom:26px"><div class="scroll"><table id="adMonthTable"></table></div></div>
     </div>
@@ -1116,16 +1116,14 @@ function renderAdMonths(rows){
   if(!rows.length) return;
   $("adMonthTable").innerHTML =
     `<thead><tr><th style="text-align:left">Maand</th><th>Uitgaven</th><th>Leads</th><th>CPL</th>
-       <th>Afspraken</th><th>CPA</th><th>Sales</th><th>Omzet</th><th>Kost/sale</th><th>ROAS</th><th>Rijpheid</th></tr></thead>
-     <tbody>${rows.map(m=>{ const jong = Number(m.gem_leadleeftijd)<45;
-       return `<tr>
+       <th>Afspraken</th><th>CPA</th><th>Sales</th><th>Omzet</th><th>Kost/sale</th><th>ROAS</th></tr></thead>
+     <tbody>${rows.map(m=>`<tr>
        <td style="text-align:left">${mfmt(m.maand)}</td>
        <td style="font-weight:600">${eur(m.spend)}</td>
        <td>${m.leads}</td><td>${m.leads>0?eur(m.cpl):"—"}</td>
        <td>${m.afspraken}</td><td>${m.afspraken>0?eur(m.cpa):"—"}</td>
        <td>${m.sales}</td><td style="font-weight:600">${Number(m.omzet)>0?eur(m.omzet):"—"}</td>
-       <td>${m.sales>0?eur(m.kost_per_sale):"—"}</td><td>${Number(m.roas)>0?Number(m.roas).toFixed(2):"—"}</td>
-       <td style="color:${jong?'var(--muted)':'inherit'}">${m.gem_leadleeftijd!=null?m.gem_leadleeftijd+" d"+(jong?" · rijpt nog":""):"—"}</td></tr>`;}).join("")}</tbody>`;
+       <td>${m.sales>0?eur(m.kost_per_sale):"—"}</td><td>${Number(m.roas)>0?Number(m.roas).toFixed(2):"—"}</td></tr>`).join("")}</tbody>`;
 }
 
 /* ---------- monthly overview (all roles) ---------- */
