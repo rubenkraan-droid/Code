@@ -7,123 +7,209 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%232C5F52'/%3E%3Ctext x='50' y='72' font-size='62' text-anchor='middle' fill='white' font-family='Georgia,serif' font-weight='700'%3ER%3C/text%3E%3C/svg%3E" />
 <style>
   :root{
-    --bg:#F6F3EC; --card:#FFFFFF; --surface-2:#FBF9F4;
-    --ink:#22211C; --muted:#726F60; --faint:#A5A192;
-    --line:#E4DFD1; --line-strong:#D2CBB6;
+    --bg:#EEF1F7; --card:#FFFFFF; --surface-2:#F5F7FB;
+    --ink:#242A36; --muted:#7A8598; --faint:#AAB3C4;
+    --line:#E7ECF4; --line-strong:#D9E0EC;
     --accent:#2C5F52; --accent-ink:#173D33; --accent-soft:#E4ECE7; --accent-soft-ink:#1F4A3E;
-    --good:#4B7A3E; --good-soft:#EAF1E5;
-    --bad:#B5432E; --bad-soft:#F6E7E2;
-    --warn:#B8862E; --warn-soft:#F7EFDE;
+    --good:#3FA06B; --good-soft:#E4F4EB;
+    --bad:#E0654B; --bad-soft:#FBE9E4;
+    --warn:#E0A23A; --warn-soft:#FBF1DE;
+    --blue:#5B8DEF; --teal:#33C2C0; --violet:#8B7CF0; --pink:#F16D9A; --amber:#F4A63B;
     --serif: ui-serif, Charter, "Iowan Old Style", Georgia, "Times New Roman", serif;
+    --shadow:0 1px 2px rgba(20,40,80,.04), 0 6px 20px rgba(20,40,80,.05);
+    --shadow-hover:0 2px 6px rgba(20,40,80,.06), 0 14px 34px rgba(20,40,80,.10);
+    --r:16px;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,Roboto,Arial,sans-serif;line-height:1.5;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,Inter,Roboto,Arial,sans-serif;line-height:1.5;
     -webkit-font-smoothing:antialiased}
-  h1{font-family:var(--serif);font-weight:500;font-size:22px;margin:0}
-  .shell{display:grid;grid-template-columns:220px 1fr;min-height:100vh;transition:grid-template-columns .18s ease}
-  .shell.collapsed{grid-template-columns:60px 1fr}
-  .side{background:var(--surface-2);border-right:1px solid var(--line);padding:22px 16px;
-    display:flex;flex-direction:column;gap:20px}
-  .shell.collapsed .side{padding:22px 10px}
-  .brand{display:flex;align-items:center;gap:10px;padding:0 4px}
-  .brand .mark{width:30px;height:30px;border-radius:8px;background:var(--accent);color:#fff;
-    display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:16px;flex:none}
-  .brand .name{font-size:14px;font-weight:600;line-height:1.2;flex:1;white-space:nowrap;overflow:hidden}
-  .brand .name small{display:block;font-size:11px;font-weight:400;color:var(--muted)}
-  #sideToggle{border:none;background:none;color:var(--muted);cursor:pointer;padding:6px;border-radius:6px;flex:none;display:flex}
-  #sideToggle:hover{background:var(--line);color:var(--ink)}
-  .shell.collapsed .brand{justify-content:center}
-  .shell.collapsed .brand .name,.shell.collapsed .tab .lbl{display:none}
-  .shell.collapsed .tab{justify-content:center}
-  .main{padding:26px 34px 60px;min-width:0;max-width:1180px}
-  .top{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:20px}
-  .sub{font-size:13px;color:var(--muted);margin:3px 0 0}
-  .who{font-size:13px;color:var(--muted);display:flex;align-items:center}
-  .who button{margin-left:10px;border:1px solid var(--line-strong);background:var(--card);border-radius:8px;
-    padding:7px 12px;font:inherit;font-size:13px;cursor:pointer;color:var(--ink)}
-  .who button:hover{background:var(--surface-2)}
-  .who select{margin-left:10px;min-width:0}
-  .filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px}
-  .tabs{display:flex;flex-direction:column;gap:2px}
-  .tab{display:flex;align-items:center;gap:10px;border:none;background:none;font:inherit;font-size:13.5px;
-    padding:9px 10px;cursor:pointer;color:var(--muted);border-radius:8px;text-align:left;width:100%}
-  .tab:hover{background:var(--line)}
-  .tab.active{color:var(--accent-soft-ink);background:var(--accent-soft);font-weight:600}
-  #adParkTabs.tabs{flex-direction:row;gap:4px;border-bottom:1px solid var(--line);padding-bottom:0}
-  #adParkTabs.tabs .tab{border-radius:8px 8px 0 0;border-bottom:2px solid transparent;padding:8px 14px}
-  #adParkTabs.tabs .tab.active{background:none;border-bottom-color:var(--accent)}
+  h1{font-weight:700;font-size:21px;margin:0;letter-spacing:-.01em}
+  .shell{min-height:100vh;display:flex;flex-direction:column}
+  /* ---------- bovenbalk met icoon-navigatie ---------- */
+  .topbar{position:sticky;top:0;z-index:30;background:var(--card);border-bottom:1px solid var(--line);
+    box-shadow:0 1px 0 rgba(20,40,80,.02);display:flex;align-items:center;gap:18px;padding:11px 26px}
+  .brand{display:flex;align-items:center;gap:11px;flex:none}
+  .brand .mark{width:34px;height:34px;border-radius:10px;
+    background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 55%, #000 0%));
+    color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:17px;flex:none;
+    box-shadow:0 4px 10px color-mix(in srgb,var(--accent) 35%, transparent)}
+  .brand .name{font-size:14.5px;font-weight:700;line-height:1.15;white-space:nowrap}
+  .brand .name small{display:block;font-size:11px;font-weight:500;color:var(--muted)}
+  #sideToggle{border:none;background:none;color:var(--muted);cursor:pointer;padding:6px;border-radius:8px;flex:none;display:none}
+  #sideToggle:hover{background:var(--surface-2);color:var(--ink)}
+  .tabs{display:flex;flex-direction:row;gap:3px;flex:1;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{display:flex;align-items:center;gap:8px;border:none;background:none;font:inherit;font-size:13.5px;
+    padding:9px 13px;cursor:pointer;color:var(--muted);border-radius:10px;text-align:left;white-space:nowrap;
+    transition:background .15s,color .15s}
+  .tab svg{opacity:.85}
+  .tab:hover{background:var(--surface-2);color:var(--ink)}
+  .tab.active{color:#fff;font-weight:600;
+    background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 62%, #000));
+    box-shadow:0 4px 12px color-mix(in srgb,var(--accent) 30%, transparent)}
+  .tab.active svg{opacity:1}
+  .who{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:10px;flex:none;margin-left:auto}
+  .who button,.who a.btn{border:1px solid var(--line-strong);background:var(--card);border-radius:10px;
+    padding:7px 12px;font:inherit;font-size:13px;cursor:pointer;color:var(--ink);text-decoration:none}
+  .who button:hover,.who a.btn:hover{background:var(--surface-2)}
+  .who select{min-width:0}
+  .main{padding:24px 26px 64px;min-width:0;max-width:1240px;width:100%;margin:0 auto}
+  .top{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+  .sub{font-size:13px;color:var(--muted);margin:4px 0 0}
+  .filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px}
+  #adParkTabs.tabs{flex-direction:row;gap:6px;flex:none;border-bottom:1px solid var(--line);padding-bottom:0;overflow:visible}
+  #adParkTabs.tabs .tab{border-radius:10px 10px 0 0;border-bottom:2px solid transparent;padding:8px 15px;background:none;color:var(--muted);box-shadow:none}
+  #adParkTabs.tabs .tab.active{background:none;color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
   .info{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--line);color:var(--muted);font-size:11px;font-style:normal;margin-left:6px;cursor:help;position:relative;vertical-align:middle}
-  .info .tip{display:none;position:absolute;left:0;bottom:22px;width:240px;background:var(--ink);color:#fff;font-size:12px;font-weight:400;line-height:1.4;padding:9px 11px;border-radius:8px;z-index:10;text-align:left;text-transform:none}
+  .info .tip{display:none;position:absolute;left:0;bottom:22px;width:250px;background:var(--ink);color:#fff;font-size:12px;font-weight:400;line-height:1.45;padding:10px 12px;border-radius:10px;z-index:20;text-align:left;text-transform:none;box-shadow:var(--shadow-hover);font-variant-numeric:normal}
   .info{text-transform:none}
   .info:hover .tip,.info:focus .tip{display:block}
-  select,input{font:inherit;font-size:13.5px;padding:8px 10px;border:1px solid var(--line-strong);
-    border-radius:8px;background:var(--card);color:var(--ink);min-width:150px}
-  .banner{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;margin:0 0 10px;color:var(--accent-ink)}
+  select,input,textarea{font:inherit;font-size:13.5px;padding:9px 11px;border:1px solid var(--line-strong);
+    border-radius:10px;background:var(--card);color:var(--ink);min-width:150px}
+  select:focus,input:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 14%, transparent)}
+  .banner{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;margin:0 0 12px;color:var(--accent-ink)}
   .banner.hide{color:var(--bad)}
-  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:10px;margin-bottom:26px}
-  .metric{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
-  .metric.team{background:var(--accent-soft);border-color:var(--accent-soft)}
-  .metric .l{font-size:12px;color:var(--muted);margin-bottom:6px}
-  .metric .v{font-family:var(--serif);font-size:24px;line-height:1.15}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:12px;margin-bottom:24px}
+  .metric{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px 17px;box-shadow:var(--shadow)}
+  .metric.hasdonut{display:flex;align-items:center;gap:13px}
+  .metric .mtxt{min-width:0}
+  .metric.team{background:linear-gradient(135deg,var(--accent-soft),color-mix(in srgb,var(--accent-soft) 55%, #fff));border-color:transparent}
+  .metric .l{font-size:12px;color:var(--muted);margin-bottom:5px;line-height:1.25}
+  .metric .v{font-family:var(--serif);font-size:25px;line-height:1.1;font-weight:500}
   .metric.team .l,.metric.team .v{color:var(--accent-soft-ink)}
-  .sec{font-size:11px;font-weight:600;margin:0 0 10px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
-  .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:26px}
-  .panel .scroll{max-height:420px;overflow-y:auto}
+  .metric.deal-link{transition:box-shadow .15s,transform .1s}
+  .metric.deal-link:hover{box-shadow:var(--shadow-hover);transform:translateY(-1px)}
+  .donutmini{flex:none;width:46px;height:46px;position:relative}
+  .donutmini .dv{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--ink)}
+  .sec{font-size:11px;font-weight:700;margin:0 0 12px;text-transform:uppercase;letter-spacing:.045em;color:var(--muted)}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:24px;box-shadow:var(--shadow)}
+  .panel .scroll{max-height:440px;overflow-y:auto}
   table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
-  th,td{padding:11px 12px;text-align:right;white-space:nowrap}
+  th,td{padding:11px 13px;text-align:right;white-space:nowrap}
   th:first-child,td:first-child{text-align:left;font-variant-numeric:normal}
   th.tl,td.tl{text-align:left;font-variant-numeric:normal}
   thead tr{background:var(--surface-2)}
-  thead th{position:sticky;top:0;background:var(--surface-2);text-transform:uppercase;font-size:10.5px;letter-spacing:.03em}
-  th{font-weight:600;color:var(--muted)}
+  thead th{position:sticky;top:0;background:var(--surface-2);text-transform:uppercase;font-size:10.5px;letter-spacing:.03em;z-index:1}
+  th{font-weight:700;color:var(--muted)}
   tbody tr{border-top:1px solid var(--line)}
+  tbody tr:hover{background:var(--surface-2)}
   .av{display:inline-flex;align-items:center;gap:8px}
-  .dot{width:26px;height:26px;border-radius:50%;background:var(--accent-soft);color:var(--accent-soft-ink);display:inline-flex;
-    align-items:center;justify-content:center;font-size:11px;font-weight:600;flex:none}
+  .dot{width:28px;height:28px;border-radius:50%;
+    background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 22%, #fff),color-mix(in srgb,var(--accent) 42%, #fff));
+    color:var(--accent-ink);display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex:none}
   .good{color:var(--good)}.bad{color:var(--bad)}
-  .badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600}
+  .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;line-height:1.4}
   .badge.sale{background:var(--good-soft);color:var(--good)}
   .badge.held{background:var(--surface-2);color:var(--muted)}
   .badge.lost{background:var(--bad-soft);color:var(--bad)}
+  .badge.warn{background:var(--warn-soft);color:var(--warn)}
+  /* awareness-fase pills (koud -> warm) */
+  .fase{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+  .fase-onbewust{background:#ECEEF3;color:#6B7488}
+  .fase-probleembewust{background:#E4ECFB;color:#3F63B5}
+  .fase-oplossingsbewust{background:#DFF1EF;color:#1E8A86}
+  .fase-productbewust{background:var(--warn-soft);color:#C0871F}
+  .fase-meest_bewust{background:var(--good-soft);color:#2E8656}
+  .fase-leeg{background:var(--surface-2);color:var(--faint);font-weight:500}
   td a{color:var(--accent);text-decoration:none;font-weight:600}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
   @media(max-width:720px){.grid2{grid-template-columns:1fr}}
-  .chartbox{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .chartbox{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow)}
   .inv{display:flex;gap:18px}.inv div{flex:1;text-align:center}
   .inv .v{font-size:22px;font-weight:600}.inv .l{font-size:12px;color:var(--muted)}
   .foot{font-size:12px;color:var(--faint);margin-top:8px}
+  /* hero-donut (funnel) */
+  .hero{display:grid;grid-template-columns:260px 1fr;gap:14px;margin-bottom:24px;align-items:stretch}
+  @media(max-width:720px){.hero{grid-template-columns:1fr}}
+  .donuthero{position:relative;display:flex;align-items:center;justify-content:center;min-height:210px}
+  .donutcenter{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+  .donutcenter .big{font-family:var(--serif);font-size:34px;line-height:1;font-weight:500}
+  .donutcenter .cap{font-size:12px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.04em}
+  .herostats{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-content:stretch}
+  @media(max-width:520px){.herostats{grid-template-columns:1fr}}
   /* login */
   #gate{max-width:380px;margin:12vh auto;background:var(--card);border:1px solid var(--line);
-    border-radius:14px;padding:28px 26px;text-align:center}
-  #gate h2{font-family:var(--serif);font-weight:500;font-size:19px;margin:0 0 6px}
+    border-radius:var(--r);padding:28px 26px;text-align:center;box-shadow:var(--shadow)}
+  #gate h2{font-weight:700;font-size:19px;margin:0 0 6px}
   #gate p{font-size:14px;color:var(--muted);margin:0 0 18px}
   #gate input{width:100%;margin-bottom:12px}
-  #gate button{width:100%;background:var(--accent);color:#fff;border:0;border-radius:8px;
+  #gate button{width:100%;background:var(--accent);color:#fff;border:0;border-radius:10px;
     padding:11px;font:inherit;font-size:15px;font-weight:600;cursor:pointer}
   #gate button:hover{background:var(--accent-ink)}
   #gateMsg{font-size:13px;margin-top:14px;min-height:18px}
   .hidden{display:none}
+  /* ---------- best presterende advertenties + archief ---------- */
+  .adbest{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}
+  .adbest-card{position:relative;display:flex;flex-direction:column;gap:10px;background:var(--card);
+    border:1px solid var(--line);border-radius:var(--r);padding:12px;cursor:pointer;box-shadow:var(--shadow);
+    transition:box-shadow .15s,transform .1s}
+  .adbest-card:hover{box-shadow:var(--shadow-hover);transform:translateY(-2px)}
+  .adbest-rank{position:absolute;top:19px;left:20px;z-index:1;background:rgba(20,28,42,.66);color:#fff;
+    min-width:24px;height:24px;padding:0 7px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+    font-family:var(--serif);font-size:14px}
+  .adbest-thumb{width:100%;aspect-ratio:1/1;border-radius:12px;overflow:hidden;flex:none;
+    background:linear-gradient(135deg,var(--surface-2),var(--line));display:flex;align-items:center;justify-content:center;position:relative}
+  .adbest-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .adbest-thumb.leeg::after{content:"▦";color:var(--faint);font-size:38px}
+  .adbest-info{min-width:0}
+  .adbest-naam{font-size:14px;color:var(--ink);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .adbest-hoofd{font-family:var(--serif);font-size:21px;margin:3px 0;line-height:1.15;color:var(--ink)}
+  .adbest-sub{font-size:12px;color:var(--muted)}
+  /* archief-kaart */
+  .arch{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px}
+  .arch-card{display:flex;flex-direction:column;gap:10px;background:var(--card);border:1px solid var(--line);
+    border-radius:var(--r);padding:12px;cursor:pointer;box-shadow:var(--shadow);transition:box-shadow .15s,transform .1s}
+  .arch-card:hover{box-shadow:var(--shadow-hover);transform:translateY(-2px)}
+  .arch-thumb{width:100%;aspect-ratio:1/1;border-radius:12px;overflow:hidden;flex:none;position:relative;
+    background:linear-gradient(135deg,var(--surface-2),var(--line));display:flex;align-items:center;justify-content:center}
+  .arch-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .arch-thumb.leeg::after{content:"▦";color:var(--faint);font-size:40px}
+  .arch-pills{position:absolute;top:8px;left:8px;right:8px;display:flex;gap:6px;flex-wrap:wrap;justify-content:space-between}
+  .arch-naam{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .arch-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:12px}
+  .arch-stats .s{background:var(--surface-2);border-radius:8px;padding:6px 7px;text-align:center}
+  .arch-stats .s b{display:block;font-size:13px;color:var(--ink);font-weight:700}
+  .arch-stats .s span{color:var(--muted);font-size:10.5px}
+  .arch-note{font-size:12px;color:var(--muted);line-height:1.4;border-top:1px solid var(--line);padding-top:8px}
+  .arch-note .kill{color:var(--bad);font-weight:600}
+  .arch-empty{color:var(--muted);padding:26px;text-align:center;grid-column:1/-1}
+  .worked-wel{color:var(--good);font-weight:700}
+  .worked-niet{color:var(--bad);font-weight:700}
+  /* notitie/fase-bewerkpaneel */
+  .overlay{position:fixed;inset:0;z-index:100;background:rgba(20,28,42,.42);backdrop-filter:blur(2px);
+    display:flex;align-items:center;justify-content:center;padding:20px}
+  .overlay.hidden{display:none}
+  .overlay .editpanel{width:100%;max-width:540px;margin:0;max-height:90vh;overflow-y:auto}
+  .editpanel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:20px 22px;
+    box-shadow:var(--shadow-hover);margin-bottom:24px}
+  .editpanel h3{margin:0 0 3px;font-size:16px;font-weight:700}
+  .editpanel .ep-sub{font-size:12px;color:var(--muted);margin:0 0 16px}
+  .ep-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:620px){.ep-grid{grid-template-columns:1fr}}
+  .ep-field{display:flex;flex-direction:column;gap:6px}
+  .ep-field.full{grid-column:1/-1}
+  .ep-field label{font-size:12px;font-weight:600;color:var(--muted)}
+  .ep-field select,.ep-field textarea{width:100%;min-width:0}
+  .ep-field textarea{resize:vertical;min-height:64px;line-height:1.45}
+  .ep-actions{display:flex;gap:10px;align-items:center;margin-top:16px}
+  .ep-actions .save{background:var(--accent);color:#fff;border:0;border-radius:10px;padding:9px 18px;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer}
+  .ep-actions .save:hover{background:var(--accent-ink)}
+  .ep-actions .save:disabled{opacity:.55;cursor:default}
+  .ep-actions .cancel{background:var(--card);border:1px solid var(--line-strong);border-radius:10px;padding:9px 16px;font:inherit;font-size:13.5px;cursor:pointer;color:var(--ink)}
+  .ep-actions .msg{font-size:12.5px;color:var(--good);font-weight:600}
   /* ---------- mobiel ---------- */
   @media(max-width:860px){
-    .shell,.shell.collapsed{grid-template-columns:1fr}
-    .side,.shell.collapsed .side{flex-direction:column;align-items:stretch;gap:10px;
-      padding:12px 14px;border-right:none;border-bottom:1px solid var(--line)}
-    #sideToggle{display:none}
-    .brand{padding:0 2px}
-    .shell.collapsed .brand{justify-content:flex-start}
-    .shell.collapsed .brand .name{display:block}
-    #tabs{flex-direction:row;overflow-x:auto;gap:6px;padding-bottom:2px;-webkit-overflow-scrolling:touch}
-    .tab,.shell.collapsed .tab{width:auto;flex:none;white-space:nowrap;justify-content:flex-start;padding:8px 13px}
-    .shell.collapsed .tab .lbl{display:inline}
-    .main{padding:18px 15px 48px;max-width:none}
+    .topbar{flex-wrap:wrap;gap:10px 14px;padding:10px 15px}
+    .who{margin-left:auto;flex-wrap:wrap;gap:6px 8px}
+    #tabs{order:5;flex-basis:100%;width:100%}
+    .main{padding:18px 15px 48px}
     .top{flex-direction:column;align-items:stretch;gap:10px;margin-bottom:14px}
-    h1{font-size:20px}
-    .who{flex-wrap:wrap;gap:6px 8px}
-    .who select{flex:1;margin-left:0}
-    .who button{margin-left:0}
-    .cards{grid-template-columns:1fr 1fr;gap:8px}
-    select,input{min-width:0}
+    h1{font-size:19px}
+    .hero{grid-template-columns:1fr}
+    .cards{grid-template-columns:1fr 1fr;gap:10px}
+    .who select{flex:1 1 auto}
+    select,input,textarea{min-width:0}
     .filters select{flex:1 1 44%}
     .grid2{grid-template-columns:1fr}
     th,td{padding:9px 8px}
@@ -131,39 +217,22 @@
   }
   @media(max-width:420px){
     .cards{grid-template-columns:1fr}
+    .herostats{grid-template-columns:1fr}
   }
-  /* best presterende advertenties */
-  .adbest{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}
-  .adbest-card{position:relative;display:flex;flex-direction:column;gap:10px;background:var(--card);
-    border:1px solid var(--line);border-radius:14px;padding:12px;cursor:pointer;transition:border-color .15s,box-shadow .15s}
-  .adbest-card:hover{border-color:var(--accent);box-shadow:0 2px 14px rgba(0,0,0,.07)}
-  .adbest-rank{position:absolute;top:19px;left:20px;z-index:1;background:rgba(29,29,27,.62);color:#fff;
-    min-width:24px;height:24px;padding:0 7px;border-radius:12px;display:flex;align-items:center;justify-content:center;
-    font-family:var(--serif);font-size:14px}
-  .adbest-thumb{width:100%;aspect-ratio:1/1;border-radius:10px;overflow:hidden;flex:none;background:var(--line);
-    display:flex;align-items:center;justify-content:center}
-  .adbest-thumb img{width:100%;height:100%;object-fit:cover;display:block}
-  .adbest-thumb.leeg::after{content:"▦";color:var(--muted);font-size:38px}
-  .adbest-info{min-width:0}
-  .adbest-naam{font-size:14px;color:var(--ink);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .adbest-hoofd{font-family:var(--serif);font-size:21px;margin:3px 0;line-height:1.15;color:var(--ink)}
-  .adbest-sub{font-size:12px;color:var(--muted)}
-
   /* ---------- afdrukken / PDF: alleen de actieve tab, netjes ---------- */
   @media print {
     @page { margin: 12mm; }
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     html, body { background:#fff !important; }
-    .side, #sideToggle, .who, .filters, #printBtn, #gate, .info { display:none !important; }
-    .shell { display:block !important; }
+    .topbar, #tabs, #sideToggle, .who, .filters, #printBtn, #gate, .info, .editpanel { display:none !important; }
     .main { margin:0 !important; padding:0 !important; width:100% !important; max-width:100% !important; }
     .top { margin:0 0 12px !important; }
     #printMeta { display:block !important; }
     .cards { gap:8px !important; }
-    .metric, .panel, .chartbox, table, .adbest-card { break-inside: avoid; }
+    .metric, .panel, .chartbox, table, .adbest-card, .arch-card { break-inside: avoid; box-shadow:none !important; }
     .sec { break-after: avoid; }
     table { font-size: 11px !important; }
-    .adbest { grid-template-columns: repeat(4, 1fr) !important; }
+    .adbest, .arch { grid-template-columns: repeat(4, 1fr) !important; }
     a[href]::after { content:"" !important; }
   }
 </style>
@@ -180,22 +249,31 @@
 
 <div id="app" class="hidden">
 <div class="shell">
-  <aside class="side">
+  <header class="topbar">
+    <button id="sideToggle" title="Menu" aria-label="Menu">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
     <div class="brand">
       <div class="mark">R</div>
       <div class="name">RecraVas<small>Dashboard</small></div>
-      <button id="sideToggle" title="Zijbalk in-/uitklappen" aria-label="Zijbalk in-/uitklappen">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
-      </button>
     </div>
-    <div id="tabs" class="tabs">
+    <nav id="tabs" class="tabs">
       <button class="tab active" data-tab="resultaten" title="Resultaten"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19h16M7 15v4M12 10v9M17 6v13"/></svg><span class="lbl">Resultaten</span></button>
       <button class="tab" data-tab="advertenties" title="Advertenties"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M7 13h4M7 16h7"/></svg><span class="lbl">Advertenties</span></button>
+      <button class="tab" data-tab="archief" title="Archief · creative-library"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></svg><span class="lbl">Archief</span></button>
       <button class="tab" data-tab="financien" title="Financiën"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5c0-1.4 1.2-2 2.5-2s2.5.7 2.5 1.8c0 2.4-5 1.3-5 3.7 0 1.1 1.2 1.8 2.5 1.8s2.5-.6 2.5-2"/></svg><span class="lbl">Financiën</span></button>
       <button class="tab" data-tab="prognose" title="Prognose"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 17l5-5 4 4 8-9M14 7h6v6"/></svg><span class="lbl">Prognose</span></button>
       <button class="tab" data-tab="resale" title="Resale"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-7 9 7M5 10v9h5v-6h4v6h5v-9"/></svg><span class="lbl">Resale</span></button>
+    </nav>
+    <div class="who">
+      <a id="helpBtn" class="btn" href="handleiding.html" target="_blank" rel="noopener" title="Handleiding & functie-overzicht">Handleiding</a>
+      <button id="printBtn" class="btn" onclick="printDashboard()" title="Sla dit dashboard op als PDF">↓ PDF</button>
+      <a id="adLink" href="notion-dashboard.html" class="hidden" style="color:var(--accent);text-decoration:none;font-weight:600">Advertenties &#8599;</a>
+      <span id="whoami"></span>
+      <select id="viewAs"></select>
+      <button id="logout">Uitloggen</button>
     </div>
-  </aside>
+  </header>
   <main class="main">
   <div class="top">
     <div>
@@ -203,14 +281,6 @@
       <h1 id="title">Dashboard</h1>
       <p class="sub" id="subtitle"></p>
       <p id="printMeta" style="display:none;color:var(--muted);font-size:12px;margin-top:4px"></p>
-    </div>
-    <div class="who">
-      <a id="helpBtn" href="handleiding.html" target="_blank" rel="noopener" title="Handleiding & functie-overzicht" style="margin-right:10px;border:1px solid var(--line-strong);background:var(--card);border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer;text-decoration:none;color:var(--ink)">Handleiding</a>
-      <button id="printBtn" onclick="printDashboard()" title="Sla dit dashboard op als PDF" style="margin-right:10px;border:1px solid var(--line-strong);background:var(--card);border-radius:8px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer">↓ PDF</button>
-      <a id="adLink" href="notion-dashboard.html" class="hidden" style="color:var(--accent);text-decoration:none;font-weight:600">Advertenties &#8599;</a>
-      <span id="whoami" style="margin-left:12px"></span>
-      <select id="viewAs"></select>
-      <button id="logout">Uitloggen</button>
     </div>
   </div>
 
@@ -235,6 +305,14 @@
     <div class="cards" id="liveCards"></div>
     <div class="sec">Leads per maand uit Pipedrive</div>
     <div class="panel"><table id="liveMonths"></table></div>
+  </div>
+
+  <div id="heroWrap" class="hero hidden">
+    <div class="chartbox donuthero">
+      <canvas id="funnelDonut" height="200"></canvas>
+      <div class="donutcenter" id="funnelCenter"></div>
+    </div>
+    <div class="herostats cards" id="heroStats" style="margin-bottom:0"></div>
   </div>
 
   <div class="cards" id="cardsTop"></div>
@@ -321,7 +399,10 @@
     </div>
     <div id="adOverviewSec">
       <div id="adWarnBanner" class="hidden banner" style="background:var(--warn-soft);color:var(--warn);padding:10px 14px;border-radius:8px"></div>
-      <div class="sec">Per advertentie · klik op een rij voor het dagverloop, op een aantal (leads/afspraken/sales) voor de deals, op een kolomkop om te sorteren</div>
+      <div class="sec" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <span style="flex:1;min-width:200px">Per advertentie · klik op een rij voor het dagverloop, op een aantal voor de deals, op een <b>fase-pill</b> voor de notities</span>
+        <select id="adFaseFilter" style="text-transform:none;font-weight:400;letter-spacing:0"></select>
+      </div>
       <div class="panel"><div class="scroll"><table id="adTable"></table></div></div>
     </div>
     <div id="adDealsSec" class="hidden" style="margin-top:26px">
@@ -402,8 +483,55 @@
       <div class="panel"><div class="scroll"><table id="resaleLeadsTable"></table></div></div>
     </div>
   </div>
+
+  <div id="tabArchief" class="hidden">
+    <div id="archParkTabs" class="tabs hidden" style="margin-bottom:16px"></div>
+    <div class="sec" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span style="flex:1;min-width:220px">Creative-library · klik op een advertentie voor de notities (werkte wel/niet, waarom, kill-reden)</span>
+      <select id="archFaseFilter" style="text-transform:none;font-weight:400;letter-spacing:0"></select>
+      <select id="archStatusFilter" style="text-transform:none;font-weight:400;letter-spacing:0"></select>
+    </div>
+    <div id="archGrid" class="arch"></div>
+    <p class="foot" id="archFoot"></p>
+  </div>
   </main>
 </div>
+</div>
+
+<!-- notitie/fase-bewerkpaneel (gedeeld door Advertenties + Archief) -->
+<div id="adEditOverlay" class="overlay hidden">
+  <div class="editpanel" role="dialog" aria-modal="true">
+    <h3 id="adEditTitle">Advertentie</h3>
+    <p class="ep-sub" id="adEditSub"></p>
+    <div class="ep-grid">
+      <div class="ep-field">
+        <label for="edFase">Fase · bewustzijn (Schwartz)</label>
+        <select id="edFase"></select>
+      </div>
+      <div class="ep-field">
+        <label for="edWerkte">Werkte deze advertentie?</label>
+        <select id="edWerkte">
+          <option value="">— niet ingevuld —</option>
+          <option value="wel">Werkte wel</option>
+          <option value="niet">Werkte niet</option>
+          <option value="onbekend">Nog onbekend</option>
+        </select>
+      </div>
+      <div class="ep-field full">
+        <label for="edWaarom">Waarom (waarschijnlijk)</label>
+        <textarea id="edWaarom" placeholder="Waarom werkte de advertentie wel of niet? (bijv. sterke hook, verkeerde doelgroep, prijs)"></textarea>
+      </div>
+      <div class="ep-field full">
+        <label for="edKill">Kill-reden · alleen bij een gestopte advertentie</label>
+        <textarea id="edKill" placeholder="Waarom is deze advertentie gestopt? (bijv. te hoge CPL, uitgeput publiek)"></textarea>
+      </div>
+    </div>
+    <div class="ep-actions">
+      <button class="save" id="edSave">Opslaan</button>
+      <button class="cancel" id="edCancel">Annuleren</button>
+      <span class="msg hidden" id="edMsg">Opgeslagen ✓</span>
+    </div>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -418,6 +546,54 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const $ = id => document.getElementById(id);
 const eur = n => "€"+Math.round(n||0).toLocaleString("nl-NL");
 const initials = n => n.slice(0,2).toUpperCase();
+const esc = s => String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const escAttr = s => esc(s).replace(/"/g,"&quot;");
+
+/* ---------- awareness-fase (Schwartz, afgekort) ---------- */
+const FASES = [
+  { key:"onbewust",         afk:"Onb",   label:"Onbewust" },
+  { key:"probleembewust",   afk:"Prob",  label:"Probleembewust" },
+  { key:"oplossingsbewust", afk:"Opl",   label:"Oplossingsbewust" },
+  { key:"productbewust",    afk:"Prod",  label:"Productbewust" },
+  { key:"meest_bewust",     afk:"Meest", label:"Meest bewust" },
+];
+const FASE_BY = Object.fromEntries(FASES.map(f=>[f.key,f]));
+// uitleg-popup bovenaan de Fase-kolom
+const FASE_UITLEG = "Awareness-fase (Eugene Schwartz), hoe bewust het publiek is: "
+  + FASES.map(f=>`${f.afk} = ${f.label}`).join(" · ")
+  + ". Van koud (Onbewust) naar warm (Meest bewust). Klik op een pill om de fase te wijzigen.";
+function fasePill(stage){
+  const f = FASE_BY[stage];
+  return f ? `<span class="fase fase-${f.key}" title="${f.label}">${f.afk}</span>`
+           : `<span class="fase fase-leeg" title="Nog geen fase ingesteld">—</span>`;
+}
+const WERKTE_LBL = { wel:"Werkte wel", niet:"Werkte niet", onbekend:"Nog onbekend" };
+
+/* ---------- mini-donut voor % stat-kaarten + gradient chart-vullingen ---------- */
+function donutMini(pct, color){
+  const p = Math.max(0, Math.min(100, Number(pct)||0));
+  const r = 15.9, c = 2*Math.PI*r, off = c*(1-p/100), col = color || "var(--accent)";
+  return `<div class="donutmini"><svg viewBox="0 0 40 40" width="46" height="46">
+    <circle cx="20" cy="20" r="${r}" fill="none" stroke="var(--line)" stroke-width="4"></circle>
+    <circle cx="20" cy="20" r="${r}" fill="none" stroke="${col}" stroke-width="4" stroke-linecap="round"
+      stroke-dasharray="${c.toFixed(2)}" stroke-dashoffset="${off.toFixed(2)}" transform="rotate(-90 20 20)"></circle>
+  </svg><div class="dv">${Math.round(p)}%</div></div>`;
+}
+const hexA = (hex, a) => {
+  const h = (hex||"").replace("#","");
+  if(h.length<6) return hex;
+  const n = parseInt(h,16);
+  return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
+};
+// verticale gradient-vulling voor Chart.js (returnt een functie die de chart-area gebruikt)
+const areaGrad = (hex, topA, botA) => (context) => {
+  const ch = context.chart, area = ch.chartArea;
+  if(!area) return hexA(hex, topA);
+  const g = ch.ctx.createLinearGradient(0, area.top, 0, area.bottom);
+  g.addColorStop(0, hexA(hex, topA));
+  g.addColorStop(1, hexA(hex, botA));
+  return g;
+};
 
 /* ---------- branding per park (logo + favicon) ---------- */
 const DEFAULT_FAVICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%232C5F52'/%3E%3Ctext x='50' y='72' font-size='62' text-anchor='middle' fill='white' font-family='Georgia,serif' font-weight='700'%3ER%3C/text%3E%3C/svg%3E";
@@ -457,12 +633,14 @@ function periodRange(){
   const iso = d => d.toISOString().slice(0,10);
   return { p_from: iso(from), p_to: iso(to) };
 }
-const metric  = (l,v) => `<div class="metric"><div class="l">${l}</div><div class="v">${v}</div></div>`;
-function definitiefCard(dc){
-  const s=Number(dc&&dc.sales)||0, d=Number(dc&&dc.definitief)||0;
-  const val = s===0 ? "—" : (d>=s ? "Ja" : "Nee");
-  return `<div class="metric"><div class="l">Definitief <span class="info" tabindex="0">i<span class="tip">Nog niet alle koopovereenkomsten zijn definitief voor deze maand.</span></span></div><div class="v">${val}</div></div>`;
-}
+const metric  = (l,v) => {
+  const s = String(v).trim(), m = /^(-?\d+(?:[.,]\d+)?)\s*%$/.exec(s);
+  if(m){
+    const pct = parseFloat(m[1].replace(",","."));
+    return `<div class="metric hasdonut">${donutMini(pct)}<div class="mtxt"><div class="l">${l}</div><div class="v">${v}</div></div></div>`;
+  }
+  return `<div class="metric"><div class="mtxt"><div class="l">${l}</div><div class="v">${v}</div></div></div>`;
+};
 /* klikbare deals-cellen/cards: leads/afspraken/verkopen -> lijst met Pipedrive-links */
 const KINDLBL = { leads:"Leads", afspraken:"Afspraken", verkopen:"Verkopen" };
 const dcell = (waarde, kind, agentId, naam, resale) => Number(waarde)>0
@@ -527,8 +705,9 @@ async function applyRole(){
   $("apptSec").classList.toggle("hidden", parkV);
   $("fPark").classList.toggle("hidden", parkV);
   $("fAgent").classList.toggle("hidden", !owner);
-  // makelaar ziet Resultaten + Financiën (eigen commissie); geen advertenties/prognose.
+  // makelaar ziet Resultaten + Financiën (eigen commissie); geen advertenties/archief/prognose.
   document.querySelector('.tab[data-tab="advertenties"]').classList.toggle("hidden", agentV);
+  document.querySelector('.tab[data-tab="archief"]').classList.toggle("hidden", agentV);
   document.querySelector('.tab[data-tab="financien"]').classList.toggle("hidden", parkV);
   document.querySelector('.tab[data-tab="prognose"]').classList.toggle("hidden", agentV);
   document.querySelector('.tab[data-tab="resale"]').classList.toggle("hidden", parkV);
@@ -537,6 +716,7 @@ async function applyRole(){
   document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active", x.dataset.tab==="resultaten"));
   $("tabResultaten").classList.remove("hidden");
   $("tabAdvertenties").classList.add("hidden");
+  $("tabArchief").classList.add("hidden");
   $("tabPrognose").classList.add("hidden");
   $("tabResale").classList.add("hidden");
   if(owner){
@@ -571,6 +751,7 @@ function fillSelect(el, opts, allLabel){
 // niet alleen de Resultaten (refresh); zo volgen Advertenties/Financiën/Prognose het filter
 function renderActieveTab(){
   if(activeTab==="advertenties") renderAds();
+  else if(activeTab==="archief") renderArchief();
   else if(activeTab==="financien"){ const cv=currentView(); if(cv.role==="agent") renderFinanceAgent(cv.id); else renderFinance(); }
   else if(activeTab==="prognose") renderPrognose();
   else if(activeTab==="resale") renderResale();
@@ -600,13 +781,15 @@ function toonTab(tab, opts){
   document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active", x.dataset.tab===tab));
   $("tabResultaten").classList.toggle("hidden", tab!=="resultaten");
   $("tabAdvertenties").classList.toggle("hidden", tab!=="advertenties");
+  $("tabArchief").classList.toggle("hidden", tab!=="archief");
   $("tabFinance").classList.toggle("hidden", tab!=="financien");
   $("tabPrognose").classList.toggle("hidden", tab!=="prognose");
   $("tabResale").classList.toggle("hidden", tab!=="resale");
   $("fAgent").classList.toggle("hidden", tab!=="resultaten" || !currentView || currentView().role!=="owner");
-  $("fPark").classList.toggle("hidden", (currentView && currentView().role==="park") || tab==="advertenties" || tab==="financien" || tab==="resale");
+  $("fPark").classList.toggle("hidden", (currentView && currentView().role==="park") || tab==="advertenties" || tab==="archief" || tab==="financien" || tab==="resale");
   if(!opts.silent) localStorage.setItem("activeTab", tab);
   if(tab==="advertenties") renderAds();
+  if(tab==="archief") renderArchief();
   if(tab==="financien"){ const cv=currentView(); if(cv.role==="agent") renderFinanceAgent(cv.id); else renderFinance(); }
   if(tab==="prognose") renderPrognose();
   if(tab==="resale") renderResale();
@@ -640,8 +823,8 @@ async function renderFinance(){
   // samen = omzet. Verkoopsom staat al bij de KPI's en in de tabel eronder.
   finChart = new Chart($("finChart"), {
     data:{ labels: mo.map(x=>mfmt(x.maand)), datasets:[
-      { type:"bar", label:"Courtage makelaar", data:mo.map(x=>Number(x.courtage_makelaar)||0), backgroundColor:"#D2CBB6", stack:"courtage", order:2 },
-      { type:"bar", label:"Marge RecraVas (winst)", data:mo.map(x=>Number(x.marge_recraparcs)||0), backgroundColor:"#B8862E", stack:"courtage", order:1 } ]},
+      { type:"bar", label:"Courtage makelaar", data:mo.map(x=>Number(x.courtage_makelaar)||0), backgroundColor:areaGrad("#B7C0D2",.95,.5), borderRadius:5, borderSkipped:false, stack:"courtage", order:2 },
+      { type:"bar", label:"Marge RecraVas (winst)", data:mo.map(x=>Number(x.marge_recraparcs)||0), backgroundColor:areaGrad(accent(),.95,.45), borderRadius:5, borderSkipped:false, stack:"courtage", order:1 } ]},
     options:{ responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{ position:"bottom", labels:{ boxWidth:10, font:{size:11} } },
         tooltip:{ callbacks:{
@@ -714,7 +897,7 @@ async function renderFinanceAgent(agentId){
   if(finChart) finChart.destroy();
   finChart = new Chart($("finChart"), {
     data:{ labels: mo.map(x=>mfmt(x.maand)), datasets:[
-      { type:"bar", label:"Mijn commissie", data:mo.map(x=>Number(x.mijn_commissie)||0), backgroundColor:accent(), yAxisID:"y", order:2 },
+      { type:"bar", label:"Mijn commissie", data:mo.map(x=>Number(x.mijn_commissie)||0), backgroundColor:areaGrad(accent(),.95,.4), borderRadius:6, borderSkipped:false, yAxisID:"y", order:2 },
       { type:"line", label:"Verkoopsom", data:mo.map(x=>Number(x.verkoopsom)||0), borderColor:"#B8862E", backgroundColor:"#B8862E", borderWidth:2, tension:0.3, pointRadius:3, yAxisID:"y1", order:1 } ]},
     options:{ responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{ position:"bottom", labels:{ boxWidth:10, font:{size:11} } } },
@@ -903,8 +1086,8 @@ async function renderAds(){
   if(adChart) adChart.destroy();
   adChart = new Chart($("adChart"), {
     data:{ labels: dd.map(x=>dt2(x.dag)), datasets:[
-      { type:"bar", label:"Uitgaven", data:dd.map(x=>Number(x.spend)||0), backgroundColor:parkAccent(pp), yAxisID:"y", order:3 },
-      { type:"line", label:"Leads", data:dd.map(x=>Number(x.leads)||0), borderColor:"#B8862E", backgroundColor:"#B8862E", borderWidth:2, tension:0.3, pointRadius:2, yAxisID:"y1", order:1 },
+      { type:"bar", label:"Uitgaven", data:dd.map(x=>Number(x.spend)||0), backgroundColor:areaGrad(parkAccent(pp),.95,.4), borderRadius:6, borderSkipped:false, yAxisID:"y", order:3 },
+      { type:"line", label:"Leads", data:dd.map(x=>Number(x.leads)||0), borderColor:"#B8862E", backgroundColor:areaGrad("#B8862E",.28,0), fill:true, borderWidth:2, tension:0.35, pointRadius:2, yAxisID:"y1", order:1 },
       adAfsprakenDataset(dd) ]},
     options: adChartOptions(dd)
   });
@@ -947,8 +1130,8 @@ async function renderAdDetail(adId, naam){
   if(adDetailChart) adDetailChart.destroy();
   adDetailChart = new Chart($("adDetailChart"), {
     data:{ labels: dd.map(x=>dt2(x.dag)), datasets:[
-      { type:"bar", label:"Uitgaven", data:dd.map(x=>Number(x.spend)||0), backgroundColor:parkAccent(ADPARK), yAxisID:"y", order:2 },
-      { type:"line", label:"Leads", data:dd.map(x=>Number(x.leads)||0), borderColor:"#B8862E", backgroundColor:"#B8862E", borderWidth:2, tension:0.3, pointRadius:2, yAxisID:"y1", order:1 },
+      { type:"bar", label:"Uitgaven", data:dd.map(x=>Number(x.spend)||0), backgroundColor:areaGrad(parkAccent(ADPARK),.95,.4), borderRadius:6, borderSkipped:false, yAxisID:"y", order:2 },
+      { type:"line", label:"Leads", data:dd.map(x=>Number(x.leads)||0), borderColor:"#B8862E", backgroundColor:areaGrad("#B8862E",.28,0), fill:true, borderWidth:2, tension:0.35, pointRadius:2, yAxisID:"y1", order:1 },
       adAfsprakenDataset(dd) ]},
     options: adChartOptions(dd)
   });
@@ -965,10 +1148,13 @@ async function renderAdDetail(adId, naam){
 }
 
 const ADCOLS = [
-  ["advertentie","Advertentie"], ["status","Status"], ["spend","Uitgaven"], ["clicks","Clicks"],
+  ["advertentie","Advertentie"], ["status","Status"], ["awareness_stage","Fase"], ["spend","Uitgaven"], ["clicks","Clicks"],
   ["cpc","CPC"], ["leads","Leads"], ["cpl","CPL"], ["afspraken","Afspraken"], ["cpa","CPA"],
   ["ongekwalificeerd_pct","Ongekwalificeerd %"], ["sales","Sales"], ["omzet","Omzet"], ["roas","ROAS"],
 ];
+// sorteervolgorde voor de Fase-kolom: op funnel-positie (koud -> warm), leeg onderaan
+const FASE_ORDER = Object.fromEntries(FASES.map((f,i)=>[f.key,i+1]));
+let ADFASE = "all"; // actieve fase-filter in de advertentietabel
 // --- Afkeuren op ongekwalificeerde leads (twee niveaus) ------------------------
 // "Let op" (oranje) = zachte attentie op het rauwe percentage. "Overweeg uitzetten"
 // (rood) = statistisch onderbouwd via de Wilson-ondergrens (95%), die automatisch
@@ -1012,15 +1198,24 @@ function ongekFlag(a, ctx){
     return { level:1, pct, lb, base:ctx.basePct };
   return { level:0, pct, lb, base:ctx.basePct };
 }
+const faseSortVal = a => a.awareness_stage ? FASE_ORDER[a.awareness_stage] : 99;
 function drawAdTable(){
   const s = ADSORT;
-  const rows = [...ADROWS].sort((a,b)=>{
-    const av=a[s.key], bv=b[s.key];
-    return (typeof av==="string" ? av.localeCompare(bv) : (Number(av)||0)-(Number(bv)||0)) * s.dir;
-  });
+  const rows = ADROWS
+    .filter(a => ADFASE==="all" || (ADFASE==="none" ? !a.awareness_stage : a.awareness_stage===ADFASE))
+    .sort((a,b)=>{
+      if(s.key==="awareness_stage") return (faseSortVal(a)-faseSortVal(b)) * s.dir;
+      const av=a[s.key], bv=b[s.key];
+      return (typeof av==="string" ? av.localeCompare(bv) : (Number(av)||0)-(Number(bv)||0)) * s.dir;
+    });
   $("adTable").innerHTML =
-    `<thead><tr>${ADCOLS.map(([key,label])=>
-      `<th data-key="${key}" class="${key==='advertentie'||key==='status'?'tl':''}" style="cursor:pointer;user-select:none">${label}${s.key===key ? (s.dir<0?" ↓":" ↑") : ""}</th>`).join("")}</tr></thead>
+    `<thead><tr>${ADCOLS.map(([key,label])=>{
+      const arrow = s.key===key ? (s.dir<0?" ↓":" ↑") : "";
+      const info = key==='awareness_stage'
+        ? ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">${FASE_UITLEG}</span></span>` : "";
+      const tl = (key==='advertentie'||key==='status'||key==='awareness_stage') ? 'tl' : '';
+      return `<th data-key="${key}" class="${tl}" style="cursor:pointer;user-select:none">${label}${arrow}${info}</th>`;
+    }).join("")}</tr></thead>
      <tbody>${(()=>{ const ctx = ongekStats(); return rows.map(a=>{
        const st = STATUSNL[a.status] || [a.status||"—","held"];
        const ok = Number(a.ongekwalificeerd_pct)||0;
@@ -1036,9 +1231,12 @@ function drawAdTable(){
          : f.level===1
          ? `<span class="info" tabindex="0" style="background:var(--warn-soft);color:var(--warn)">!<span class="tip">Let op: ${ok}% van ${a.leads} leads ongekwalificeerd — verhoogd${ctx.basePct>0?` t.o.v. je gemiddelde van ${ctx.basePct.toFixed(1)}%`:""}. Houd de targeting in de gaten; nog te weinig leads voor een harde conclusie.</span></span>`
          : "";
+       const kill = a.kill_reason
+         ? ` <span class="info" tabindex="0" style="background:var(--bad-soft);color:var(--bad)">✕<span class="tip">Kill-reden: ${esc(a.kill_reason)}</span></span>` : "";
        return `<tr data-adid="${a.ad_id}" data-naam="${a.advertentie}" style="cursor:pointer"><td style="text-align:left">${a.advertentie}
-           ${icon}</td>
+           ${icon}${kill}</td>
          <td style="text-align:left"><span class="badge ${st[1]}">${st[0]}</span></td>
+         <td class="tl fase-cell" data-code="${escAttr(a.code)}" style="cursor:pointer" title="Klik om de fase/notities te wijzigen">${fasePill(a.awareness_stage)}</td>
          <td style="font-weight:600">${eur(a.spend)}</td><td>${a.clicks}</td>
          <td>${a.cpc ? "€"+Number(a.cpc).toLocaleString("nl-NL",{minimumFractionDigits:2,maximumFractionDigits:2}) : "—"}</td>
          <td>${adLink(a.leads,'leads',a.ad_id,a.advertentie)}</td><td>${a.leads>0 ? eur(a.cpl) : "—"}</td>
@@ -1046,7 +1244,7 @@ function drawAdTable(){
          <td class="${okCls}">${a.leads>0 ? ok+"%"+relMark : "—"}</td>
          <td>${adLink(a.sales,'verkopen',a.ad_id,a.advertentie)}</td><td>${a.omzet>0 ? eur(a.omzet) : "—"}</td>
          <td>${Number(a.roas)>0 ? Number(a.roas).toFixed(2) : "—"}</td></tr>`;
-     }).join(""); })()}</tbody>`;
+     }).join("") || `<tr><td colspan="${ADCOLS.length}" style="color:var(--muted);padding:14px">Geen advertenties in deze selectie.</td></tr>`; })()}</tbody>`;
   document.querySelectorAll("#adTable th").forEach(th => th.addEventListener("click", () => {
     const key = th.dataset.key;
     if(ADSORT.key === key) ADSORT.dir *= -1; else ADSORT = { key, dir:-1 };
@@ -1054,6 +1252,11 @@ function drawAdTable(){
   }));
   document.querySelectorAll("#adTable tbody tr").forEach(tr => tr.addEventListener("click", () => {
     renderAdDetail(Number(tr.dataset.adid), tr.dataset.naam);
+  }));
+  document.querySelectorAll("#adTable .fase-cell").forEach(el => el.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const row = ADROWS.find(r => r.code === el.dataset.code);
+    if(row) openAdEdit(row, "ad");
   }));
   document.querySelectorAll("#adTable .ad-deal-link").forEach(el => el.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -1156,9 +1359,9 @@ function drawSalesChart(labels, omzet, aantal){
   if(salesChart) salesChart.destroy();
   salesChart = new Chart(el, {
     data:{ labels, datasets:[
-      { type:"bar", label:"Omzet", data:omzet, backgroundColor:accent(), yAxisID:"y", order:2 },
-      { type:"line", label:"Aantal verkopen", data:aantal, borderColor:"#B8862E", backgroundColor:"#B8862E",
-        borderWidth:2, tension:0.3, yAxisID:"y1", order:1 }
+      { type:"bar", label:"Omzet", data:omzet, backgroundColor:areaGrad(accent(),.95,.4), borderRadius:6, borderSkipped:false, yAxisID:"y", order:2 },
+      { type:"line", label:"Aantal verkopen", data:aantal, borderColor:"#B8862E", backgroundColor:areaGrad("#B8862E",.25,0), fill:true,
+        borderWidth:2, tension:0.35, yAxisID:"y1", order:1 }
     ]},
     options:{ responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{ position:"bottom", labels:{ boxWidth:10, font:{size:11} } } },
@@ -1232,6 +1435,11 @@ async function renderOwner(){
     metric("CPL",eur(f.cost_per_lead)) +
     metric("Closing %",(closing||0)+"%") + metric("Afval %",(f.afval_pct||0)+"%") +
     metric("No-show %",(f.no_show_pct||0)+"%");
+  renderFunnel([
+    {label:"Leads", value:f.leads||0, color:"#5B8DEF"},
+    {label:"Afspraken", value:f.appointments||0, color:accent(), sub:f.leads?`${Math.round((f.appointments||0)/f.leads*100)}% van leads`:""},
+    {label:"Sales", value:f.sales||0, color:"#3FA06B", sub:`Closing ${closing||0}%`},
+  ], { big:(f.leads||0).toLocaleString("nl-NL"), cap:"Leads" });
 
   let agents = await rpc("owner_agent_performance", r) || [];
   if(agentVal!=="all") agents = agents.filter(a=>String(a.agent_id)===agentVal);
@@ -1306,6 +1514,10 @@ async function renderAgent(agentId){
     metric("Omzet per afspraak",eur(s.revenue_per_appt)) +
     metric("Closing %",(s.closing_rate_pct||0)+"%") + metric("Afval %",(s.afval_pct||0)+"%") +
     metric("No-show %",(s.no_show_pct||0)+"%");
+  renderFunnel([
+    {label:"Afspraken", value:s.appointments||0, color:accent()},
+    {label:"Sales", value:s.sales||0, color:"#3FA06B", sub:`Closing ${s.closing_rate_pct||0}%`},
+  ], { big:(s.appointments||0).toLocaleString("nl-NL"), cap:"Afspraken" });
   $("cardsTeam").innerHTML =
     metricT("Omzet per afspraak",eur(s.team_revenue_per_appt)) +
     metricT("Closing %",(s.team_closing_rate_pct||0)+"%") +
@@ -1339,6 +1551,12 @@ async function renderPark(parkId){
     metric("Omzet per afspraak (gem.)",eur(perAppt)) +
     metric("Closing %",(f.appointments?Math.round(f.sales/f.appointments*100):0)+"%") +
     metric("No-show %",(f.no_show_pct||0)+"%");
+  const closingP = f.appointments?Math.round(f.sales/f.appointments*100):0;
+  renderFunnel([
+    {label:"Leads", value:f.leads||0, color:"#5B8DEF"},
+    {label:"Afspraken", value:f.appointments||0, color:accent(), sub:f.leads?`${Math.round((f.appointments||0)/f.leads*100)}% van leads`:""},
+    {label:"Sales", value:f.sales||0, color:"#3FA06B", sub:`Closing ${closingP}%`},
+  ], { big:(f.leads||0).toLocaleString("nl-NL"), cap:"Leads" });
   renderMonths(await rpc("monthly_overview", {p_park_id:parkId}) || [], {spend:false, leads:true});
   $("opvolgSec").classList.add("hidden");
   renderInventory(parkId);
@@ -1546,9 +1764,155 @@ document.addEventListener("click", (e) => {
   else toonAgentDeals(agentId, kind, naam, parkId);
 });
 
+/* ---------- hero-donut (funnel) bovenaan Resultaten ---------- */
+let funnelChart;
+function renderFunnel(stages, center){
+  $("heroWrap").classList.remove("hidden");
+  if(funnelChart) funnelChart.destroy();
+  funnelChart = new Chart($("funnelDonut"), {
+    type:"doughnut",
+    data:{ labels: stages.map(s=>s.label),
+      datasets:[{ data: stages.map(s=>Number(s.value)||0), backgroundColor: stages.map(s=>s.color),
+        borderColor:"#fff", borderWidth:3, hoverOffset:5 }] },
+    options:{ responsive:true, maintainAspectRatio:false, cutout:"68%",
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:i=>`${i.label}: ${Number(i.raw).toLocaleString("nl-NL")}` } } } }
+  });
+  $("funnelCenter").innerHTML = `<div class="big">${center.big}</div><div class="cap">${center.cap}</div>`;
+  $("heroStats").innerHTML = stages.map(s=>
+    `<div class="metric"><div class="mtxt"><div class="l"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${s.color};margin-right:7px;vertical-align:middle"></span>${s.label}</div><div class="v">${(Number(s.value)||0).toLocaleString("nl-NL")}</div>${s.sub?`<div class="l" style="margin:5px 0 0">${s.sub}</div>`:""}</div></div>`).join("");
+}
+
+/* ---------- notitie/fase-bewerkpaneel (gedeeld) ---------- */
+let EDIT_CTX = null;
+function openAdEdit(row, source){
+  EDIT_CTX = { code: row.code, source: source || "ad" };
+  $("adEditTitle").textContent = row.advertentie || row.code;
+  $("adEditSub").textContent = "Code: " + row.code + (row.status ? " · " + (STATUSNL[row.status]||[row.status])[0] : "");
+  $("edFase").value   = row.awareness_stage || "";
+  $("edWerkte").value = row.werkte || "";
+  $("edWaarom").value = row.waarom || "";
+  $("edKill").value   = row.kill_reason || "";
+  $("edMsg").classList.add("hidden");
+  $("edSave").disabled = false;
+  $("adEditOverlay").classList.remove("hidden");
+}
+function closeAdEdit(){ $("adEditOverlay").classList.add("hidden"); EDIT_CTX = null; }
+async function saveAdEdit(){
+  if(!EDIT_CTX) return;
+  $("edSave").disabled = true;
+  const args = {
+    p_code: EDIT_CTX.code,
+    p_awareness_stage: $("edFase").value || null,
+    p_werkte: $("edWerkte").value || null,
+    p_waarom: $("edWaarom").value.trim() || null,
+    p_kill_reason: $("edKill").value.trim() || null,
+  };
+  const { error } = await sb.rpc("set_ad_annotation", args);
+  if(error){
+    $("edMsg").textContent = "Opslaan mislukt: " + error.message;
+    $("edMsg").style.color = "var(--bad)";
+    $("edMsg").classList.remove("hidden");
+    $("edSave").disabled = false;
+    return;
+  }
+  // lokale datasets meteen bijwerken zodat beide tabs kloppen zonder herladen
+  const patch = a => { if(a && a.code===EDIT_CTX.code){
+    a.awareness_stage = args.p_awareness_stage; a.werkte = args.p_werkte;
+    a.waarom = args.p_waarom; a.kill_reason = args.p_kill_reason; } };
+  ADROWS.forEach(patch); ARCHROWS.forEach(patch);
+  const src = EDIT_CTX.source;
+  closeAdEdit();
+  if(src==="arch") drawArchGrid(); else drawAdTable();
+}
+
+/* ---------- ARCHIEF · creative-library ---------- */
+let ARCHROWS = [], ARCHPARK = null, ARCHFASE = "all", ARCHSTATUS = "all";
+async function renderArchief(){
+  const v = currentView();
+  let pp;
+  if(v.role==="park"){ pp = v.id; $("archParkTabs").classList.add("hidden"); }
+  else {
+    if(!ARCHPARK || !PARKS.find(p=>p.id===ARCHPARK)) ARCHPARK = (PARKS[0]||{}).id;
+    pp = ARCHPARK;
+    $("archParkTabs").innerHTML = PARKS.map(p=>
+      `<button class="tab ${p.id===ARCHPARK?"active":""}" data-park="${p.id}">${p.name}</button>`).join("");
+    $("archParkTabs").classList.remove("hidden");
+    document.querySelectorAll("#archParkTabs .tab").forEach(b=>b.addEventListener("click", ()=>{
+      ARCHPARK = Number(b.dataset.park); renderArchief();
+    }));
+  }
+  setBranding(pp);
+  ARCHROWS = await rpc("ad_archive", { p_park_id: pp }) || [];
+  // status-filter vullen met de statussen die in dit park voorkomen
+  const statuses = [...new Set(ARCHROWS.map(a=>a.status).filter(Boolean))];
+  if(ARCHSTATUS!=="all" && !statuses.includes(ARCHSTATUS)) ARCHSTATUS = "all";
+  $("archStatusFilter").innerHTML = `<option value="all">Alle statussen</option>`
+    + statuses.map(s=>`<option value="${s}" ${s===ARCHSTATUS?"selected":""}>${(STATUSNL[s]||[s])[0]}</option>`).join("");
+  drawArchGrid();
+}
+function drawArchGrid(){
+  const rows = ARCHROWS
+    .filter(a => ARCHFASE==="all" || (ARCHFASE==="none" ? !a.awareness_stage : a.awareness_stage===ARCHFASE))
+    .filter(a => ARCHSTATUS==="all" || a.status===ARCHSTATUS);
+  $("archFoot").textContent = ARCHROWS.length
+    ? `${rows.length} van ${ARCHROWS.length} advertenties · thumbnail en status uit Meta, resultaten all-time uit Pipedrive.`
+    : "Nog geen advertenties voor deze selectie.";
+  if(!rows.length){ $("archGrid").innerHTML = `<div class="arch-empty">Geen advertenties met deze fase/status.</div>`; return; }
+  const werkteTxt = w => w==='wel' ? '✓ werkte' : w==='niet' ? '✕ werkte niet' : '· nog onbekend';
+  $("archGrid").innerHTML = rows.map(a=>{
+    const st = STATUSNL[a.status] || [a.status||"—","held"];
+    const werkte = a.werkte ? `<span class="worked-${a.werkte}">${werkteTxt(a.werkte)}</span>` : "";
+    const heeftNote = a.werkte || a.waarom || a.kill_reason;
+    const note = heeftNote
+      ? `<div class="arch-note">${werkte}${a.waarom?` ${esc(a.waarom)}`:""}${a.kill_reason?`<div class="kill">Kill: ${esc(a.kill_reason)}</div>`:""}</div>`
+      : `<div class="arch-note" style="color:var(--faint)">Nog geen notitie · klik om toe te voegen</div>`;
+    return `<div class="arch-card" data-code="${escAttr(a.code)}">
+      <div class="arch-thumb${a.thumbnail_url?"":" leeg"}">
+        ${a.thumbnail_url?`<img src="${escAttr(a.thumbnail_url)}" alt="" loading="lazy" onerror="this.parentNode.classList.add('leeg');this.remove()">`:""}
+        <div class="arch-pills">
+          <span class="badge ${st[1]}">${st[0]}</span>
+          ${a.awareness_stage?fasePill(a.awareness_stage):""}
+        </div>
+      </div>
+      <div class="arch-naam" title="${escAttr(a.advertentie)}">${esc(a.advertentie)}</div>
+      <div class="arch-stats">
+        <div class="s"><b>${eur(a.spend)}</b><span>uitgaven</span></div>
+        <div class="s"><b>${a.leads}</b><span>leads</span></div>
+        <div class="s"><b>${a.leads>0?eur(a.cpl):"—"}</b><span>CPL</span></div>
+        <div class="s"><b>${a.afspraken}</b><span>afspraken</span></div>
+        <div class="s"><b>${a.afspraken>0?eur(a.cpa):"—"}</b><span>CPA</span></div>
+        <div class="s"><b>${a.sales}</b><span>sales</span></div>
+      </div>
+      ${note}
+    </div>`;
+  }).join("");
+  document.querySelectorAll("#archGrid .arch-card").forEach(c => c.addEventListener("click", ()=>{
+    const row = ARCHROWS.find(r=>r.code===c.dataset.code);
+    if(row) openAdEdit(row, "arch");
+  }));
+}
+
+/* ---------- filters + modal-bediening initialiseren ---------- */
+function fillFaseFilter(el, allLabel){
+  el.innerHTML = `<option value="all">${allLabel}</option>`
+    + FASES.map(f=>`<option value="${f.key}">${f.afk} · ${f.label}</option>`).join("")
+    + `<option value="none">— zonder fase —</option>`;
+}
+fillFaseFilter($("adFaseFilter"), "Alle fases");
+$("adFaseFilter").addEventListener("change", e=>{ ADFASE = e.target.value; drawAdTable(); });
+fillFaseFilter($("archFaseFilter"), "Alle fases");
+$("archFaseFilter").addEventListener("change", e=>{ ARCHFASE = e.target.value; drawArchGrid(); });
+$("archStatusFilter").addEventListener("change", e=>{ ARCHSTATUS = e.target.value; drawArchGrid(); });
+$("edFase").innerHTML = `<option value="">— geen fase —</option>`
+  + FASES.map(f=>`<option value="${f.key}">${f.afk} · ${f.label}</option>`).join("");
+$("edSave").addEventListener("click", saveAdEdit);
+$("edCancel").addEventListener("click", closeAdEdit);
+$("adEditOverlay").addEventListener("click", e=>{ if(e.target.id==="adEditOverlay") closeAdEdit(); });
+document.addEventListener("keydown", e=>{ if(e.key==="Escape" && !$("adEditOverlay").classList.contains("hidden")) closeAdEdit(); });
+
 /* ---------- dashboard als PDF: print de actieve tab ---------- */
 function printDashboard(){
-  const tabNaam = { resultaten:"Resultaten", advertenties:"Advertenties", financien:"Financiën", prognose:"Prognose", resale:"Resale" }[activeTab] || "Dashboard";
+  const tabNaam = { resultaten:"Resultaten", advertenties:"Advertenties", archief:"Archief", financien:"Financiën", prognose:"Prognose", resale:"Resale" }[activeTab] || "Dashboard";
   const per = $("fPeriod").selectedOptions[0]?.textContent || "";
   const nu = new Date().toLocaleDateString("nl-NL");
   $("printMeta").textContent = `${tabNaam} · periode: ${per} · afgedrukt op ${nu}`;
