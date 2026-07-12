@@ -656,21 +656,31 @@ function periodRange(){
   const iso = d => d.toISOString().slice(0,10);
   return { p_from: iso(from), p_to: iso(to) };
 }
-const metric  = (l,v) => {
+const metric  = (l,v,sub) => {
   const s = String(v).trim(), m = /^(-?\d+(?:[.,]\d+)?)\s*%$/.exec(s);
   if(m){
     const pct = parseFloat(m[1].replace(",","."));
-    return `<div class="metric hasdonut">${donutMini(pct)}<div class="mtxt"><div class="l">${l}</div><div class="v">${v}</div></div></div>`;
+    return `<div class="metric hasdonut">${donutMini(pct)}<div class="mtxt"><div class="l">${l}</div><div class="v">${v}</div>${sub||""}</div></div>`;
   }
-  return `<div class="metric"><div class="mtxt"><div class="l">${l}</div><div class="v">${v}</div></div></div>`;
+  return `<div class="metric"><div class="mtxt"><div class="l">${l}</div><div class="v">${v}</div>${sub||""}</div></div>`;
 };
+// subregel "x definitief" + info-knopje voor onder een sales-cijfer; ds = {sales, definitief}
+function defSub(ds){
+  const s = Number(ds && ds.sales)||0, d = Number(ds && ds.definitief)||0;
+  if(s===0) return "";
+  const ok = d>=s;
+  const tip = ok ? "Alle verkopen in deze selectie zijn definitief."
+                 : `Nog niet alle verkopen in deze selectie zijn definitief (${d} van ${s}).`;
+  return `<div class="l" style="margin:5px 0 0;color:${ok?'var(--good)':'var(--warn)'};font-weight:600">${d} definitief`
+    + ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">${tip}</span></span></div>`;
+}
 /* klikbare deals-cellen/cards: leads/afspraken/verkopen -> lijst met Pipedrive-links */
 const KINDLBL = { leads:"Leads", afspraken:"Afspraken", verkopen:"Verkopen" };
 const dcell = (waarde, kind, agentId, naam, resale) => Number(waarde)>0
   ? `<td><span class="deal-link" data-kind="${kind}" data-agentid="${agentId==null?'':agentId}" data-naam="${String(naam||'').replace(/"/g,'')}" data-resale="${resale?1:0}" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px">${waarde}</span></td>`
   : `<td>${waarde}</td>`;
-const metricDeal = (l,v,kind,agentId,naam,resale,parkId) =>
-  `<div class="metric deal-link" style="cursor:pointer" data-kind="${kind}" data-agentid="${agentId==null?'':agentId}" data-naam="${String(naam||'').replace(/"/g,'')}" data-resale="${resale?1:0}" data-park="${parkId==null?'':parkId}"><div class="l">${l} <span style="font-size:11px;color:var(--muted)">↗</span></div><div class="v">${v}</div></div>`;
+const metricDeal = (l,v,kind,agentId,naam,resale,parkId,sub) =>
+  `<div class="metric deal-link" style="cursor:pointer" data-kind="${kind}" data-agentid="${agentId==null?'':agentId}" data-naam="${String(naam||'').replace(/"/g,'')}" data-resale="${resale?1:0}" data-park="${parkId==null?'':parkId}"><div class="l">${l} <span style="font-size:11px;color:var(--muted)">↗</span></div><div class="v">${v}</div>${sub||""}</div>`;
 const adLink = (v,kind,adId,naam) => Number(v)>0
   ? `<span class="ad-deal-link" data-adid="${adId}" data-kind="${kind}" data-naam="${String(naam||'').replace(/"/g,'')}" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px">${v}</span>`
   : v;
@@ -1089,11 +1099,12 @@ async function renderAds(){
   }
   setBranding(pp);
   const r = periodRange();
-  const [k, daily, ov, mnd] = await Promise.all([
+  const [k, daily, ov, mnd, dsAds] = await Promise.all([
     rpc("ad_kpis",  { ...r, p_park_id: pp }).then(x=>x?.[0]||{}),
     rpc("ad_daily", { ...r, p_park_id: pp }),
     rpc("ad_overview", { ...r, p_park_id: pp }),
     rpc("ad_monthly", { p_park_id: pp, p_from: r.p_from, p_to: r.p_to }),
+    rpc("definitief_stats", { ...r, p_agent_id:null, p_park_id: pp, p_anchor:'lead' }).then(x=>x?.[0]||{}),
   ]);
 
   const spend=Number(k.spend)||0, leads=Number(k.leads)||0, afspr=Number(k.afspraken)||0,
@@ -1105,7 +1116,7 @@ async function renderAds(){
     metric("Kosten per lead", leads ? eur(spend/leads) : "—") +
     metric("Afspraken", afspr) +
     metric("Kosten per afspraak", afspr ? eur(spend/afspr) : "—") +
-    metric("Sales", sales) +
+    metric("Sales", sales, defSub(dsAds)) +
     metric("Kosten per sale", sales ? eur(spend/sales) : "—") +
     metric("Omzet", eur(omzet)) +
     metric("ROAS", spend ? (omzet/spend).toFixed(2) : "—");
@@ -1500,7 +1511,7 @@ async function renderOwner(){
   $("cardsTop").innerHTML =
     metric("Uitgaven",eur(f.spend)) + metricDeal("Leads",f.leads||0,'leads',null,'',false,parkVal==="all"?null:Number(parkVal)) +
     metricDeal("Afspraken",f.appointments||0,'afspraken',null,'',false,parkVal==="all"?null:Number(parkVal)) +
-    metricDeal("Sales",f.sales||0,'verkopen',null,'',false,parkVal==="all"?null:Number(parkVal)) +
+    metricDeal("Sales",f.sales||0,'verkopen',null,'',false,parkVal==="all"?null:Number(parkVal),defSub(dc)) +
     metric("Omzet",eur(f.revenue)) + metric("Omzet per afspraak",eur(perAppt)) +
     metric("CPL",eur(f.cost_per_lead)) +
     metric("Closing %",(closing||0)+"%") + metric("Afval %",(f.afval_pct||0)+"%") +
@@ -1508,7 +1519,7 @@ async function renderOwner(){
   renderFunnel([
     {label:"Leads", value:f.leads||0, color:"#5B8DEF"},
     {label:"Afspraken", value:f.appointments||0, color:accent(), sub:f.leads?`${Math.round((f.appointments||0)/f.leads*100)}% van leads`:""},
-    {label:"Sales", value:f.sales||0, color:"#3FA06B", sub:`Closing ${closing||0}%`},
+    {label:"Sales", value:f.sales||0, color:"#3FA06B", sub:`Closing ${closing||0}%`, subHtml:defSub(dc)},
   ], { big:(f.leads||0).toLocaleString("nl-NL"), cap:"Leads" });
 
   let agents = await rpc("owner_agent_performance", r) || [];
@@ -1583,16 +1594,20 @@ async function renderAgent(agentId){
   setBranding(pp);
   $("teamTitle").textContent = "Teamgemiddelde (alle makelaars, zonder namen"
     + (pp ? " · " + ((PARKS.find(p=>p.id===pp)||{}).name||"") : "") + ")";
-  const s = (await rpc("agent_stats", {p_agent_id:agentId, p_park_id:pp, ...r}))?.[0] || {};
+  const [s, dsAgent] = await Promise.all([
+    rpc("agent_stats", {p_agent_id:agentId, p_park_id:pp, ...r}).then(x=>x?.[0]||{}),
+    rpc("definitief_stats", { ...r, p_agent_id:agentId, p_park_id:pp, p_anchor:'sale' }).then(x=>x?.[0]||{}),
+  ]);
   $("cardsTop").innerHTML =
-    metricDeal("Mijn afspraken",s.appointments||0,'afspraken',agentId,'') + metricDeal("Mijn sales",s.sales||0,'verkopen',agentId,'') +
+    metricDeal("Mijn afspraken",s.appointments||0,'afspraken',agentId,'') +
+    metricDeal("Mijn sales",s.sales||0,'verkopen',agentId,'',false,null,defSub(dsAgent)) +
     metric("Mijn omzet",eur(s.revenue)) + metric("Mijn commissie",eur(s.mijn_commissie)) +
     metric("Omzet per afspraak",eur(s.revenue_per_appt)) +
     metric("Closing %",(s.closing_rate_pct||0)+"%") + metric("Afval %",(s.afval_pct||0)+"%") +
     metric("No-show %",(s.no_show_pct||0)+"%");
   renderFunnel([
     {label:"Afspraken", value:s.appointments||0, color:accent()},
-    {label:"Sales", value:s.sales||0, color:"#3FA06B", sub:`Closing ${s.closing_rate_pct||0}%`},
+    {label:"Sales", value:s.sales||0, color:"#3FA06B", sub:`Closing ${s.closing_rate_pct||0}%`, subHtml:defSub(dsAgent)},
   ], { big:(s.appointments||0).toLocaleString("nl-NL"), cap:"Afspraken" });
   $("cardsTeam").innerHTML =
     metricT("Omzet per afspraak",eur(s.team_revenue_per_appt)) +
@@ -1617,14 +1632,17 @@ async function renderAgent(agentId){
 async function renderPark(parkId){
   const r = periodRange();
   setBranding(parkId);
-  const f = (await rpc("client_park_funnel", {p_park_id:parkId, ...r}))?.[0] || {};
+  const [f, dsPark] = await Promise.all([
+    rpc("client_park_funnel", {p_park_id:parkId, ...r}).then(x=>x?.[0]||{}),
+    rpc("definitief_stats", { ...r, p_agent_id:null, p_park_id:parkId, p_anchor:'sale' }).then(x=>x?.[0]||{}),
+  ]);
   const perAppt = f.appointments ? Math.round(f.revenue/f.appointments) : 0;
   $("cardsTop").innerHTML =
     `<div class="metric"><div class="l">Advertentiekosten
        <span class="info" tabindex="0">i<span class="tip">Advertentiekosten van deze periode. Let op: een lead van nu leidt vaak pas weken tot maanden later tot een verkoop, dus deze kosten horen niet één-op-één bij de omzet van dezelfde periode.</span></span>
      </div><div class="v">${eur(f.spend)}</div></div>` +
     metric("Leads",f.leads||0) + metric("Afspraken",f.appointments||0) +
-    metric("Sales",f.sales||0) + metric("Omzet",eur(f.revenue)) +
+    metric("Sales",f.sales||0,defSub(dsPark)) + metric("Omzet",eur(f.revenue)) +
     metric("Omzet per afspraak (gem.)",eur(perAppt)) +
     metric("Closing %",(f.appointments?Math.round(f.sales/f.appointments*100):0)+"%") +
     metric("No-show %",(f.no_show_pct||0)+"%");
@@ -1632,7 +1650,7 @@ async function renderPark(parkId){
   renderFunnel([
     {label:"Leads", value:f.leads||0, color:"#5B8DEF"},
     {label:"Afspraken", value:f.appointments||0, color:accent(), sub:f.leads?`${Math.round((f.appointments||0)/f.leads*100)}% van leads`:""},
-    {label:"Sales", value:f.sales||0, color:"#3FA06B", sub:`Closing ${closingP}%`},
+    {label:"Sales", value:f.sales||0, color:"#3FA06B", sub:`Closing ${closingP}%`, subHtml:defSub(dsPark)},
   ], { big:(f.leads||0).toLocaleString("nl-NL"), cap:"Leads" });
   renderMonths(await rpc("monthly_overview", {p_park_id:parkId}) || [],
     {spend:false, leads:true, def: await defMaandMap(null, parkId)});
@@ -1858,7 +1876,7 @@ function renderFunnel(stages, center){
   });
   $("funnelCenter").innerHTML = `<div class="big">${center.big}</div><div class="cap">${center.cap}</div>`;
   $("heroStats").innerHTML = stages.map(s=>
-    `<div class="metric"><div class="mtxt"><div class="l"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${s.color};margin-right:7px;vertical-align:middle"></span>${s.label}</div><div class="v">${(Number(s.value)||0).toLocaleString("nl-NL")}</div>${s.sub?`<div class="l" style="margin:5px 0 0">${s.sub}</div>`:""}</div></div>`).join("");
+    `<div class="metric"><div class="mtxt"><div class="l"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${s.color};margin-right:7px;vertical-align:middle"></span>${s.label}</div><div class="v">${(Number(s.value)||0).toLocaleString("nl-NL")}</div>${s.sub?`<div class="l" style="margin:5px 0 0">${s.sub}</div>`:""}${s.subHtml||""}</div></div>`).join("");
 }
 
 /* ---------- automatische inzichten ---------- */
