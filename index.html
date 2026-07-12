@@ -20,10 +20,29 @@
     --shadow-hover:0 2px 6px rgba(20,40,80,.06), 0 14px 34px rgba(20,40,80,.10);
     --r:16px;
   }
+  /* ---------- donker thema (automatisch 's avonds, of via de knop) ---------- */
+  :root[data-theme="dark"]{
+    --bg:#141922; --card:#1C232E; --surface-2:#222B38;
+    --ink:#E8ECF4; --muted:#94A1B5; --faint:#5F6B80;
+    --line:#2A3342; --line-strong:#3A4557;
+    --accent-ink:#A9CDC0; --accent-soft:#22352E; --accent-soft-ink:#9CC3B5;
+    --good:#4FBF83; --good-soft:#1E332A;
+    --bad:#F07B60; --bad-soft:#3A231E;
+    --warn:#E8B45C; --warn-soft:#37301E;
+    --shadow:0 1px 2px rgba(0,0,0,.35), 0 6px 20px rgba(0,0,0,.35);
+    --shadow-hover:0 2px 6px rgba(0,0,0,.4), 0 14px 34px rgba(0,0,0,.5);
+  }
+  :root[data-theme="dark"] .fase-onbewust{background:#2A3140;color:#9DA9BE}
+  :root[data-theme="dark"] .fase-probleembewust{background:#1F2C45;color:#8FADE8}
+  :root[data-theme="dark"] .fase-oplossingsbewust{background:#173432;color:#5CC5C0}
+  :root[data-theme="dark"] .fase-productbewust{background:#37301E;color:#E8B45C}
+  :root[data-theme="dark"] .fase-meest_bewust{background:#1E332A;color:#4FBF83}
+  :root[data-theme="dark"] .insight.info .ic{background:#1F2C45}
+  :root[data-theme="dark"] .info .tip{background:#0C0F14}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,Inter,Roboto,Arial,sans-serif;line-height:1.5;
-    -webkit-font-smoothing:antialiased}
+    -webkit-font-smoothing:antialiased;transition:background .25s}
   h1{font-weight:700;font-size:21px;margin:0;letter-spacing:-.01em}
   .shell{min-height:100vh;display:flex;flex-direction:column}
   /* ---------- bovenbalk met icoon-navigatie ---------- */
@@ -53,7 +72,8 @@
   .who button,.who a.btn{border:1px solid var(--line-strong);background:var(--card);border-radius:10px;
     padding:7px 12px;font:inherit;font-size:13px;cursor:pointer;color:var(--ink);text-decoration:none}
   .who button:hover,.who a.btn:hover{background:var(--surface-2)}
-  .who select{min-width:0}
+  .who select{min-width:0;max-width:175px}
+  @media(max-width:1280px){ .who .btn{padding:7px 9px} .who #whoami{display:none} }
   .main{padding:24px 26px 64px;min-width:0;max-width:1240px;width:100%;margin:0 auto}
   .top{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:18px}
   .sub{font-size:13px;color:var(--muted);margin:4px 0 0}
@@ -210,28 +230,50 @@
   .ep-actions .msg{font-size:12.5px;color:var(--good);font-weight:600}
   /* ---------- mobiel ---------- */
   @media(max-width:860px){
-    .topbar{flex-wrap:wrap;gap:10px 14px;padding:10px 15px}
+    .topbar{flex-wrap:wrap;gap:8px 10px;padding:9px 13px}
     .who{margin-left:auto;flex-wrap:wrap;gap:6px 8px}
+    .who button,.who a.btn{padding:6px 10px;font-size:12.5px}
     #tabs{order:5;flex-basis:100%;width:100%}
-    .main{padding:18px 15px 48px}
+    .tab{padding:8px 11px;font-size:13px}
+    .main{padding:16px 14px 48px}
     .top{flex-direction:column;align-items:stretch;gap:10px;margin-bottom:14px}
     h1{font-size:19px}
-    .hero{grid-template-columns:1fr}
+    .hero{grid-template-columns:1fr;gap:12px}
+    .donuthero{min-height:185px}
     .cards{grid-template-columns:1fr 1fr;gap:10px}
+    .metric{padding:13px 14px}
+    .metric .v{font-size:22px}
     .who select{flex:1 1 auto}
     select,input,textarea{min-width:0}
     .filters select{flex:1 1 44%}
     .grid2{grid-template-columns:1fr}
     th,td{padding:9px 8px}
     .panel{overflow-x:auto}
+    .adbest{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:11px}
+    .arch{grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:11px}
+    .arch-stats{grid-template-columns:1fr 1fr 1fr;gap:4px}
+    .arch-stats .s{padding:5px 4px}
+    .insights{gap:10px}
+    .overlay{padding:12px;align-items:flex-end}
+    .overlay .editpanel{max-height:82vh}
   }
   @media(max-width:420px){
     .cards{grid-template-columns:1fr}
     .herostats{grid-template-columns:1fr}
+    .brand .name small{display:none}
   }
   /* ---------- afdrukken / PDF: alleen de actieve tab, netjes ---------- */
   @media print {
     @page { margin: 12mm; }
+    /* afdrukken altijd in het lichte thema, ook als het scherm donker staat */
+    :root, :root[data-theme="dark"] {
+      --bg:#fff; --card:#fff; --surface-2:#F5F7FB;
+      --ink:#242A36; --muted:#7A8598; --faint:#AAB3C4;
+      --line:#E7ECF4; --line-strong:#D9E0EC;
+      --accent-ink:#173D33; --accent-soft:#E4ECE7; --accent-soft-ink:#1F4A3E;
+      --good:#3FA06B; --good-soft:#E4F4EB; --bad:#E0654B; --bad-soft:#FBE9E4;
+      --warn:#E0A23A; --warn-soft:#FBF1DE; --shadow:none; --shadow-hover:none;
+    }
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     html, body { background:#fff !important; }
     .topbar, #tabs, #sideToggle, .who, .filters, #printBtn, #gate, .info, .editpanel { display:none !important; }
@@ -276,6 +318,7 @@
       <button class="tab" data-tab="resale" title="Resale"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-7 9 7M5 10v9h5v-6h4v6h5v-9"/></svg><span class="lbl">Resale</span></button>
     </nav>
     <div class="who">
+      <button id="themeBtn" class="btn" title="Thema: automatisch (donker in de avond)">◐</button>
       <a id="helpBtn" class="btn" href="handleiding.html" target="_blank" rel="noopener" title="Handleiding & functie-overzicht">Handleiding</a>
       <button id="printBtn" class="btn" onclick="printDashboard()" title="Sla dit dashboard op als PDF">↓ PDF</button>
       <a id="adLink" href="notion-dashboard.html" class="hidden" style="color:var(--accent);text-decoration:none;font-weight:600">Advertenties &#8599;</a>
@@ -618,6 +661,41 @@ const areaGrad = (hex, topA, botA) => (context) => {
   return g;
 };
 
+/* ---------- thema: automatisch donker in de avond, handmatig via de knop ---------- */
+const THEMA_STANDEN = { auto:"◐", light:"☀", dark:"☾" };
+const THEMA_TITELS = { auto:"Thema: automatisch (donker in de avond) · klik voor licht",
+  light:"Thema: licht · klik voor donker", dark:"Thema: donker · klik voor automatisch" };
+const isAvond = () => { const h = new Date().getHours(); return h >= 19 || h < 7; };
+const themaVoorkeur = () => localStorage.getItem("thema") || "auto";
+function effectiefThema(){
+  const p = themaVoorkeur();
+  if(p !== "auto") return p;
+  return (window.matchMedia("(prefers-color-scheme: dark)").matches || isAvond()) ? "dark" : "light";
+}
+const isDark = () => document.documentElement.dataset.theme === "dark";
+const cardKleur = () => isDark() ? "#1C232E" : "#FFFFFF";
+function applyChartTheme(){
+  if(typeof Chart === "undefined") return;
+  Chart.defaults.color = isDark() ? "#94A1B5" : "#7A8598";
+  Chart.defaults.borderColor = isDark() ? "rgba(255,255,255,.07)" : "rgba(20,40,80,.08)";
+}
+function zetThema(){
+  document.documentElement.dataset.theme = effectiefThema();
+  applyChartTheme();
+  const p = themaVoorkeur(), btn = $("themeBtn");
+  if(btn){ btn.textContent = THEMA_STANDEN[p]; btn.title = THEMA_TITELS[p]; }
+}
+zetThema();
+// elke 10 min checken of de avond is gevallen (alleen relevant in auto-stand)
+setInterval(() => { if(themaVoorkeur()==="auto" && document.documentElement.dataset.theme !== effectiefThema()){ zetThema(); refresh(); renderActieveTab(); } }, 600000);
+$("themeBtn").addEventListener("click", () => {
+  const volgorde = { auto:"light", light:"dark", dark:"auto" };
+  localStorage.setItem("thema", volgorde[themaVoorkeur()]);
+  zetThema();
+  // charts hertekenen in de nieuwe kleuren
+  try { refresh(); renderActieveTab(); } catch(e) {}
+});
+
 /* ---------- branding per park (logo + favicon) ---------- */
 const DEFAULT_FAVICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%232C5F52'/%3E%3Ctext x='50' y='72' font-size='62' text-anchor='middle' fill='white' font-family='Georgia,serif' font-weight='700'%3ER%3C/text%3E%3C/svg%3E";
 function setFavicon(href){
@@ -664,6 +742,32 @@ const metric  = (l,v,sub) => {
   }
   return `<div class="metric"><div class="mtxt"><div class="l">${l}</div><div class="v">${v}</div>${sub||""}</div></div>`;
 };
+/* ---------- periode-vergelijking: zelfde lengte, direct ervoor ---------- */
+function vorigePeriode(r){
+  const f = new Date(r.p_from), t = new Date(r.p_to);
+  if(f <= new Date("2001-01-01")) return null;           // all-time heeft geen "vorige periode"
+  const dagen = Math.round((t - f) / 86400000) + 1;
+  const pt = new Date(f); pt.setDate(pt.getDate() - 1);
+  const pf = new Date(pt); pf.setDate(pf.getDate() - (dagen - 1));
+  const iso = d => d.toISOString().slice(0,10);
+  return { p_from: iso(pf), p_to: iso(pt) };
+}
+// subregel "▲ 12% vs vorige periode"; prevBeschikbaar=false (all-time of fetch-fout) -> niets tonen.
+// neutraal=true voor kosten-cijfers: stijging/daling is daar geen goed of slecht nieuws.
+function deltaSub(cur, prev, prevBeschikbaar, neutraal){
+  if(!prevBeschikbaar) return "";
+  cur = Number(cur)||0; prev = Number(prev)||0;
+  if(cur===0 && prev===0) return "";
+  let kern;
+  if(prev===0) kern = `<span style="color:${neutraal?'var(--muted)':'var(--good)'};font-weight:600">nieuw</span>`;
+  else {
+    const d = Math.round((cur - prev) / prev * 100);
+    const kleur = neutraal ? 'var(--muted)' : (d>0 ? 'var(--good)' : 'var(--bad)');
+    kern = d===0 ? `<span style="color:var(--muted)">gelijk</span>`
+      : `<span style="color:${kleur};font-weight:600">${d>0?'▲':'▼'} ${Math.abs(d)}%</span>`;
+  }
+  return `<div class="l" style="margin:5px 0 0">${kern} <span style="color:var(--faint)">vs vorige periode</span></div>`;
+}
 // subregel "x definitief" + info-knopje voor onder een sales-cijfer; ds = {sales, definitief}
 function defSub(ds){
   const s = Number(ds && ds.sales)||0, d = Number(ds && ds.definitief)||0;
@@ -1099,21 +1203,25 @@ async function renderAds(){
   }
   setBranding(pp);
   const r = periodRange();
-  const [k, daily, ov, mnd, dsAds] = await Promise.all([
+  const rPrevAd = vorigePeriode(r);
+  const [k, daily, ov, mnd, dsAds, kPrev] = await Promise.all([
     rpc("ad_kpis",  { ...r, p_park_id: pp }).then(x=>x?.[0]||{}),
     rpc("ad_daily", { ...r, p_park_id: pp }),
     rpc("ad_overview", { ...r, p_park_id: pp }),
     rpc("ad_monthly", { p_park_id: pp, p_from: r.p_from, p_to: r.p_to }),
     rpc("definitief_stats", { ...r, p_agent_id:null, p_park_id: pp, p_anchor:'lead' }).then(x=>x?.[0]||{}),
+    rPrevAd ? rpc("ad_kpis", { ...rPrevAd, p_park_id: pp }).then(x=>x?.[0]) : Promise.resolve(null),
   ]);
+  const heeftPrevAd = !!kPrev;
 
   const spend=Number(k.spend)||0, leads=Number(k.leads)||0, afspr=Number(k.afspraken)||0,
         sales=Number(k.sales)||0, omzet=Number(k.omzet)||0, clicks=Number(k.clicks)||0;
+  const prevCpl = kPrev && Number(kPrev.leads)>0 ? Number(kPrev.spend)/Number(kPrev.leads) : null;
   $("adKpis").innerHTML =
-    metric("Totaal uitgaven", eur(spend)) +
+    metric("Totaal uitgaven", eur(spend), deltaSub(spend,kPrev&&kPrev.spend,heeftPrevAd,true)) +
     metric("Clicks", clicks.toLocaleString("nl-NL")) +
-    metric("Leads", leads) +
-    metric("Kosten per lead", leads ? eur(spend/leads) : "—") +
+    metric("Leads", leads, deltaSub(leads,kPrev&&kPrev.leads,heeftPrevAd)) +
+    metric("Kosten per lead", leads ? eur(spend/leads) : "—", leads&&prevCpl!=null ? deltaSub(spend/leads,prevCpl,true,true) : "") +
     metric("Afspraken", afspr) +
     metric("Kosten per afspraak", afspr ? eur(spend/afspr) : "—") +
     metric("Sales", sales, defSub(dsAds)) +
@@ -1501,18 +1609,22 @@ async function renderOwner(){
   renderLive(r, parkNum);
   setBranding(parkNum);
 
-  let f;
-  if(parkVal==="all") f = (await rpc("owner_total_funnel", r))?.[0];
-  else f = (await rpc("client_park_funnel", {p_park_id:Number(parkVal), ...r}))?.[0];
-  f = f || {};
-  const dc = (await rpc("definitief_check", { ...r, p_park_id: parkVal==="all"?null:Number(parkVal) }))?.[0] || {};
+  const rPrev = vorigePeriode(r);
+  const funnelRpc = rr => parkVal==="all" ? rpc("owner_total_funnel", rr) : rpc("client_park_funnel", {p_park_id:Number(parkVal), ...rr});
+  const [fRes, fpRes, dc] = await Promise.all([
+    funnelRpc(r).then(x=>x?.[0]),
+    rPrev ? funnelRpc(rPrev).then(x=>x?.[0]) : Promise.resolve(null),
+    rpc("definitief_check", { ...r, p_park_id: parkVal==="all"?null:Number(parkVal) }).then(x=>x?.[0]||{}),
+  ]);
+  const f = fRes || {}, fp = fpRes, heeftPrev = !!fp;
   const closing = f.closing_rate_pct ?? (f.appointments ? Math.round(f.sales/f.appointments*100) : 0);
   const perAppt = f.appointments ? Math.round(f.revenue/f.appointments) : 0;
   $("cardsTop").innerHTML =
-    metric("Uitgaven",eur(f.spend)) + metricDeal("Leads",f.leads||0,'leads',null,'',false,parkVal==="all"?null:Number(parkVal)) +
-    metricDeal("Afspraken",f.appointments||0,'afspraken',null,'',false,parkVal==="all"?null:Number(parkVal)) +
-    metricDeal("Sales",f.sales||0,'verkopen',null,'',false,parkVal==="all"?null:Number(parkVal),defSub(dc)) +
-    metric("Omzet",eur(f.revenue)) + metric("Omzet per afspraak",eur(perAppt)) +
+    metric("Uitgaven",eur(f.spend),deltaSub(f.spend,fp&&fp.spend,heeftPrev,true)) +
+    metricDeal("Leads",f.leads||0,'leads',null,'',false,parkVal==="all"?null:Number(parkVal),deltaSub(f.leads,fp&&fp.leads,heeftPrev)) +
+    metricDeal("Afspraken",f.appointments||0,'afspraken',null,'',false,parkVal==="all"?null:Number(parkVal),deltaSub(f.appointments,fp&&fp.appointments,heeftPrev)) +
+    metricDeal("Sales",f.sales||0,'verkopen',null,'',false,parkVal==="all"?null:Number(parkVal),defSub(dc)+deltaSub(f.sales,fp&&fp.sales,heeftPrev)) +
+    metric("Omzet",eur(f.revenue),deltaSub(f.revenue,fp&&fp.revenue,heeftPrev)) + metric("Omzet per afspraak",eur(perAppt)) +
     metric("CPL",eur(f.cost_per_lead)) +
     metric("Closing %",(closing||0)+"%") + metric("Afval %",(f.afval_pct||0)+"%") +
     metric("No-show %",(f.no_show_pct||0)+"%");
@@ -1594,14 +1706,17 @@ async function renderAgent(agentId){
   setBranding(pp);
   $("teamTitle").textContent = "Teamgemiddelde (alle makelaars, zonder namen"
     + (pp ? " · " + ((PARKS.find(p=>p.id===pp)||{}).name||"") : "") + ")";
-  const [s, dsAgent] = await Promise.all([
+  const rPrevA = vorigePeriode(r);
+  const [s, dsAgent, sPrev] = await Promise.all([
     rpc("agent_stats", {p_agent_id:agentId, p_park_id:pp, ...r}).then(x=>x?.[0]||{}),
     rpc("definitief_stats", { ...r, p_agent_id:agentId, p_park_id:pp, p_anchor:'sale' }).then(x=>x?.[0]||{}),
+    rPrevA ? rpc("agent_stats", {p_agent_id:agentId, p_park_id:pp, ...rPrevA}).then(x=>x?.[0]) : Promise.resolve(null),
   ]);
+  const heeftPrevA = !!sPrev;
   $("cardsTop").innerHTML =
-    metricDeal("Mijn afspraken",s.appointments||0,'afspraken',agentId,'') +
-    metricDeal("Mijn sales",s.sales||0,'verkopen',agentId,'',false,null,defSub(dsAgent)) +
-    metric("Mijn omzet",eur(s.revenue)) + metric("Mijn commissie",eur(s.mijn_commissie)) +
+    metricDeal("Mijn afspraken",s.appointments||0,'afspraken',agentId,'',false,null,deltaSub(s.appointments,sPrev&&sPrev.appointments,heeftPrevA)) +
+    metricDeal("Mijn sales",s.sales||0,'verkopen',agentId,'',false,null,defSub(dsAgent)+deltaSub(s.sales,sPrev&&sPrev.sales,heeftPrevA)) +
+    metric("Mijn omzet",eur(s.revenue),deltaSub(s.revenue,sPrev&&sPrev.revenue,heeftPrevA)) + metric("Mijn commissie",eur(s.mijn_commissie)) +
     metric("Omzet per afspraak",eur(s.revenue_per_appt)) +
     metric("Closing %",(s.closing_rate_pct||0)+"%") + metric("Afval %",(s.afval_pct||0)+"%") +
     metric("No-show %",(s.no_show_pct||0)+"%");
@@ -1632,17 +1747,22 @@ async function renderAgent(agentId){
 async function renderPark(parkId){
   const r = periodRange();
   setBranding(parkId);
-  const [f, dsPark] = await Promise.all([
+  const rPrevP = vorigePeriode(r);
+  const [f, dsPark, fPrev] = await Promise.all([
     rpc("client_park_funnel", {p_park_id:parkId, ...r}).then(x=>x?.[0]||{}),
     rpc("definitief_stats", { ...r, p_agent_id:null, p_park_id:parkId, p_anchor:'sale' }).then(x=>x?.[0]||{}),
+    rPrevP ? rpc("client_park_funnel", {p_park_id:parkId, ...rPrevP}).then(x=>x?.[0]) : Promise.resolve(null),
   ]);
+  const heeftPrevP = !!fPrev;
   const perAppt = f.appointments ? Math.round(f.revenue/f.appointments) : 0;
   $("cardsTop").innerHTML =
-    `<div class="metric"><div class="l">Advertentiekosten
+    `<div class="metric"><div class="mtxt"><div class="l">Advertentiekosten
        <span class="info" tabindex="0">i<span class="tip">Advertentiekosten van deze periode. Let op: een lead van nu leidt vaak pas weken tot maanden later tot een verkoop, dus deze kosten horen niet één-op-één bij de omzet van dezelfde periode.</span></span>
-     </div><div class="v">${eur(f.spend)}</div></div>` +
-    metric("Leads",f.leads||0) + metric("Afspraken",f.appointments||0) +
-    metric("Sales",f.sales||0,defSub(dsPark)) + metric("Omzet",eur(f.revenue)) +
+     </div><div class="v">${eur(f.spend)}</div>${deltaSub(f.spend,fPrev&&fPrev.spend,heeftPrevP,true)}</div></div>` +
+    metric("Leads",f.leads||0,deltaSub(f.leads,fPrev&&fPrev.leads,heeftPrevP)) +
+    metric("Afspraken",f.appointments||0,deltaSub(f.appointments,fPrev&&fPrev.appointments,heeftPrevP)) +
+    metric("Sales",f.sales||0,defSub(dsPark)+deltaSub(f.sales,fPrev&&fPrev.sales,heeftPrevP)) +
+    metric("Omzet",eur(f.revenue),deltaSub(f.revenue,fPrev&&fPrev.revenue,heeftPrevP)) +
     metric("Omzet per afspraak (gem.)",eur(perAppt)) +
     metric("Closing %",(f.appointments?Math.round(f.sales/f.appointments*100):0)+"%") +
     metric("No-show %",(f.no_show_pct||0)+"%");
@@ -1870,7 +1990,7 @@ function renderFunnel(stages, center){
     type:"doughnut",
     data:{ labels: stages.map(s=>s.label),
       datasets:[{ data: stages.map(s=>Number(s.value)||0), backgroundColor: stages.map(s=>s.color),
-        borderColor:"#fff", borderWidth:3, hoverOffset:5 }] },
+        borderColor:cardKleur(), borderWidth:3, hoverOffset:5 }] },
     options:{ responsive:true, maintainAspectRatio:false, cutout:"68%",
       plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:i=>`${i.label}: ${Number(i.raw).toLocaleString("nl-NL")}` } } } }
   });
