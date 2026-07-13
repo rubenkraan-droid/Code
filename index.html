@@ -73,6 +73,7 @@
     padding:7px 12px;font:inherit;font-size:13px;cursor:pointer;color:var(--ink);text-decoration:none}
   .who button:hover,.who a.btn:hover{background:var(--surface-2)}
   .who select{min-width:0;max-width:175px}
+  .who .btn .bico{display:none;vertical-align:-2px}   /* icoon alleen op smalle schermen */
   @media(max-width:1280px){ .who .btn{padding:7px 9px} .who #whoami{display:none} }
   .main{padding:24px 26px 64px;min-width:0;max-width:1240px;width:100%;margin:0 auto}
   .top{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:18px}
@@ -277,6 +278,13 @@
     .overlay{padding:12px;align-items:flex-end}
     .overlay .editpanel{max-height:82vh}
   }
+  /* smalle telefoons: actieknoppen als icoon (tekst weg) zodat de bovenbalk niet
+     in 3-4 rijen afbreekt; het thema-icoon ◐ heeft al geen tekst */
+  @media(max-width:520px){
+    .who .btn .blbl{display:none}
+    .who .btn .bico{display:inline-block}
+    .who .btn{padding:8px 10px}
+  }
   @media(max-width:420px){
     .herostats{grid-template-columns:1fr}
     .brand .name small{display:none}
@@ -343,13 +351,13 @@
     </nav>
     <div class="who">
       <button id="themeBtn" class="btn" title="Thema: automatisch — donker van 18:00 tot 09:00">◐</button>
-      <button id="rapportBtn" class="btn hidden" title="Kant-en-klare samenvatting van de gekozen periode — om te delen of te plakken in een bericht">Rapport</button>
-      <a id="helpBtn" class="btn" href="handleiding.html" target="_blank" rel="noopener" title="Handleiding & functie-overzicht">Handleiding</a>
-      <button id="printBtn" class="btn" onclick="printDashboard()" title="Sla dit dashboard op als PDF">↓ PDF</button>
+      <button id="rapportBtn" class="btn hidden" title="Kant-en-klare samenvatting van de gekozen periode — om te delen of te plakken in een bericht"><svg class="bico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2h8l4 4v16H6z"/><path d="M14 2v4h4M9 12h6M9 16h6"/></svg><span class="blbl">Rapport</span></button>
+      <a id="helpBtn" class="btn" href="handleiding.html" target="_blank" rel="noopener" title="Handleiding & functie-overzicht"><svg class="bico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5a2 2 0 0 1 2-2h6v16H6a2 2 0 0 0-2 2zM20 3h-6v16h6a0 0 0 0 0 0 0z"/></svg><span class="blbl">Handleiding</span></a>
+      <button id="printBtn" class="btn" onclick="printDashboard()" title="Sla dit dashboard op als PDF"><svg class="bico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v11M8 10l4 4 4-4M5 21h14"/></svg><span class="blbl">↓ PDF</span></button>
       <a id="adLink" href="notion-dashboard.html" class="hidden" style="color:var(--accent);text-decoration:none;font-weight:600">Advertenties &#8599;</a>
       <span id="whoami"></span>
       <select id="viewAs"></select>
-      <button id="logout">Uitloggen</button>
+      <button id="logout" class="btn" title="Uitloggen"><svg class="bico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 4h3a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3M10 17l-5-5 5-5M4 12h11"/></svg><span class="blbl">Uitloggen</span></button>
     </div>
   </header>
   <main class="main">
