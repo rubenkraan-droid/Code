@@ -1048,15 +1048,17 @@ async function afschermGeenToegang(email){
      <button id="logoutNA">Uitloggen</button>`;
   $("logoutNA").addEventListener("click", async ()=>{ await sb.auth.signOut(); location.href = location.pathname + "?login"; });
 }
+let LOGIN_NO_FINANCE = false;   // eigenaar zonder financiën-toegang (login-modus)
 async function startAsUser(email){
-  const acc = await rpc("my_access") || [];
+  const acc = await rpc("my_login_role") || [];
   const row = acc[0];
-  if(!row) return afschermGeenToegang(email);          // ingelogd maar geen grant
+  if(!row || !row.role) return afschermGeenToegang(email);   // ingelogd maar geen rol
+  LOGIN_NO_FINANCE = !!row.no_finance;
   $("gate").classList.add("hidden");
   $("app").classList.remove("hidden");
   $("logout").classList.remove("hidden");
-  if(row.is_owner){
-    $("whoami").textContent = email + " · Eigenaar";
+  if(row.role === "owner"){
+    $("whoami").textContent = email + " · Eigenaar" + (row.no_finance ? " · excl. financiën" : "");
     PARKS  = await rpc("owner_parks")  || [];
     AGENTS = await rpc("owner_agents") || [];
     PARKS.push(DEMO_PARK);
@@ -1067,6 +1069,14 @@ async function startAsUser(email){
     $("viewAs").value = "owner";
     $("viewAs").classList.remove("hidden");            // eigenaar mag view-as gebruiken
     $("viewAs").addEventListener("change", applyRole);
+  } else if(row.role === "agent"){
+    // makelaar: uitsluitend eigen cijfers, dropdown vergrendeld
+    $("whoami").textContent = email + " · Makelaar " + row.agent_name;
+    PARKS  = [DEMO_PARK];
+    AGENTS = [{ id: row.agent_id, name: row.agent_name }];
+    $("viewAs").innerHTML = `<option value="agent:${row.agent_id}">${esc(row.agent_name)}</option>`;
+    $("viewAs").value = "agent:" + row.agent_id;
+    $("viewAs").classList.add("hidden");               // op slot
   } else {
     // parkgebruiker: uitsluitend eigen park, dropdown vergrendeld
     $("whoami").textContent = email + " · " + row.park_name;
@@ -1155,6 +1165,10 @@ async function applyRole(){
     $("title").textContent = "Park dashboard";
     $("subtitle").textContent = "Parkweergave · " + ((PARKS.find(p=>p.id===v.id)||{}).name||"");
     refresh = () => renderPark(v.id);
+  }
+  if(LOGIN_NO_FINANCE){   // eigenaar zonder financiën: tab altijd verborgen
+    document.querySelector('.tab[data-tab="financien"]').classList.add("hidden");
+    if(activeTab==="financien"){ activeTab="resultaten"; }
   }
   await refresh();
   herstelTab();
