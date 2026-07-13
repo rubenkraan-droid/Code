@@ -330,7 +330,6 @@
       <button class="tab" data-tab="advertenties" title="Advertenties"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M7 13h4M7 16h7"/></svg><span class="lbl">Advertenties</span></button>
       <button class="tab" data-tab="archief" title="Archief · creative-library"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></svg><span class="lbl">Archief</span></button>
       <button class="tab" data-tab="financien" title="Financiën"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5c0-1.4 1.2-2 2.5-2s2.5.7 2.5 1.8c0 2.4-5 1.3-5 3.7 0 1.1 1.2 1.8 2.5 1.8s2.5-.6 2.5-2"/></svg><span class="lbl">Financiën</span></button>
-      <button class="tab" data-tab="prognose" title="Prognose"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 17l5-5 4 4 8-9M14 7h6v6"/></svg><span class="lbl">Prognose</span></button>
       <button class="tab" data-tab="resale" title="Resale"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-7 9 7M5 10v9h5v-6h4v6h5v-9"/></svg><span class="lbl">Resale</span></button>
     </nav>
     <div class="who">
@@ -540,21 +539,6 @@
     <div class="sec">Per deal</div>
     <div class="panel"><div class="scroll"><table id="finTable"></table></div></div>
     <p class="foot">Notarisdatum en ontbindende voorwaarden komen uit de handmatige Pipedrive-velden; staat daar niets, dan toont het dashboard "Nog niet bekend".</p>
-  </div>
-
-  <div id="tabPrognose" class="hidden">
-    <div class="sec">Prognose: wat levert meer advertentiebudget op?
-      <span class="info" tabindex="0">i<span class="tip">Gebaseerd op de echte cijfers van de gekozen periode en park: advertentie-uitgaven uit Meta en verkopen (met verkoopsom) uit Pipedrive. De prognose rekent lineair: in werkelijkheid stijgen de kosten per verkoop meestal licht naarmate je budget groeit.</span></span>
-    </div>
-    <div class="cards" id="progBasis"></div>
-    <div class="chartbox" style="margin-bottom:14px;padding:20px 22px">
-      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:6px">
-        <span>Advertentiebudget per maand</span><span id="progSpendLabel" style="font-weight:700;font-size:16px;color:var(--ink)"></span>
-      </div>
-      <input type="range" id="progSlider" min="0" max="100" step="1" style="width:100%;accent-color:var(--accent)" />
-    </div>
-    <div class="cards" id="progOut"></div>
-    <p class="foot">De prognose is een rekenvoorbeeld op basis van je echte kosten per verkoop, geen garantie. Bij "Alle parken" worden uitgaven en verkopen van alle parken samengenomen; kies een specifiek park voor een zuiverdere berekening.</p>
   </div>
 
   <div id="tabResale" class="hidden">
@@ -1133,11 +1117,10 @@ async function applyRole(){
   $("fPark").classList.toggle("hidden", parkV);
   $("fAgent").classList.toggle("hidden", !owner);
   $("rapportBtn").classList.toggle("hidden", !owner);   // rapport bevat omzet/marge-context: alleen eigenaar
-  // makelaar ziet Resultaten + Financiën (eigen commissie); geen advertenties/archief/prognose.
+  // makelaar ziet Resultaten + Financiën (eigen commissie); geen advertenties/archief.
   document.querySelector('.tab[data-tab="advertenties"]').classList.toggle("hidden", agentV);
   document.querySelector('.tab[data-tab="archief"]').classList.toggle("hidden", agentV);
   document.querySelector('.tab[data-tab="financien"]').classList.toggle("hidden", parkV);
-  document.querySelector('.tab[data-tab="prognose"]').classList.toggle("hidden", agentV);
   document.querySelector('.tab[data-tab="resale"]').classList.toggle("hidden", parkV);
   $("tabs").classList.remove("hidden");
   activeTab = "resultaten";
@@ -1145,7 +1128,6 @@ async function applyRole(){
   $("tabResultaten").classList.remove("hidden");
   $("tabAdvertenties").classList.add("hidden");
   $("tabArchief").classList.add("hidden");
-  $("tabPrognose").classList.add("hidden");
   $("tabResale").classList.add("hidden");
   if(owner){
     $("title").textContent = "Master dashboard";
@@ -1180,12 +1162,11 @@ function fillSelect(el, opts, allLabel){
     + opts.map(o=>`<option value="${o.value}">${o.label}</option>`).join("");
 }
 // bij filterwijziging (periode/park/agent) ook de actieve neventab opnieuw tekenen,
-// niet alleen de Resultaten (refresh); zo volgen Advertenties/Financiën/Prognose het filter
+// niet alleen de Resultaten (refresh); zo volgen Advertenties/Financiën/Resale het filter
 function renderActieveTab(){
   if(activeTab==="advertenties") renderAds();
   else if(activeTab==="archief") renderArchief();
   else if(activeTab==="financien"){ const cv=currentView(); if(cv.role==="agent") renderFinanceAgent(cv.id); else renderFinance(); }
-  else if(activeTab==="prognose") renderPrognose();
   else if(activeTab==="resale") renderResale();
 }
 $("fPeriod").addEventListener("change", e=>{
@@ -1215,7 +1196,6 @@ function toonTab(tab, opts){
   $("tabAdvertenties").classList.toggle("hidden", tab!=="advertenties");
   $("tabArchief").classList.toggle("hidden", tab!=="archief");
   $("tabFinance").classList.toggle("hidden", tab!=="financien");
-  $("tabPrognose").classList.toggle("hidden", tab!=="prognose");
   $("tabResale").classList.toggle("hidden", tab!=="resale");
   $("fAgent").classList.toggle("hidden", tab!=="resultaten" || !currentView || currentView().role!=="owner");
   $("fPark").classList.toggle("hidden", (currentView && currentView().role==="park") || tab==="advertenties" || tab==="archief" || tab==="financien" || tab==="resale");
@@ -1223,7 +1203,6 @@ function toonTab(tab, opts){
   if(tab==="advertenties") renderAds();
   if(tab==="archief") renderArchief();
   if(tab==="financien"){ const cv=currentView(); if(cv.role==="agent") renderFinanceAgent(cv.id); else renderFinance(); }
-  if(tab==="prognose") renderPrognose();
   if(tab==="resale") renderResale();
 }
 // een verborgen tab (niet beschikbaar voor deze rol) is geen geldige bestemming
@@ -1381,60 +1360,6 @@ async function renderFinanceAgent(agentId){
        <td style="text-align:left">${dtVoorwaarde(r.rescission_date, r.status_label)}</td>
        <td><a href="${r.pipedrive_url}" target="_blank" rel="noopener">Pipedrive ↗</a></td>
      </tr>`).join("") || `<tr><td colspan="8" style="color:var(--muted);padding:14px">Nog geen deals mondeling verkocht of verder.</td></tr>`}</tbody>`;
-}
-
-/* ---------- PROGNOSE (echte data: Meta-spend + verkopen/verkoopsom uit Pipedrive via ad_kpis; geen marge) ---------- */
-let PROG = null;
-async function renderPrognose(){
-  const v = currentView();
-  const pp = v.role==="park" ? v.id : ($("fPark").value==="all" ? null : Number($("fPark").value));
-  const parkNaam = pp==null ? "alle parken" : ((PARKS.find(p=>p.id===pp)||{}).name || "dit park");
-  const r = periodRange();
-  const k = (await rpc("ad_kpis", { ...r, p_park_id: pp }))?.[0] || {};
-  const spend = Number(k.spend)||0, sales = Number(k.sales)||0,
-        verkoopsom = Number(k.omzet)||0; // ad_kpis.omzet = som verkoopsom (amount)
-
-  // Zinnige prognose kan alleen als er in deze selectie zowel echte uitgaven als echte
-  // verkopen zijn. Anders: eerlijk melden waarom, geen verzonnen cijfers.
-  const sl = $("progSlider");
-  if(spend<=0 || sales<=0){
-    PROG = null;
-    let uitleg;
-    if(spend<=0 && sales<=0) uitleg = `Nog geen advertentie-uitgaven én geen verkopen in deze selectie (${parkNaam}). Kies eventueel een andere periode.`;
-    else if(spend<=0)        uitleg = `Er zijn wel verkopen (${sales}), maar geen advertentie-uitgaven in deze selectie (${parkNaam}) — bijvoorbeeld omdat er nog geen Meta-koppeling is. Zonder uitgaven valt geen kosten-per-verkoop te berekenen.`;
-    else                     uitleg = `Er zijn wel advertentie-uitgaven (${eur(spend)}), maar nog geen verkopen gekoppeld in deze selectie (${parkNaam}). Zodra een lead uit deze periode tot verkoop leidt, verschijnt hier de prognose.`;
-    $("progBasis").innerHTML = `<div class="metric" style="grid-column:1/-1"><div class="l">${uitleg}</div></div>`;
-    $("progSpendLabel").textContent = "—";
-    $("progOut").innerHTML = "";
-    sl.value = 0; sl.disabled = true;
-    return;
-  }
-  sl.disabled = false;
-
-  PROG = { cpa: spend/sales, verkoopsomPer: verkoopsom/sales, basisSpend: spend };
-  $("progBasis").innerHTML =
-    metric("Advertentie-uitgaven", eur(spend)) +
-    metric("Verkopen", sales) +
-    metric("Kosten per verkoop", eur(PROG.cpa)) +
-    metric("Gem. verkoopsom", eur(PROG.verkoopsomPer));
-  sl.min = 0; sl.max = Math.max(Math.round(spend*3), 1000); sl.step = Math.max(Math.round(spend/40/50)*50, 50);
-  sl.value = Math.round(spend);
-  sl.oninput = updatePrognose;
-  updatePrognose();
-}
-function updatePrognose(){
-  if(!PROG) return;
-  const budget = Number($("progSlider").value);
-  $("progSpendLabel").textContent = eur(budget);
-  const verkopen = budget / PROG.cpa;
-  const verkoopsom = verkopen * PROG.verkoopsomPer;
-  const basisVerkoopsom = (PROG.basisSpend/PROG.cpa) * PROG.verkoopsomPer;
-  const perEuro = budget>0 ? (verkoopsom/budget).toFixed(1) : "0";
-  $("progOut").innerHTML =
-    `<div class="metric team"><div class="l">Verwachte verkopen</div><div class="v">${verkopen.toFixed(1)}</div></div>` +
-    `<div class="metric team"><div class="l">Verwachte verkoopsom</div><div class="v">${eur(verkoopsom)}</div></div>` +
-    `<div class="metric"><div class="l">Verkoopsom per advertentie-euro</div><div class="v">${perEuro}</div></div>` +
-    `<div class="metric"><div class="l">Extra verkoopsom t.o.v. nu</div><div class="v">${eur(verkoopsom - basisVerkoopsom)}</div></div>`;
 }
 
 /* ---------- ADVERTENTIES ---------- */
@@ -2736,7 +2661,7 @@ document.addEventListener("keydown", e=>{
 
 /* ---------- dashboard als PDF: print de actieve tab ---------- */
 function printDashboard(){
-  const tabNaam = { resultaten:"Resultaten", advertenties:"Advertenties", archief:"Archief", financien:"Financiën", prognose:"Prognose", resale:"Resale" }[activeTab] || "Dashboard";
+  const tabNaam = { resultaten:"Resultaten", advertenties:"Advertenties", archief:"Archief", financien:"Financiën", resale:"Resale" }[activeTab] || "Dashboard";
   const per = $("fPeriod").selectedOptions[0]?.textContent || "";
   const nu = new Date().toLocaleDateString("nl-NL");
   $("printMeta").textContent = `${tabNaam} · periode: ${per} · afgedrukt op ${nu}`;
