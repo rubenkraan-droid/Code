@@ -86,7 +86,9 @@ Aan- en verkoop van bestaande woningen (Pipedrive-pijplijn Resale). Zuivere funn
   "Opslaan als PDF". Afdrukken gebeurt altijd in het lichte thema.
 - **Rapport** (rechtsboven, alleen eigenaar): genereert een deelbare tekst-samenvatting van de
   gekozen periode (funnel, kwaliteit, advertenties, team, aandachtspunten) — kopieer met één klik.
-- **◐-knop** (rechtsboven): thema — automatisch (donker in de avond), licht of donker.
+- **◐-knop** (rechtsboven): thema — automatisch (volgt je systeem/Mac), licht of donker.
+- Klik op een **advertentie** (Advertenties-tab): naast het dagverloop verschijnt de creative-foto;
+  klik erop voor de grote versie.
 - **Handleiding** (rechtsboven): opent dit document.
 - **Filters** (bovenaan): periode, park, makelaar. Bij een eindige periode tonen de KPI-kaarten
   automatisch ▲/▼ t.o.v. de even lange periode ervoor, plus een mini-trendlijn per maand.

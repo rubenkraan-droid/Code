@@ -187,6 +187,20 @@
   .adbest-naam{font-size:14px;color:var(--ink);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .adbest-hoofd{font-family:var(--serif);font-size:21px;margin:3px 0;line-height:1.15;color:var(--ink)}
   .adbest-sub{font-size:12px;color:var(--muted)}
+  /* thema-veilige mini-sluitknop */
+  .mini-close{margin-left:10px;border:1px solid var(--line-strong);background:var(--card);color:var(--ink);
+    border-radius:8px;padding:3px 10px;font:inherit;font-size:12px;cursor:pointer}
+  .mini-close:hover{background:var(--surface-2)}
+  /* advertentiedetail: creative-foto naast de grafiek */
+  .addetail-top{display:flex;gap:14px;margin-bottom:14px;align-items:stretch}
+  @media(max-width:720px){.addetail-top{flex-direction:column}}
+  .addetail-top .chartbox{flex:1;min-width:0;margin:0}
+  .addetail-thumb{flex:none;width:230px;border-radius:var(--r);overflow:hidden;border:1px solid var(--line);
+    background:linear-gradient(135deg,var(--surface-2),var(--line));position:relative;cursor:zoom-in;box-shadow:var(--shadow)}
+  @media(max-width:720px){.addetail-thumb{width:100%;max-height:280px}}
+  .addetail-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .addetail-thumb .zoomhint{position:absolute;right:8px;bottom:8px;background:rgba(20,28,42,.66);color:#fff;
+    font-size:11px;padding:3px 8px;border-radius:8px}
   /* archief-kaart */
   .arch{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px}
   .arch-card{display:flex;flex-direction:column;gap:10px;background:var(--card);border:1px solid var(--line);
@@ -319,7 +333,7 @@
       <button class="tab" data-tab="resale" title="Resale"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-7 9 7M5 10v9h5v-6h4v6h5v-9"/></svg><span class="lbl">Resale</span></button>
     </nav>
     <div class="who">
-      <button id="themeBtn" class="btn" title="Thema: automatisch (donker in de avond)">◐</button>
+      <button id="themeBtn" class="btn" title="Thema: automatisch — volgt je systeem">◐</button>
       <button id="rapportBtn" class="btn hidden" title="Kant-en-klare samenvatting van de gekozen periode — om te delen of te plakken in een bericht">Rapport</button>
       <a id="helpBtn" class="btn" href="handleiding.html" target="_blank" rel="noopener" title="Handleiding & functie-overzicht">Handleiding</a>
       <button id="printBtn" class="btn" onclick="printDashboard()" title="Sla dit dashboard op als PDF">↓ PDF</button>
@@ -482,7 +496,7 @@
     </div>
     <div id="adDealsSec" class="hidden" style="margin-top:26px">
       <div class="sec"><span id="adDealsTitle">Deals</span>
-        <button onclick="$('adDealsSec').classList.add('hidden')" style="margin-left:10px;border:1px solid var(--line);background:#fff;border-radius:7px;padding:3px 10px;font:inherit;font-size:12px;cursor:pointer">Sluiten ×</button>
+        <button onclick="$('adDealsSec').classList.add('hidden')" class="mini-close">Sluiten ×</button>
       </div>
       <div class="panel" style="margin-bottom:26px"><div class="scroll"><table id="adDealsTable"></table></div></div>
     </div>
@@ -494,9 +508,12 @@
     </div>
     <div id="adDetailSec" class="hidden">
       <div class="sec"><span id="adDetailTitle"></span>
-        <button onclick="closeAdDetail()" style="margin-left:10px;border:1px solid var(--line);background:#fff;border-radius:7px;padding:3px 10px;font:inherit;font-size:12px;cursor:pointer">Sluiten ×</button>
+        <button onclick="closeAdDetail()" class="mini-close">Sluiten ×</button>
       </div>
-      <div class="chartbox" style="margin-bottom:14px"><canvas id="adDetailChart" height="200"></canvas></div>
+      <div class="addetail-top">
+        <a id="adDetailThumb" class="addetail-thumb hidden" target="_blank" rel="noopener"></a>
+        <div class="chartbox"><canvas id="adDetailChart" height="200"></canvas></div>
+      </div>
       <div class="panel" style="margin-bottom:26px"><div class="scroll"><table id="adDetailTable"></table></div></div>
     </div>
     <p class="foot" id="adFoot"></p>
@@ -684,16 +701,16 @@ const areaGrad = (hex, topA, botA) => (context) => {
   return g;
 };
 
-/* ---------- thema: automatisch donker in de avond, handmatig via de knop ---------- */
+/* ---------- thema: automatisch = volgt de Mac (systeem), of handmatig via de knop ---------- */
 const THEMA_STANDEN = { auto:"◐", light:"☀", dark:"☾" };
-const THEMA_TITELS = { auto:"Thema: automatisch (donker in de avond) · klik voor licht",
+const THEMA_TITELS = { auto:"Thema: automatisch — volgt je systeem · klik voor licht",
   light:"Thema: licht · klik voor donker", dark:"Thema: donker · klik voor automatisch" };
-const isAvond = () => { const h = new Date().getHours(); return h >= 19 || h < 7; };
+const systeemDonker = window.matchMedia("(prefers-color-scheme: dark)");
 const themaVoorkeur = () => localStorage.getItem("thema") || "auto";
 function effectiefThema(){
   const p = themaVoorkeur();
   if(p !== "auto") return p;
-  return (window.matchMedia("(prefers-color-scheme: dark)").matches || isAvond()) ? "dark" : "light";
+  return systeemDonker.matches ? "dark" : "light";   // auto = precies wat de Mac doet
 }
 const isDark = () => document.documentElement.dataset.theme === "dark";
 const cardKleur = () => isDark() ? "#1C232E" : "#FFFFFF";
@@ -709,8 +726,12 @@ function zetThema(){
   if(btn){ btn.textContent = THEMA_STANDEN[p]; btn.title = THEMA_TITELS[p]; }
 }
 zetThema();
-// elke 10 min checken of de avond is gevallen (alleen relevant in auto-stand)
-setInterval(() => { if(themaVoorkeur()==="auto" && document.documentElement.dataset.theme !== effectiefThema()){ zetThema(); refresh(); renderActieveTab(); } }, 600000);
+// live meebewegen als de Mac tussen licht/donker wisselt (alleen in auto-stand)
+systeemDonker.addEventListener("change", () => {
+  if(themaVoorkeur()==="auto" && document.documentElement.dataset.theme !== effectiefThema()){
+    zetThema(); try { refresh(); renderActieveTab(); } catch(e) {}
+  }
+});
 $("themeBtn").addEventListener("click", () => {
   const volgorde = { auto:"light", light:"dark", dark:"auto" };
   localStorage.setItem("thema", volgorde[themaVoorkeur()]);
@@ -1337,6 +1358,16 @@ async function renderAdDetail(adId, naam){
   const r = periodRange();
   const dd = await rpc("ad_daily_detail", { p_ad_id: adId, ...r }) || [];
   $("adDetailTitle").textContent = `Dagverloop · ${naam}`;
+  // creative-foto tonen (thumbnail uit ad_overview van dezelfde rij), klikbaar voor groot
+  const rij = ADROWS.find(a => Number(a.ad_id)===Number(adId) || a.advertentie===naam);
+  const thumb = $("adDetailThumb"), url = rij && rij.thumbnail_url;
+  if(url){
+    thumb.href = url;
+    thumb.innerHTML = `<img src="${escAttr(url)}" alt="${escAttr(naam)}" onerror="this.closest('.addetail-thumb').classList.add('hidden')"><span class="zoomhint">Klik voor groot ↗</span>`;
+    thumb.classList.remove("hidden");
+  } else {
+    thumb.classList.add("hidden"); thumb.innerHTML = "";
+  }
   $("adDetailSec").classList.remove("hidden");
   const dt2 = d => new Date(d).toLocaleDateString("nl-NL",{day:"numeric",month:"short"});
   if(adDetailChart) adDetailChart.destroy();
