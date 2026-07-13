@@ -544,7 +544,7 @@
 
   <div id="tabPrognose" class="hidden">
     <div class="sec">Prognose: wat levert meer advertentiebudget op?
-      <span class="info" tabindex="0">i<span class="tip">Gebaseerd op de echte cijfers van de gekozen periode en park: advertentie-uitgaven uit Meta en verkopen (met verkoopsom en marge) uit Pipedrive. De prognose rekent lineair: in werkelijkheid stijgen de kosten per verkoop meestal licht naarmate je budget groeit.</span></span>
+      <span class="info" tabindex="0">i<span class="tip">Gebaseerd op de echte cijfers van de gekozen periode en park: advertentie-uitgaven uit Meta en verkopen (met verkoopsom) uit Pipedrive. De prognose rekent lineair: in werkelijkheid stijgen de kosten per verkoop meestal licht naarmate je budget groeit.</span></span>
     </div>
     <div class="cards" id="progBasis"></div>
     <div class="chartbox" style="margin-bottom:14px;padding:20px 22px">
@@ -1369,7 +1369,7 @@ async function renderFinanceAgent(agentId){
      </tr>`).join("") || `<tr><td colspan="8" style="color:var(--muted);padding:14px">Nog geen deals mondeling verkocht of verder.</td></tr>`}</tbody>`;
 }
 
-/* ---------- PROGNOSE (echte data: Meta-spend + verkopen/verkoopsom/marge uit Pipedrive via ad_kpis) ---------- */
+/* ---------- PROGNOSE (echte data: Meta-spend + verkopen/verkoopsom uit Pipedrive via ad_kpis; geen marge) ---------- */
 let PROG = null;
 async function renderPrognose(){
   const v = currentView();
@@ -1378,7 +1378,7 @@ async function renderPrognose(){
   const r = periodRange();
   const k = (await rpc("ad_kpis", { ...r, p_park_id: pp }))?.[0] || {};
   const spend = Number(k.spend)||0, sales = Number(k.sales)||0,
-        verkoopsom = Number(k.omzet)||0, marge = Number(k.marge)||0; // ad_kpis.omzet = som verkoopsom (amount)
+        verkoopsom = Number(k.omzet)||0; // ad_kpis.omzet = som verkoopsom (amount)
 
   // Zinnige prognose kan alleen als er in deze selectie zowel echte uitgaven als echte
   // verkopen zijn. Anders: eerlijk melden waarom, geen verzonnen cijfers.
@@ -1397,13 +1397,12 @@ async function renderPrognose(){
   }
   sl.disabled = false;
 
-  PROG = { cpa: spend/sales, verkoopsomPer: verkoopsom/sales, margePer: marge/sales, basisSpend: spend };
+  PROG = { cpa: spend/sales, verkoopsomPer: verkoopsom/sales, basisSpend: spend };
   $("progBasis").innerHTML =
     metric("Advertentie-uitgaven", eur(spend)) +
     metric("Verkopen", sales) +
     metric("Kosten per verkoop", eur(PROG.cpa)) +
-    metric("Gem. verkoopsom", eur(PROG.verkoopsomPer)) +
-    metric("Gem. marge RecraVas", eur(PROG.margePer));
+    metric("Gem. verkoopsom", eur(PROG.verkoopsomPer));
   sl.min = 0; sl.max = Math.max(Math.round(spend*3), 1000); sl.step = Math.max(Math.round(spend/40/50)*50, 50);
   sl.value = Math.round(spend);
   sl.oninput = updatePrognose;
@@ -1415,15 +1414,13 @@ function updatePrognose(){
   $("progSpendLabel").textContent = eur(budget);
   const verkopen = budget / PROG.cpa;
   const verkoopsom = verkopen * PROG.verkoopsomPer;
-  const marge = verkopen * PROG.margePer;
-  const basisMarge = (PROG.basisSpend/PROG.cpa) * PROG.margePer;
-  const rendement = budget>0 ? (marge/budget).toFixed(2) : "0";
+  const basisVerkoopsom = (PROG.basisSpend/PROG.cpa) * PROG.verkoopsomPer;
+  const perEuro = budget>0 ? (verkoopsom/budget).toFixed(1) : "0";
   $("progOut").innerHTML =
     `<div class="metric team"><div class="l">Verwachte verkopen</div><div class="v">${verkopen.toFixed(1)}</div></div>` +
     `<div class="metric team"><div class="l">Verwachte verkoopsom</div><div class="v">${eur(verkoopsom)}</div></div>` +
-    `<div class="metric team"><div class="l">Verwachte marge RecraVas</div><div class="v">${eur(marge)}</div></div>` +
-    `<div class="metric"><div class="l">Marge per advertentie-euro</div><div class="v">${rendement}</div></div>` +
-    `<div class="metric"><div class="l">Extra marge t.o.v. nu</div><div class="v">${eur(marge - basisMarge)}</div></div>`;
+    `<div class="metric"><div class="l">Verkoopsom per advertentie-euro</div><div class="v">${perEuro}</div></div>` +
+    `<div class="metric"><div class="l">Extra verkoopsom t.o.v. nu</div><div class="v">${eur(verkoopsom - basisVerkoopsom)}</div></div>`;
 }
 
 /* ---------- ADVERTENTIES ---------- */
@@ -2020,10 +2017,10 @@ async function renderOwner(){
     metric("Closing %",(closing||0)+"%") + metric("Afval %",(f.afval_pct||0)+"%") +
     metric("No-show %",(f.no_show_pct||0)+"%");
   renderFunnel([
-    {label:"Leads", value:f.leads||0, color:"#5B8DEF"},
-    {label:"Afspraken", value:f.appointments||0, color:accent(), sub:f.leads?`${Math.round((f.appointments||0)/f.leads*100)}% van leads`:""},
-    {label:"Shows", value:shows, color:"#33C2C0", sub:`${f.appointments?Math.round(shows/f.appointments*100):0}% kwam opdagen`},
-    {label:"Sales", value:f.sales||0, color:"#3FA06B", sub:`Closing ${closing||0}% (op shows)`, subHtml:defSub(dc)},
+    {label:"Geen afspraak", value:Math.max(0,(f.leads||0)-(f.appointments||0)), color:"#C7D2E8", sub:"lead zonder afspraak"},
+    {label:"No-show", value:Math.max(0,(f.appointments||0)-shows), color:"#F4A63B", sub:"afspraak, niet geweest"},
+    {label:"Geweest, geen sale", value:Math.max(0,shows-(f.sales||0)), color:"#33C2C0", sub:`Closing ${closing||0}% (op shows)`},
+    {label:"Verkocht", value:f.sales||0, color:"#3FA06B", sub:"afspraak → sale", subHtml:defSub(dc)},
   ], { big:(f.leads||0).toLocaleString("nl-NL"), cap:"Leads" });
 
   let agents = await rpc("owner_agent_performance", r) || [];
@@ -2124,9 +2121,9 @@ async function renderAgent(agentId){
     metric("Closing %",(closingA||0)+"%") + metric("Afval %",(s.afval_pct||0)+"%") +
     metric("No-show %",(s.no_show_pct||0)+"%");
   renderFunnel([
-    {label:"Afspraken", value:s.appointments||0, color:accent()},
-    {label:"Shows", value:showsA, color:"#33C2C0", sub:`${s.appointments?Math.round(showsA/s.appointments*100):0}% kwam opdagen`},
-    {label:"Sales", value:s.sales||0, color:"#3FA06B", sub:`Closing ${closingA||0}% (op shows)`, subHtml:defSub(dsAgent)},
+    {label:"No-show", value:Math.max(0,(s.appointments||0)-showsA), color:"#F4A63B", sub:"afspraak, niet geweest"},
+    {label:"Geweest, geen sale", value:Math.max(0,showsA-(s.sales||0)), color:"#33C2C0", sub:`Closing ${closingA||0}% (op shows)`},
+    {label:"Verkocht", value:s.sales||0, color:"#3FA06B", sub:"afspraak → sale", subHtml:defSub(dsAgent)},
   ], { big:(s.appointments||0).toLocaleString("nl-NL"), cap:"Afspraken" });
   $("cardsTeam").innerHTML =
     metricT("Omzet per afspraak",eur(s.team_revenue_per_appt)) +
@@ -2182,10 +2179,10 @@ async function renderPark(parkId){
     metric("No-show %",(f.no_show_pct||0)+"%");
   const showsP = showsVan(f.appointments,f.no_show_pct);
   renderFunnel([
-    {label:"Leads", value:f.leads||0, color:"#5B8DEF"},
-    {label:"Afspraken", value:f.appointments||0, color:accent(), sub:f.leads?`${Math.round((f.appointments||0)/f.leads*100)}% van leads`:""},
-    {label:"Shows", value:showsP, color:"#33C2C0", sub:`${f.appointments?Math.round(showsP/f.appointments*100):0}% kwam opdagen`},
-    {label:"Sales", value:f.sales||0, color:"#3FA06B", sub:`Closing ${closingOpShows(f.sales,showsP)}% (op shows)`, subHtml:defSub(dsPark)},
+    {label:"Geen afspraak", value:Math.max(0,(f.leads||0)-(f.appointments||0)), color:"#C7D2E8", sub:"lead zonder afspraak"},
+    {label:"No-show", value:Math.max(0,(f.appointments||0)-showsP), color:"#F4A63B", sub:"afspraak, niet geweest"},
+    {label:"Geweest, geen sale", value:Math.max(0,showsP-(f.sales||0)), color:"#33C2C0", sub:`Closing ${closingOpShows(f.sales,showsP)}% (op shows)`},
+    {label:"Verkocht", value:f.sales||0, color:"#3FA06B", sub:"afspraak → sale", subHtml:defSub(dsPark)},
   ], { big:(f.leads||0).toLocaleString("nl-NL"), cap:"Leads" });
   const moP = await rpc("monthly_overview", {p_park_id:parkId}) || [];
   renderMonths(moP, {spend:false, leads:true, def: await defMaandMap(null, parkId)});
