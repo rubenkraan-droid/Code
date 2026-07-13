@@ -350,7 +350,7 @@
       <button class="tab" data-tab="resale" title="Resale"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-7 9 7M5 10v9h5v-6h4v6h5v-9"/></svg><span class="lbl">Resale</span></button>
     </nav>
     <div class="who">
-      <button id="themeBtn" class="btn" title="Thema: automatisch — donker van 18:00 tot 09:00">◐</button>
+      <button id="themeBtn" class="btn" title="Thema: automatisch — donker van 20:00 tot 09:00">◐</button>
       <button id="rapportBtn" class="btn hidden" title="Kant-en-klare samenvatting van de gekozen periode — om te delen of te plakken in een bericht"><svg class="bico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2h8l4 4v16H6z"/><path d="M14 2v4h4M9 12h6M9 16h6"/></svg><span class="blbl">Rapport</span></button>
       <a id="helpBtn" class="btn" href="handleiding.html" target="_blank" rel="noopener" title="Handleiding & functie-overzicht"><svg class="bico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5a2 2 0 0 1 2-2h6v16H6a2 2 0 0 0-2 2zM20 3h-6v16h6a0 0 0 0 0 0 0z"/></svg><span class="blbl">Handleiding</span></a>
       <button id="printBtn" class="btn" onclick="printDashboard()" title="Sla dit dashboard op als PDF"><svg class="bico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v11M8 10l4 4 4-4M5 21h14"/></svg><span class="blbl">↓ PDF</span></button>
@@ -724,11 +724,11 @@ const areaGrad = (hex, topA, botA) => (context) => {
   return g;
 };
 
-/* ---------- thema: automatisch = donker 's avonds/'s nachts (18:00–09:00), of handmatig ---------- */
-const THEMA_DONKER_VANAF = 18;   // vanaf 18:00 donker
+/* ---------- thema: automatisch = donker 's avonds/'s nachts (20:00–09:00), of handmatig ---------- */
+const THEMA_DONKER_VANAF = 20;   // vanaf 20:00 donker
 const THEMA_LICHT_VANAF  = 9;    // vanaf 09:00 weer licht
 const THEMA_STANDEN = { auto:"◐", light:"☀", dark:"☾" };
-const THEMA_TITELS = { auto:"Thema: automatisch — donker van 18:00 tot 09:00 · klik voor licht",
+const THEMA_TITELS = { auto:"Thema: automatisch — donker van 20:00 tot 09:00 · klik voor licht",
   light:"Thema: licht · klik voor donker", dark:"Thema: donker · klik voor automatisch" };
 const isAvondDonker = () => { const h = new Date().getHours(); return h >= THEMA_DONKER_VANAF || h < THEMA_LICHT_VANAF; };
 const themaVoorkeur = () => localStorage.getItem("thema") || "auto";
@@ -751,7 +751,7 @@ function zetThema(){
   if(btn){ btn.textContent = THEMA_STANDEN[p]; btn.title = THEMA_TITELS[p]; }
 }
 zetThema();
-// elke 5 min checken of de grens (18:00 / 09:00) is gepasseerd terwijl de pagina open staat
+// elke 5 min checken of de grens (20:00 / 09:00) is gepasseerd terwijl de pagina open staat
 setInterval(() => {
   if(themaVoorkeur()==="auto" && document.documentElement.dataset.theme !== effectiefThema()){
     zetThema(); try { refresh(); renderActieveTab(); } catch(e) {}
