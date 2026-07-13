@@ -394,7 +394,7 @@
   </div>
 
   <div id="ownerOnly" class="hidden">
-    <div class="banner hide"><span>●</span><span>Alleen voor eigenaar · nooit zichtbaar voor makelaar of ontwikkelaar</span></div>
+    <div class="banner hide"><span>●</span><span>Alleen voor Master · nooit zichtbaar voor makelaar of ontwikkelaar</span></div>
     <div id="ownerInsightsSec" class="hidden">
       <div class="sec">Automatische inzichten
         <span class="info" tabindex="0">i<span class="tip">Automatisch berekende signalen uit de cijfers van de gekozen periode: uitschieters bij makelaars, definitief-status en opvolg-achterstand. Bedoeld als startpunt, niet als oordeel.</span></span>
@@ -652,8 +652,10 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const $ = id => document.getElementById(id);
 const eur = n => "€"+Math.round(n||0).toLocaleString("nl-NL");
 const initials = n => n.slice(0,2).toUpperCase();
-const esc = s => String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-const escAttr = s => esc(s).replace(/"/g,"&quot;");
+const esc = s => String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+const escAttr = esc;
+// alleen http(s) of interne links toestaan in href/src (weert javascript:/data:-injectie)
+const safeUrl = u => { const s = String(u||""); return /^(https?:\/\/|#)/i.test(s) ? escAttr(s) : "#"; };
 
 /* ---------- awareness-fase (Schwartz, afgekort) ---------- */
 const FASES = [
@@ -1018,7 +1020,7 @@ async function boot(){
   AGENTS = await rpc("owner_agents") || [];
   PARKS.push(DEMO_PARK);   // demopark meelopen in naam-/branding-lookups en de sub-tabs
   $("viewAs").innerHTML =
-    `<option value="owner">Eigenaar (alles)</option>`
+    `<option value="owner">Master (alles)</option>`
     + `<optgroup label="Makelaar">${AGENTS.map(a=>`<option value="agent:${a.id}">${a.name}</option>`).join("")}</optgroup>`
     + `<optgroup label="Recreatieontwikkelaar">${PARKS.map(p=>`<option value="park:${p.id}">${p.name}</option>`).join("")}</optgroup>`;
   $("viewAs").classList.remove("hidden");
@@ -1063,7 +1065,7 @@ async function applyRole(){
   $("tabResale").classList.add("hidden");
   if(owner){
     $("title").textContent = "Master dashboard";
-    $("subtitle").textContent = "Eigenaarweergave";
+    $("subtitle").textContent = "Masterweergave";
     fillSelect($("fPark"), PARKS.filter(p=>!isDemo(p.id)).map(p=>({value:p.id,label:p.name})), "Alle parken");
     fillSelect($("fAgent"), AGENTS.map(a=>({value:a.id,label:a.name})), "Alle agents");
     $("fPark").value = "all"; $("fAgent").value = "all";
@@ -1216,9 +1218,9 @@ async function renderFinance(){
     `<thead><tr><th>Kavel</th><th class="tl">Park</th><th class="tl">Makelaar</th><th class="tl">Status</th>
       <th>Verkoopsom</th><th>Omzet</th><th>Courtage</th><th>Marge RecraVas</th><th class="tl">Notarisdatum</th><th class="tl">Ontbindende Vw.</th><th></th></tr></thead>
      <tbody>${rows.map(r=>`<tr>
-       <td style="text-align:left">${r.kavelnummer || "—"}</td>
-       <td style="text-align:left">${r.park}</td>
-       <td style="text-align:left">${r.agent}</td>
+       <td style="text-align:left">${r.kavelnummer?esc(r.kavelnummer):"—"}</td>
+       <td style="text-align:left">${esc(r.park)}</td>
+       <td style="text-align:left">${esc(r.agent)}</td>
        <td style="text-align:left" class="${statusKleur(r.status_label)}">${r.status_label}</td>
        <td>${r.amount!=null ? eur(r.amount) : "Nog niet bekend"}</td>
        <td>${r.omzet!=null ? eur(r.omzet) : "Nog niet bekend"}</td>
@@ -1282,8 +1284,8 @@ async function renderFinanceAgent(agentId){
     `<thead><tr><th>Kavel</th><th class="tl">Park</th><th class="tl">Status</th>
       <th>Verkoopsom</th><th>Mijn commissie</th><th class="tl">Notarisdatum</th><th class="tl">Ontbindende Vw.</th><th></th></tr></thead>
      <tbody>${rows.map(r=>`<tr>
-       <td style="text-align:left">${r.kavelnummer || "—"}</td>
-       <td style="text-align:left">${r.park}</td>
+       <td style="text-align:left">${r.kavelnummer?esc(r.kavelnummer):"—"}</td>
+       <td style="text-align:left">${esc(r.park)}</td>
        <td style="text-align:left" class="${statusKleur(r.status_label)}">${r.status_label}</td>
        <td>${r.amount!=null ? eur(r.amount) : "Nog niet bekend"}</td>
        <td style="font-weight:600;color:var(--good)">${r.mijn_commissie!=null ? eur(r.mijn_commissie) : "Nog niet bekend"}</td>
@@ -1494,7 +1496,7 @@ async function renderAdDetail(adId, naam){
   const rij = ADROWS.find(a => Number(a.ad_id)===Number(adId) || a.advertentie===naam);
   const thumb = $("adDetailThumb"), url = rij && rij.thumbnail_url;
   if(url){
-    thumb.href = url;
+    thumb.href = safeUrl(url);   // weert javascript:-scheme in de klikbare link
     thumb.innerHTML = `<img src="${escAttr(url)}" alt="${escAttr(naam)}" onerror="this.closest('.addetail-thumb').classList.add('hidden')"><span class="zoomhint">Klik voor groot ↗</span>`;
     thumb.classList.remove("hidden");
   } else {
@@ -1616,7 +1618,7 @@ function drawAdTable(){
          : "";
        const kill = a.kill_reason
          ? ` <span class="info" tabindex="0" style="background:var(--bad-soft);color:var(--bad)">✕<span class="tip">Kill-reden: ${esc(a.kill_reason)}</span></span>` : "";
-       return `<tr data-adid="${a.ad_id}" data-naam="${a.advertentie}" style="cursor:pointer"><td style="text-align:left">${a.advertentie}
+       return `<tr data-adid="${a.ad_id}" data-naam="${escAttr(a.advertentie)}" style="cursor:pointer"><td style="text-align:left">${esc(a.advertentie)}
            ${icon}${kill}</td>
          <td style="text-align:left"><span class="badge ${st[1]}">${st[0]}</span></td>
          <td class="tl fase-cell" data-code="${escAttr(a.code)}" style="cursor:pointer" title="Klik om de fase/notities te wijzigen">${fasePill(a.awareness_stage)}</td>
@@ -1726,11 +1728,11 @@ function renderBestAds(){
       sub = `${a.afspraken} afspraken · ${a.leads} leads · ${eur(a.spend)}`; }
     else { hoofd = `${a.leads} <span style="font-size:12px;color:var(--muted)">leads</span>`;
       sub = `${eur(a.spend)} · CPL ${a.leads > 0 ? eur(a.cpl) : "—"}`; }
-    return `<div class="adbest-card" data-adid="${a.ad_id}" data-naam="${a.advertentie}">
+    return `<div class="adbest-card" data-adid="${a.ad_id}" data-naam="${escAttr(a.advertentie)}">
       <div class="adbest-rank">${i + 1}</div>
-      <div class="adbest-thumb${url ? "" : " leeg"}">${url ? `<img src="${url}" alt="" onerror="this.parentNode.classList.add('leeg');this.remove()">` : ""}</div>
+      <div class="adbest-thumb${url ? "" : " leeg"}">${url ? `<img src="${escAttr(url)}" alt="" onerror="this.parentNode.classList.add('leeg');this.remove()">` : ""}</div>
       <div class="adbest-info">
-        <div class="adbest-naam" title="${a.advertentie}">${a.advertentie}</div>
+        <div class="adbest-naam" title="${escAttr(a.advertentie)}">${esc(a.advertentie)}</div>
         <div class="adbest-hoofd">${hoofd}</div>
         <div class="adbest-sub">${sub}</div>
       </div>
@@ -1837,14 +1839,14 @@ function renderAppts(rows, showAgent){
        const label = {sale:"Verkocht",lost:"Afgevallen",no_show:"Niet geweest"}[x.outcome] || "Geweest";
        const cls = {sale:"sale",lost:"lost",no_show:"lost"}[x.outcome] || "held";
        return `<tr><td>${dt(x.scheduled_at)}</td>
-         ${showAgent?`<td style="text-align:left">${x.agent}</td>`:""}
-         <td style="text-align:left">${x.park.replace("Park ","")}</td>
-         <td style="text-align:left">${x.kavelnummer || "—"}</td>
+         ${showAgent?`<td style="text-align:left">${esc(x.agent)}</td>`:""}
+         <td style="text-align:left">${esc(String(x.park||"").replace("Park ",""))}</td>
+         <td style="text-align:left">${x.kavelnummer?esc(x.kavelnummer):"—"}</td>
          <td style="text-align:left"><span class="badge ${cls}">${label}</span></td>
          <td style="text-align:left">${x.sale_date?dt(x.sale_date):"—"}</td>
          <td style="text-align:left">${x.notary_date?dt(x.notary_date):"—"}</td>
          <td style="font-weight:600">${x.sale_amount?eur(x.sale_amount):"—"}</td>
-         <td><a href="${x.pipedrive_url}" target="_blank" rel="noopener">Pipedrive ↗</a></td></tr>`;
+         <td><a href="${safeUrl(x.pipedrive_url)}" target="_blank" rel="noopener">Pipedrive ↗</a></td></tr>`;
      }).join("")}</tbody>`;
 }
 
@@ -1910,7 +1912,7 @@ async function renderOwner(){
        const showPct = Math.round((100 - (a.no_show_pct||0))*10)/10;
        const scls = showPct>=90?"good":showPct<80?"bad":"";
        const cls = a.closing_rate_pct>=40?"good":a.closing_rate_pct<30?"bad":"";
-       return `<tr><td><span class="av"><span class="dot">${initials(a.agent)}</span>${a.agent}</span></td>
+       return `<tr><td><span class="av"><span class="dot">${initials(a.agent)}</span>${esc(a.agent)}</span></td>
          ${dcell(a.leads,'leads',a.agent_id,a.agent)}
          ${dcell(a.appointments,'afspraken',a.agent_id,a.agent)}
          <td class="${scls}">${a.appointments>0?showPct+"%":"—"}</td>
@@ -1927,7 +1929,7 @@ async function renderOwner(){
     p_agent_id: agentVal==="all"?null:Number(agentVal) }) || [];
   $("callTable").innerHTML =
     `<thead><tr><th>Agent</th><th>Gebeld</th><th>Gesprek</th><th>Ingepland</th><th>% gesprek van gebeld</th><th>Gesprek &#8594; afspraak %</th></tr></thead>
-     <tbody>${calls.map(c=>`<tr><td style="text-align:left">${c.agent}</td><td>${c.gebeld}</td><td>${c.gesprek}</td>
+     <tbody>${calls.map(c=>`<tr><td style="text-align:left">${esc(c.agent)}</td><td>${c.gebeld}</td><td>${c.gesprek}</td>
        <td>${c.ingepland}</td><td>${c.gebeld>0 ? Math.round(c.gesprek/c.gebeld*100)+"%" : "—"}</td>
        <td>${c.gesprek_naar_afspraak_pct!=null ? c.gesprek_naar_afspraak_pct+"%" : "—"}</td></tr>`).join("")
        || `<tr><td colspan="6" style="color:var(--muted);padding:14px">Nog geen belactiviteiten gelogd.</td></tr>`}</tbody>`;
@@ -2092,7 +2094,7 @@ async function renderReasons(r){
     const rs = alle.filter(x=>x.aantal/tot >= 0.01).sort((a,b)=>b.aantal-a.aantal).slice(0,5);
     return `<thead><tr><th>Reden</th><th>Aantal</th><th>Aandeel</th></tr></thead><tbody>`
       + rs.map(x=>`<tr data-fase="${encodeURIComponent(fase)}" data-reden="${encodeURIComponent(x.reden)}" style="cursor:pointer">
-          <td style="text-align:left;color:var(--accent);font-weight:600">${x.reden}</td><td>${x.aantal}</td>
+          <td style="text-align:left;color:var(--accent);font-weight:600">${esc(x.reden)}</td><td>${x.aantal}</td>
           <td>${Math.round(x.aantal/tot*100)}%</td></tr>`).join("") + `</tbody>`;
   };
   $("reasonsBefore").innerHTML = tabel("Voor afspraak (wilde niet komen)");
@@ -2106,10 +2108,10 @@ async function toonVerlorenDeals(fase, reden){
   $("lostDealsTable").innerHTML =
     `<thead><tr><th>Makelaar</th><th class="tl">Lead sinds</th><th class="tl">Reden (zoals ingevuld)</th><th></th></tr></thead>
      <tbody>${rows.map(x=>`<tr>
-       <td style="text-align:left">${x.agent}</td>
+       <td style="text-align:left">${esc(x.agent)}</td>
        <td style="text-align:left">${x.lead_created?dt(x.lead_created):"—"}</td>
-       <td style="text-align:left">${x.lost_reason||"—"}</td>
-       <td><a href="${x.pipedrive_url}" target="_blank" rel="noopener">Pipedrive ↗</a></td></tr>`).join("")
+       <td style="text-align:left">${x.lost_reason?esc(x.lost_reason):"—"}</td>
+       <td><a href="${safeUrl(x.pipedrive_url)}" target="_blank" rel="noopener">Pipedrive ↗</a></td></tr>`).join("")
        || `<tr><td colspan="4" style="color:var(--muted);padding:14px">Geen deals gevonden.</td></tr>`}</tbody>`;
   $("lostDealsSec").classList.remove("hidden");
   $("lostDealsSec").scrollIntoView({ behavior:"smooth", block:"nearest" });
@@ -2120,13 +2122,13 @@ async function toonAgentDeals(agentId, kind, naam, parkId){
   $("lostDealsTable").innerHTML =
     `<thead><tr><th class="tl">Deal</th><th class="tl">Fase</th><th class="tl">Lead sinds</th><th class="tl">Afspraak</th><th class="tl">Verkocht</th><th>Verkoopsom</th><th></th></tr></thead>
      <tbody>${rows.map(x=>`<tr>
-       <td style="text-align:left">#${x.deal_id}${x.titel?` · ${x.titel}`:""}</td>
-       <td style="text-align:left">${x.stage_name||"—"}</td>
+       <td style="text-align:left">#${x.deal_id}${x.titel?` · ${esc(x.titel)}`:""}</td>
+       <td style="text-align:left">${x.stage_name?esc(x.stage_name):"—"}</td>
        <td style="text-align:left">${x.lead_created?dt(x.lead_created):"—"}</td>
        <td style="text-align:left">${x.appointment_date?dt(x.appointment_date):"—"}</td>
        <td style="text-align:left">${x.sale_date?dt(x.sale_date):"—"}</td>
        <td>${x.bedrag>0?eur(x.bedrag):"—"}</td>
-       <td><a href="${x.pipedrive_url}" target="_blank" rel="noopener">Pipedrive ↗</a></td></tr>`).join("")
+       <td><a href="${safeUrl(x.pipedrive_url)}" target="_blank" rel="noopener">Pipedrive ↗</a></td></tr>`).join("")
        || `<tr><td colspan="7" style="color:var(--muted);padding:14px">Geen deals gevonden.</td></tr>`}</tbody>`;
   $("lostDealsSec").classList.remove("hidden");
   $("lostDealsSec").scrollIntoView({ behavior:"smooth", block:"nearest" });
@@ -2164,7 +2166,7 @@ async function renderResale(){
   $("resaleAgentTable").innerHTML =
     `<thead><tr><th>Makelaar</th><th>Leads</th><th>Afspraken</th><th>Verkopen</th><th>Closing %</th><th>Afval %</th><th>Fee-omzet</th></tr></thead>
      <tbody>${agents.map(a=>`<tr>
-       <td><span class="av"><span class="dot">${initials(a.agent)}</span>${a.agent}</span></td>
+       <td><span class="av"><span class="dot">${initials(a.agent)}</span>${esc(a.agent)}</span></td>
        ${dcell(a.leads,'leads',a.agent_id,a.agent,true)}
        ${dcell(a.afspraken,'afspraken',a.agent_id,a.agent,true)}${dcell(a.verkopen,'verkopen',a.agent_id,a.agent,true)}
        <td>${a.afspraken>0?a.closing_pct+"%":"—"}</td>
@@ -2187,13 +2189,13 @@ async function resaleDealsToon(agentId, kind, naam){
   $("resaleLeadsTable").innerHTML =
     `<thead><tr><th class="tl">Deal</th><th class="tl">Fase</th><th class="tl">Lead sinds</th><th class="tl">Afspraak</th><th class="tl">Verkocht</th><th>Woningwaarde</th><th></th></tr></thead>
      <tbody>${rows.map(x=>`<tr>
-       <td style="text-align:left">#${x.deal_id}${x.titel?` · ${x.titel}`:""}</td>
-       <td style="text-align:left">${x.stage_name||"—"}</td>
+       <td style="text-align:left">#${x.deal_id}${x.titel?` · ${esc(x.titel)}`:""}</td>
+       <td style="text-align:left">${x.stage_name?esc(x.stage_name):"—"}</td>
        <td style="text-align:left">${x.lead_created?dt(x.lead_created):"—"}</td>
        <td style="text-align:left">${x.appointment_date?dt(x.appointment_date):"—"}</td>
        <td style="text-align:left">${x.sale_date?dt(x.sale_date):"—"}</td>
        <td>${x.woningwaarde?eur(x.woningwaarde):"—"}</td>
-       <td><a href="${x.pipedrive_url}" target="_blank" rel="noopener">Pipedrive ↗</a></td></tr>`).join("")
+       <td><a href="${safeUrl(x.pipedrive_url)}" target="_blank" rel="noopener">Pipedrive ↗</a></td></tr>`).join("")
        || `<tr><td colspan="7" style="color:var(--muted);padding:14px">Geen deals gevonden.</td></tr>`}</tbody>`;
   $("resaleLeadsWrap").classList.remove("hidden");
   $("resaleLeadsWrap").scrollIntoView({ behavior:"smooth", block:"nearest" });
@@ -2205,13 +2207,13 @@ async function toonAdDeals(adId, kind, naam){
   $("adDealsTable").innerHTML =
     `<thead><tr><th class="tl">Deal</th><th class="tl">Fase</th><th class="tl">Lead sinds</th><th class="tl">Afspraak</th><th class="tl">Verkocht</th><th>Verkoopsom</th><th></th></tr></thead>
      <tbody>${rows.map(x=>`<tr>
-       <td style="text-align:left">#${x.deal_id}${x.titel?` · ${x.titel}`:""}</td>
-       <td style="text-align:left">${x.stage_name||"—"}</td>
+       <td style="text-align:left">#${x.deal_id}${x.titel?` · ${esc(x.titel)}`:""}</td>
+       <td style="text-align:left">${x.stage_name?esc(x.stage_name):"—"}</td>
        <td style="text-align:left">${x.lead_created?dt(x.lead_created):"—"}</td>
        <td style="text-align:left">${x.appointment_date?dt(x.appointment_date):"—"}</td>
        <td style="text-align:left">${x.sale_date?dt(x.sale_date):"—"}</td>
        <td>${x.bedrag>0?eur(x.bedrag):"—"}</td>
-       <td><a href="${x.pipedrive_url}" target="_blank" rel="noopener">Pipedrive ↗</a></td></tr>`).join("")
+       <td><a href="${safeUrl(x.pipedrive_url)}" target="_blank" rel="noopener">Pipedrive ↗</a></td></tr>`).join("")
        || `<tr><td colspan="7" style="color:var(--muted);padding:14px">Geen deals gevonden.</td></tr>`}</tbody>`;
   $("adDealsSec").classList.remove("hidden");
   $("adDealsSec").scrollIntoView({ behavior:"smooth", block:"nearest" });
@@ -2229,14 +2231,14 @@ async function renderOpvolg(agentId, parkId, toonAgent){
     `<thead><tr><th class="tl">Deal</th>${toonAgent?'<th class="tl">Makelaar</th>':''}<th class="tl">Park</th><th class="tl">Laatste contact</th><th>Dagen sinds</th><th class="tl">Type</th><th class="tl">Door</th><th></th></tr></thead>
      <tbody>${lijst.map(x=>{ const stale = x.dagen_sinds_contact==null || x.dagen_sinds_contact>=30;
        return `<tr>
-       <td style="text-align:left">#${x.deal_id}${x.titel?` · ${x.titel}`:""}</td>
-       ${toonAgent?`<td style="text-align:left">${x.agent}</td>`:''}
-       <td style="text-align:left">${x.park}</td>
+       <td style="text-align:left">#${x.deal_id}${x.titel?` · ${esc(x.titel)}`:""}</td>
+       ${toonAgent?`<td style="text-align:left">${esc(x.agent)}</td>`:''}
+       <td style="text-align:left">${esc(x.park)}</td>
        <td style="text-align:left">${x.laatste_contact?dt(x.laatste_contact):"nog geen contact"}</td>
        <td class="${stale?'bad':''}">${x.dagen_sinds_contact==null?"—":x.dagen_sinds_contact}</td>
-       <td style="text-align:left">${x.contact_type||"—"}</td>
-       <td style="text-align:left">${x.contact_door}</td>
-       <td><a href="${x.pipedrive_url}" target="_blank" rel="noopener">Pipedrive ↗</a></td></tr>`;}).join("")}</tbody>`;
+       <td style="text-align:left">${x.contact_type?esc(x.contact_type):"—"}</td>
+       <td style="text-align:left">${esc(x.contact_door)}</td>
+       <td><a href="${safeUrl(x.pipedrive_url)}" target="_blank" rel="noopener">Pipedrive ↗</a></td></tr>`;}).join("")}</tbody>`;
   return rows.filter(x => x.dagen_sinds_contact==null || x.dagen_sinds_contact>=30).length;
 }
 
