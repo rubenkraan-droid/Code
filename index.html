@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>RecraVas Dashboard</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%232C5F52'/%3E%3Ctext x='50' y='72' font-size='62' text-anchor='middle' fill='white' font-family='Georgia,serif' font-weight='700'%3ER%3C/text%3E%3C/svg%3E" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%233A7A69'/%3E%3Cstop offset='1' stop-color='%23204538'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='24' fill='url(%23g)'/%3E%3Cpath d='M50 27 79 51 79 76 21 76 21 51Z' fill='%23fff'/%3E%3Crect x='43' y='57' width='14' height='19' rx='1.5' fill='%23255145'/%3E%3C/svg%3E" />
 <style>
   :root{
     --bg:#EEF1F7; --card:#FFFFFF; --surface-2:#F5F7FB;
@@ -1050,6 +1050,7 @@ async function afschermGeenToegang(email){
   $("logoutNA").addEventListener("click", async ()=>{ await sb.auth.signOut(); location.href = location.pathname + "?login"; });
 }
 let LOGIN_NO_FINANCE = false;   // eigenaar zonder financiën-toegang (login-modus)
+let SCOPED_PARK = null;         // park-gebonden eigenaar (bv. Carl = alleen Wielsche Dreef); null = alle parken
 async function startAsUser(email){
   const acc = await rpc("my_login_role") || [];
   const row = acc[0];
@@ -1059,18 +1060,28 @@ async function startAsUser(email){
   $("app").classList.remove("hidden");
   $("logout").classList.remove("hidden");
   if(row.role === "owner"){
-    $("whoami").textContent = email + " · Eigenaar" + (row.no_finance ? " · excl. financiën" : "");
-    PARKS  = await rpc("owner_parks")  || [];
+    const scoped = row.park_id != null;                // park-gebonden eigenaar (bv. Carl = alleen dit park)
+    SCOPED_PARK = scoped ? Number(row.park_id) : null;
     AGENTS = await rpc("owner_agents") || [];
-    PARKS.push(DEMO_PARK);
-    $("viewAs").innerHTML =
-      `<option value="owner">Master (alles)</option>`
-      + `<optgroup label="Makelaar">${AGENTS.map(a=>`<option value="agent:${a.id}">${esc(a.name)}</option>`).join("")}</optgroup>`
-      + `<optgroup label="Recreatieontwikkelaar">${PARKS.map(p=>`<option value="park:${p.id}">${esc(p.name)}</option>`).join("")}</optgroup>`
-      + `<optgroup label="Test"><option value="nofinance">Karl · eigenaar zonder financiën</option></optgroup>`;
-    $("viewAs").value = "owner";
-    $("viewAs").classList.remove("hidden");            // eigenaar mag view-as gebruiken
-    $("viewAs").addEventListener("change", applyRole);
+    if(scoped){
+      $("whoami").textContent = email + " · Eigenaar · " + (row.park_name||"") + (row.no_finance ? " · excl. financiën" : "");
+      PARKS = [{ id:Number(row.park_id), name: row.park_name }, DEMO_PARK];
+      $("viewAs").innerHTML = `<option value="owner">Master · ${esc(row.park_name||"")}</option>`;
+      $("viewAs").value = "owner";
+      $("viewAs").classList.add("hidden");             // op slot: alleen eigen park, geen andere weergaven
+    } else {
+      $("whoami").textContent = email + " · Eigenaar" + (row.no_finance ? " · excl. financiën" : "");
+      PARKS  = await rpc("owner_parks")  || [];
+      PARKS.push(DEMO_PARK);
+      $("viewAs").innerHTML =
+        `<option value="owner">Master (alles)</option>`
+        + `<optgroup label="Makelaar">${AGENTS.map(a=>`<option value="agent:${a.id}">${esc(a.name)}</option>`).join("")}</optgroup>`
+        + `<optgroup label="Recreatieontwikkelaar">${PARKS.map(p=>`<option value="park:${p.id}">${esc(p.name)}</option>`).join("")}</optgroup>`
+        + `<optgroup label="Test"><option value="nofinance">Karl · Wielsche Dreef, zonder financiën</option></optgroup>`;
+      $("viewAs").value = "owner";
+      $("viewAs").classList.remove("hidden");          // eigenaar mag view-as gebruiken
+      $("viewAs").addEventListener("change", applyRole);
+    }
   } else if(row.role === "agent"){
     // makelaar: uitsluitend eigen cijfers, dropdown vergrendeld
     $("whoami").textContent = email + " · Makelaar " + row.agent_name;
@@ -1118,7 +1129,7 @@ async function boot(){
 function currentView(){
   const v = $("viewAs").value;
   if(v==="owner") return { role:"owner" };
-  if(v==="nofinance") return { role:"owner", nofinance:true };   // testweergave: eigenaar zonder financiën (Karl)
+  if(v==="nofinance") return { role:"owner", nofinance:true, park:3 };   // testweergave Karl/Carl: eigenaar Wielsche Dreef, zonder financiën
   const [role,id] = v.split(":");
   return { role, id:Number(id) };
 }
@@ -1954,7 +1965,12 @@ async function renderLive(r, pp){
 /* ---------- EIGENAAR ---------- */
 async function renderOwner(){
   const r = periodRange();
-  const parkVal = $("fPark").value, agentVal = $("fAgent").value;
+  // gescoopte eigenaar (Carl-login) of Karl-preview: park vastzetten en het parkfilter vergrendelen
+  const scopePark = currentView().park ?? SCOPED_PARK ?? null;
+  let parkVal = $("fPark").value;
+  if(scopePark != null){ parkVal = String(scopePark); $("fPark").value = parkVal; $("fPark").disabled = true; }
+  else { $("fPark").disabled = false; }
+  const agentVal = $("fAgent").value;
   const parkNum = parkVal==="all" ? null : Number(parkVal);
   renderLive(r, parkNum);
   setBranding(parkNum);
@@ -1990,9 +2006,9 @@ async function renderOwner(){
     {label:"Verkocht", value:f.sales||0, color:"#3FA06B", sub:"afspraak → sale", subHtml:defSub(dc)},
   ], { big:(f.leads||0).toLocaleString("nl-NL"), cap:"Leads" });
 
-  let agents = await rpc("owner_agent_performance", r) || [];
+  let agents = await rpc("owner_agent_performance", {...r, p_park_id: scopePark}) || [];
   if(agentVal!=="all") agents = agents.filter(a=>String(a.agent_id)===agentVal);
-  const defRows = await rpc("agent_definitief", r) || [];
+  const defRows = await rpc("agent_definitief", {...r, p_park_id: scopePark}) || [];
   const defMap = {}; defRows.forEach(x=>defMap[x.agent_id]=Number(x.definitief)||0);
   $("agentTable").innerHTML =
     `<thead><tr><th>Makelaar</th><th>Leads</th><th>Afspraken</th><th>Show %</th><th>Shows</th><th>Closing %</th><th>Sales</th><th>Definitief</th><th>Omzet per afspraak</th><th>Omzet</th></tr></thead>
@@ -2022,7 +2038,7 @@ async function renderOwner(){
        <td>${c.gesprek_naar_afspraak_pct!=null ? c.gesprek_naar_afspraak_pct+"%" : "—"}</td></tr>`).join("")
        || `<tr><td colspan="6" style="color:var(--muted);padding:14px">Nog geen belactiviteiten gelogd.</td></tr>`}</tbody>`;
 
-  const pa = await rpc("owner_park_agent", r) || [];
+  const pa = await rpc("owner_park_agent", {...r, p_park_id: scopePark}) || [];
   const parkNames = [...new Set(pa.map(x=>x.park))];
   const agentNames = [...new Set(pa.map(x=>x.agent))];
   const palette = ["#2C5F52","#B8862E","#B5432E","#726F60","#4B7A3E"];
