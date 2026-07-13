@@ -2024,7 +2024,10 @@ async function renderAgent(agentId){
   $("apptTitle").textContent = `Mijn afspraken (${det.length})`;
   renderAppts(det, false);
   $("inventorySec").classList.add("hidden");
-  renderOpvolg(agentId, pp, false);
+  // opvolglijst: makelaar ziet de volledige werk-wachtrij (open "In contact"-leads), niet op
+  // eigen naam gefilterd — de meeste leads hebben geen makelaar toegewezen, en iedereen mag
+  // opvolgen. Respecteert wel het parkfilter. Makelaar-kolom aan zodat toewijzing zichtbaar is.
+  renderOpvolg(null, pp, true);
 }
 
 /* ---------- RECREATIEONTWIKKELAAR: alleen parkgemiddelden ---------- */
