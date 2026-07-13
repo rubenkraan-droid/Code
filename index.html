@@ -1999,12 +1999,7 @@ async function renderOwner(){
     metric("CPL",eur(f.cost_per_lead)) +
     metric("Closing %",(closing||0)+"%") + metric("Afval %",(f.afval_pct||0)+"%") +
     metric("No-show %",(f.no_show_pct||0)+"%");
-  renderFunnel([
-    {label:"Geen afspraak", value:Math.max(0,(f.leads||0)-(f.appointments||0)), color:"#C7D2E8", sub:"lead zonder afspraak"},
-    {label:"No-show", value:Math.max(0,(f.appointments||0)-shows), color:"#F4A63B", sub:"afspraak, niet geweest"},
-    {label:"Geweest, geen sale", value:Math.max(0,shows-(f.sales||0)), color:"#33C2C0", sub:`Closing ${closing||0}% (op shows)`},
-    {label:"Verkocht", value:f.sales||0, color:"#3FA06B", sub:"afspraak → sale", subHtml:defSub(dc)},
-  ], { big:(f.leads||0).toLocaleString("nl-NL"), cap:"Leads" });
+  $("heroWrap").classList.add("hidden");   // trechter verwijderd op verzoek — alleen de Afspraken/Shows/Sales-tegels
 
   let agents = await rpc("owner_agent_performance", {...r, p_park_id: scopePark}) || [];
   if(agentVal!=="all") agents = agents.filter(a=>String(a.agent_id)===agentVal);
@@ -2103,11 +2098,7 @@ async function renderAgent(agentId){
     metric("Omzet per afspraak",eur(s.revenue_per_appt)) +
     metric("Closing %",(closingA||0)+"%") + metric("Afval %",(s.afval_pct||0)+"%") +
     metric("No-show %",(s.no_show_pct||0)+"%");
-  renderFunnel([
-    {label:"No-show", value:Math.max(0,(s.appointments||0)-showsA), color:"#F4A63B", sub:"afspraak, niet geweest"},
-    {label:"Geweest, geen sale", value:Math.max(0,showsA-(s.sales||0)), color:"#33C2C0", sub:`Closing ${closingA||0}% (op shows)`},
-    {label:"Verkocht", value:s.sales||0, color:"#3FA06B", sub:"afspraak → sale", subHtml:defSub(dsAgent)},
-  ], { big:(s.appointments||0).toLocaleString("nl-NL"), cap:"Afspraken" });
+  $("heroWrap").classList.add("hidden");   // trechter verwijderd op verzoek — alleen de Afspraken/Shows/Sales-tegels
   $("cardsTeam").innerHTML =
     metricT("Omzet per afspraak",eur(s.team_revenue_per_appt)) +
     metricT("Closing %",(s.team_closing_rate_pct||0)+"%") +
@@ -2164,12 +2155,7 @@ async function renderPark(parkId){
     metric("Closing %",closingOpShows(f.sales,showsVan(f.appointments,f.no_show_pct))+"%") +
     metric("No-show %",(f.no_show_pct||0)+"%");
   const showsP = showsVan(f.appointments,f.no_show_pct);
-  renderFunnel([
-    {label:"Geen afspraak", value:Math.max(0,(f.leads||0)-(f.appointments||0)), color:"#C7D2E8", sub:"lead zonder afspraak"},
-    {label:"No-show", value:Math.max(0,(f.appointments||0)-showsP), color:"#F4A63B", sub:"afspraak, niet geweest"},
-    {label:"Geweest, geen sale", value:Math.max(0,showsP-(f.sales||0)), color:"#33C2C0", sub:`Closing ${closingOpShows(f.sales,showsP)}% (op shows)`},
-    {label:"Verkocht", value:f.sales||0, color:"#3FA06B", sub:"afspraak → sale", subHtml:defSub(dsPark)},
-  ], { big:(f.leads||0).toLocaleString("nl-NL"), cap:"Leads" });
+  $("heroWrap").classList.add("hidden");   // trechter verwijderd op verzoek — alleen de Afspraken/Shows/Sales-tegels
   const moP = await rpc("monthly_overview", {p_park_id:parkId}) || [];
   renderMonths(moP, {spend:false, leads:true, def: await defMaandMap(null, parkId)});
   const sMoP = moP.slice(-8);
