@@ -1451,6 +1451,7 @@ async function renderAds(){
     }));
   }
   setBranding(pp);
+  ADROASCAP = isDemo(pp) ? 100 : Infinity;   // cap alleen bij het demopark
   const r = periodRange();
   const rPrevAd = vorigePeriode(r);
   const [k, daily, ov, mnd, dsAds, kPrev] = await Promise.all([
@@ -1477,7 +1478,7 @@ async function renderAds(){
     metric("Sales", sales, defSub(dsAds)) +
     metric("Kosten per sale", sales ? eur(spend/sales) : "—") +
     metric("Omzet", eur(omzet)) +
-    metric("ROAS", spend ? Math.min(100, omzet/spend).toFixed(2) : "—");
+    metric("ROAS", spend ? Math.min(ADROASCAP, omzet/spend).toFixed(2) : "—");
 
   const dd = daily || [];
   const dt2 = d => new Date(d).toLocaleDateString("nl-NL",{day:"numeric",month:"short"});
@@ -1585,6 +1586,9 @@ const FASE_ORDER = Object.fromEntries(FASES.map((f,i)=>[f.key,i+1]));
 let ADFASE = "all";   // actieve fase-filter in de advertentietabel
 let ADSTATUS = "all"; // actieve status-filter (actief / gepauzeerd / gestopt ...)
 let ADKANAAL = "all"; // actieve kanaal-filter (Meta / Google / LinkedIn / organisch)
+// ROAS (= verkoopsom ÷ uitgaven) wordt alléén bij het demopark op 100 gecapt, zodat de
+// verzonnen democijfers geloofwaardig blijven. Bij echte data tonen we de werkelijke ROAS.
+let ADROASCAP = Infinity;
 // --- Afkeuren op ongekwalificeerde leads (twee niveaus) ------------------------
 // "Let op" (oranje) = zachte attentie op het rauwe percentage. "Overweeg uitzetten"
 // (rood) = statistisch onderbouwd via de Wilson-ondergrens (95%), die automatisch
@@ -1680,7 +1684,7 @@ function drawAdTable(){
          <td>${convPct(a)!=null ? convPct(a)+"%" : "—"}</td>
          <td class="${okCls}">${a.leads>0 ? ok+"%"+relMark : "—"}</td>
          <td>${adLink(a.sales,'verkopen',a.ad_id,a.advertentie)}</td><td>${a.omzet>0 ? eur(a.omzet) : "—"}</td>
-         <td>${Number(a.roas)>0 ? Math.min(100,Number(a.roas)).toFixed(2) : "—"}</td>
+         <td>${Number(a.roas)>0 ? Math.min(ADROASCAP,Number(a.roas)).toFixed(2) : "—"}</td>
          <td class="tl kanaal-cell" data-code="${escAttr(a.code)}" style="cursor:pointer" title="Klik om het kanaal/notities te wijzigen">${esc(KANAAL_LABEL(a.kanaal))}</td></tr>`;
      }).join("") || `<tr><td colspan="${ADCOLS.length}" style="color:var(--muted);padding:14px">Geen advertenties in deze selectie.</td></tr>`; })()}</tbody>`;
   document.querySelectorAll("#adTable th").forEach(th => th.addEventListener("click", () => {
@@ -1731,7 +1735,7 @@ function drawFaseTable(){
          <td>${leads>0?Math.round(afspr/leads*100)+"%":"—"}</td>
          <td>${leads>0?Math.round(ongek/leads*100)+"%":"—"}</td>
          <td>${sales}</td><td>${omzet>0?eur(omzet):"—"}</td>
-         <td>${spend>0&&omzet>0?Math.min(100,omzet/spend).toFixed(2):"—"}</td></tr>`;
+         <td>${spend>0&&omzet>0?Math.min(ADROASCAP,omzet/spend).toFixed(2):"—"}</td></tr>`;
      }).join("")}</tbody>`;
   document.querySelectorAll("#adFaseTable tbody tr").forEach(tr => tr.addEventListener("click", ()=>{
     ADFASE = tr.dataset.fase;
@@ -1764,7 +1768,7 @@ function drawKanaalTable(){
          <td>${afspr}</td><td>${afspr>0?eur(spend/afspr):"—"}</td>
          <td>${sales}</td><td>${sales>0?eur(spend/sales):"—"}</td>
          <td>${omzet>0?eur(omzet):"—"}</td>
-         <td>${spend>0&&omzet>0?Math.min(100,omzet/spend).toFixed(2):"—"}</td></tr>`;
+         <td>${spend>0&&omzet>0?Math.min(ADROASCAP,omzet/spend).toFixed(2):"—"}</td></tr>`;
      }).join("")}</tbody>`;
   document.querySelectorAll("#adKanaalTable tbody tr").forEach(tr => tr.addEventListener("click", ()=>{
     ADKANAAL = tr.dataset.kanaal;
@@ -1842,7 +1846,7 @@ function renderAdMonths(rows){
        <td>${m.leads}</td><td>${m.leads>0?eur(m.cpl):"—"}</td>
        <td>${m.afspraken}</td><td>${m.afspraken>0?eur(m.cpa):"—"}</td>
        <td>${m.sales}</td><td style="font-weight:600">${Number(m.omzet)>0?eur(m.omzet):"—"}</td>
-       <td>${m.sales>0?eur(m.kost_per_sale):"—"}</td><td>${Number(m.roas)>0?Math.min(100,Number(m.roas)).toFixed(2):"—"}</td></tr>`).join("")}</tbody>`;
+       <td>${m.sales>0?eur(m.kost_per_sale):"—"}</td><td>${Number(m.roas)>0?Math.min(ADROASCAP,Number(m.roas)).toFixed(2):"—"}</td></tr>`).join("")}</tbody>`;
 }
 
 /* ---------- monthly overview (all roles) ---------- */
