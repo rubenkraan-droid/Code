@@ -1030,27 +1030,59 @@ async function doeLogin(){
   $("gateMsg").style.color = "var(--muted)"; $("gateMsg").textContent = "Inloggen…";
   const { data, error } = await sb.auth.signInWithPassword({ email, password });
   if(error){ $("gateMsg").style.color = "var(--bad)"; $("gateMsg").textContent = error.message; return; }
-  toonIngelogd(data.user?.email || email);
+  await startAsUser(data.user?.email || email);
 }
 $("sendLink").addEventListener("click", doeLogin);
 $("password").addEventListener("keydown", e=>{ if(e.key==="Enter") doeLogin(); });
 $("logout").addEventListener("click", async () => { await sb.auth.signOut(); location.reload(); });
 
-// TEST-modus (?login): puur controleren of een account+wachtwoord werkt; raakt de preview niet.
-function toonIngelogd(email){
+// LOGIN-modus (?login): echte per-gebruiker weergave. Rol/park komt uit my_access();
+// de "Bekijk als"-dropdown is vergrendeld op de eigen identiteit. Preview (zonder ?login) blijft ongemoeid.
+async function afschermGeenToegang(email){
+  $("app").classList.add("hidden");
+  $("gate").classList.remove("hidden");
   $("gate").innerHTML =
-    `<h2>Ingelogd ✓</h2>
-     <p style="color:var(--good);font-weight:600">Het account <b>${esc(email)}</b> werkt — wachtwoord correct.</p>
-     <p style="font-size:13px;color:var(--muted)">Dit is de inlogtest. De rol-weergave (Master/makelaar/park) en het
-        afschermen van data volgen bij het definitief aanzetten van login.</p>
-     <button id="logout2">Uitloggen</button>`;
-  $("logout2").addEventListener("click", async ()=>{ await sb.auth.signOut(); location.href = location.pathname + "?login"; });
+    `<h2>Geen toegang</h2>
+     <p>Het account <b>${esc(email)}</b> is ingelogd, maar heeft (nog) geen toegangsrol.
+        Vraag de beheerder om je account te koppelen.</p>
+     <button id="logoutNA">Uitloggen</button>`;
+  $("logoutNA").addEventListener("click", async ()=>{ await sb.auth.signOut(); location.href = location.pathname + "?login"; });
 }
-async function loginTest(){
-  document.querySelector(".shell") && $("app").classList.add("hidden");
+async function startAsUser(email){
+  const acc = await rpc("my_access") || [];
+  const row = acc[0];
+  if(!row) return afschermGeenToegang(email);          // ingelogd maar geen grant
+  $("gate").classList.add("hidden");
+  $("app").classList.remove("hidden");
+  $("logout").classList.remove("hidden");
+  if(row.is_owner){
+    $("whoami").textContent = email + " · Eigenaar";
+    PARKS  = await rpc("owner_parks")  || [];
+    AGENTS = await rpc("owner_agents") || [];
+    PARKS.push(DEMO_PARK);
+    $("viewAs").innerHTML =
+      `<option value="owner">Master (alles)</option>`
+      + `<optgroup label="Makelaar">${AGENTS.map(a=>`<option value="agent:${a.id}">${esc(a.name)}</option>`).join("")}</optgroup>`
+      + `<optgroup label="Recreatieontwikkelaar">${PARKS.map(p=>`<option value="park:${p.id}">${esc(p.name)}</option>`).join("")}</optgroup>`;
+    $("viewAs").value = "owner";
+    $("viewAs").classList.remove("hidden");            // eigenaar mag view-as gebruiken
+    $("viewAs").addEventListener("change", applyRole);
+  } else {
+    // parkgebruiker: uitsluitend eigen park, dropdown vergrendeld
+    $("whoami").textContent = email + " · " + row.park_name;
+    PARKS  = [{ id: row.park_id, name: row.park_name }, DEMO_PARK];
+    AGENTS = [];
+    $("viewAs").innerHTML = `<option value="park:${row.park_id}">${esc(row.park_name)}</option>`;
+    $("viewAs").value = "park:" + row.park_id;
+    $("viewAs").classList.add("hidden");               // op slot: geen andere rollen kiesbaar
+  }
+  await applyRole();
+}
+async function loginBoot(){
+  $("app").classList.add("hidden");
   $("gate").classList.remove("hidden");
   const { data } = await sb.auth.getSession();
-  if(data.session) toonIngelogd(data.session.user.email);
+  if(data.session) await startAsUser(data.session.user.email);
 }
 
 /* TEMP: login uitgeschakeld (preview) — de rolkeuze simuleert de rollen.
@@ -2698,8 +2730,8 @@ function printDashboard(){
   window.print();
 }
 
-// ?login = inlogtest (wachtwoord controleren); anders de normale preview-modus
-if(new URLSearchParams(location.search).has("login")) loginTest(); else boot();
+// ?login = echte per-gebruiker login (rol/park uit my_access); anders de normale preview-modus
+if(new URLSearchParams(location.search).has("login")) loginBoot(); else boot();
 </script>
 </body>
 </html>
