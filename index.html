@@ -2006,6 +2006,8 @@ async function renderOwner(){
   const shows = showsVan(f.appointments, f.no_show_pct);
   const closing = closingOpShows(f.sales, shows);   // closing telt op shows (afspraken die geweest zijn)
   const perAppt = f.appointments ? Math.round(f.revenue/f.appointments) : 0;
+  const roasCap = isDemo(parkNum) ? 100 : Infinity;
+  const roasTxt = Number(f.spend)>0 ? Math.min(roasCap, f.revenue/f.spend).toFixed(2) : "—";
   $("cardsTop").innerHTML =
     metric("Uitgaven",eur(f.spend),deltaSub(f.spend,fp&&fp.spend,heeftPrev,true)+sparkSlot("uitgaven")) +
     metricDeal("Leads",f.leads||0,'leads',null,'',false,parkVal==="all"?null:Number(parkVal),deltaSub(f.leads,fp&&fp.leads,heeftPrev)+sparkSlot("leads")) +
@@ -2013,6 +2015,7 @@ async function renderOwner(){
     metric("Shows",shows,`<div class="l" style="margin:5px 0 0">afspraken die geweest zijn</div>`) +
     metricDeal("Sales",f.sales||0,'verkopen',null,'',false,parkVal==="all"?null:Number(parkVal),defSub(dc)+deltaSub(f.sales,fp&&fp.sales,heeftPrev)+sparkSlot("sales")) +
     metric("Omzet",eur(f.revenue),deltaSub(f.revenue,fp&&fp.revenue,heeftPrev)+sparkSlot("omzet")) + metric("Omzet per afspraak",eur(perAppt)) +
+    metric(`ROAS <span class="info" tabindex="0">i<span class="tip">Omzet (verkoopsom) &divide; advertentiekosten van deze periode. Let op: dit zet de totale omzet af tegen de advertentie-uitgaven — ook omzet uit leads die niet via een advertentie binnenkwamen telt mee. Een lead van nu leidt bovendien vaak pas later tot omzet.</span></span>`, roasTxt) +
     metric("CPL",eur(f.cost_per_lead)) +
     metric("Closing %",(closing||0)+"%") + metric("Afval %",(f.afval_pct||0)+"%") +
     metric("No-show %",(f.no_show_pct||0)+"%");
@@ -2165,6 +2168,8 @@ async function renderPark(parkId){
   ]);
   const heeftPrevP = !!fPrev;
   const perAppt = f.appointments ? Math.round(f.revenue/f.appointments) : 0;
+  const roasCapP = isDemo(parkId) ? 100 : Infinity;
+  const roasTxtP = Number(f.spend)>0 ? Math.min(roasCapP, f.revenue/f.spend).toFixed(2) : "—";
   $("cardsTop").innerHTML =
     `<div class="metric"><div class="mtxt"><div class="l">Advertentiekosten
        <span class="info" tabindex="0">i<span class="tip">Advertentiekosten van deze periode. Let op: een lead van nu leidt vaak pas weken tot maanden later tot een verkoop, dus deze kosten horen niet één-op-één bij de omzet van dezelfde periode.</span></span>
@@ -2175,6 +2180,7 @@ async function renderPark(parkId){
     metric("Sales",f.sales||0,defSub(dsPark)+deltaSub(f.sales,fPrev&&fPrev.sales,heeftPrevP)+sparkSlot("sales")) +
     metric("Omzet",eur(f.revenue),deltaSub(f.revenue,fPrev&&fPrev.revenue,heeftPrevP)+sparkSlot("omzet")) +
     metric("Omzet per afspraak (gem.)",eur(perAppt)) +
+    metric(`ROAS <span class="info" tabindex="0">i<span class="tip">Omzet (verkoopsom) &divide; advertentiekosten van deze periode. Let op: dit zet de totale omzet af tegen de advertentie-uitgaven — ook omzet uit leads die niet via een advertentie binnenkwamen telt mee. Een lead van nu leidt bovendien vaak pas later tot omzet.</span></span>`, roasTxtP) +
     metric("Closing %",closingOpShows(f.sales,showsVan(f.appointments,f.no_show_pct))+"%") +
     metric("No-show %",(f.no_show_pct||0)+"%");
   const showsP = showsVan(f.appointments,f.no_show_pct);
