@@ -100,6 +100,7 @@
   .metric.team .l,.metric.team .v{color:var(--accent-soft-ink)}
   .metric.deal-link{transition:box-shadow .15s,transform .1s}
   .metric.deal-link:hover{box-shadow:var(--shadow-hover);transform:translateY(-1px)}
+  .metric .spark{display:block;width:100%;margin-top:9px;opacity:.9}
   .donutmini{flex:none;width:46px;height:46px;position:relative}
   .donutmini .dv{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--ink)}
   .sec{font-size:11px;font-weight:700;margin:0 0 12px;text-transform:uppercase;letter-spacing:.045em;color:var(--muted)}
@@ -319,6 +320,7 @@
     </nav>
     <div class="who">
       <button id="themeBtn" class="btn" title="Thema: automatisch (donker in de avond)">◐</button>
+      <button id="rapportBtn" class="btn hidden" title="Kant-en-klare samenvatting van de gekozen periode — om te delen of te plakken in een bericht">Rapport</button>
       <a id="helpBtn" class="btn" href="handleiding.html" target="_blank" rel="noopener" title="Handleiding & functie-overzicht">Handleiding</a>
       <button id="printBtn" class="btn" onclick="printDashboard()" title="Sla dit dashboard op als PDF">↓ PDF</button>
       <a id="adLink" href="notion-dashboard.html" class="hidden" style="color:var(--accent);text-decoration:none;font-weight:600">Advertenties &#8599;</a>
@@ -564,6 +566,20 @@
 </div>
 </div>
 
+<!-- rapport: kant-en-klare samenvatting van de gekozen periode -->
+<div id="rapportOverlay" class="overlay hidden">
+  <div class="editpanel" role="dialog" aria-modal="true" style="max-width:660px">
+    <h3>Rapportage</h3>
+    <p class="ep-sub" id="rapportSub"></p>
+    <div id="rapportInhoud" style="font-size:13.5px;line-height:1.65"></div>
+    <div class="ep-actions">
+      <button class="save" id="rapportKopieer">Kopieer tekst</button>
+      <button class="cancel" id="rapportSluit">Sluiten</button>
+      <span class="msg hidden" id="rapportMsg">Gekopieerd ✓</span>
+    </div>
+  </div>
+</div>
+
 <!-- notitie/fase-bewerkpaneel (gedeeld door Advertenties + Archief) -->
 <div id="adEditOverlay" class="overlay hidden">
   <div class="editpanel" role="dialog" aria-modal="true">
@@ -742,6 +758,34 @@ const metric  = (l,v,sub) => {
   }
   return `<div class="metric"><div class="mtxt"><div class="l">${l}</div><div class="v">${v}</div>${sub||""}</div></div>`;
 };
+/* ---------- sparklines: mini-trend (per maand) onderin een KPI-kaart ---------- */
+let SPARK_SEQ = 0;
+function sparkline(values, kleur){
+  const vs = (values||[]).map(v=>Number(v)||0);
+  if(vs.length < 2 || !vs.some(v=>v>0)) return "";
+  const W=120, H=30, P=2;
+  const max = Math.max(...vs), min = Math.min(...vs), span = (max-min)||1;
+  const pts = vs.map((v,i)=>[P + i*(W-2*P)/(vs.length-1), H-P-(v-min)*(H-2*P)/span]);
+  const lijn = pts.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" ");
+  const vlak = lijn + ` L${pts[pts.length-1][0].toFixed(1)} ${H} L${pts[0][0].toFixed(1)} ${H} Z`;
+  const id = "sprk"+(++SPARK_SEQ);
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" height="${H}" aria-hidden="true">
+    <defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="${kleur}" stop-opacity=".25"/><stop offset="1" stop-color="${kleur}" stop-opacity="0"/>
+    </linearGradient></defs>
+    <path d="${vlak}" fill="url(#${id})"/>
+    <path d="${lijn}" fill="none" stroke="${kleur}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+  </svg>`;
+}
+// placeholder in een kaart; wordt gevuld zodra de maanddata binnen is (vulSparks)
+const sparkSlot = key => `<span class="sparkslot" data-spark="${key}"></span>`;
+function vulSparks(containerId, series){
+  document.querySelectorAll(`#${containerId} .sparkslot`).forEach(el=>{
+    const s = series[el.dataset.spark];
+    el.innerHTML = s ? sparkline(s.values, s.kleur) : "";
+  });
+}
+
 /* ---------- periode-vergelijking: zelfde lengte, direct ervoor ---------- */
 function vorigePeriode(r){
   const f = new Date(r.p_from), t = new Date(r.p_to);
@@ -842,6 +886,7 @@ async function applyRole(){
   $("apptSec").classList.toggle("hidden", parkV);
   $("fPark").classList.toggle("hidden", parkV);
   $("fAgent").classList.toggle("hidden", !owner);
+  $("rapportBtn").classList.toggle("hidden", !owner);   // rapport bevat omzet/marge-context: alleen eigenaar
   // makelaar ziet Resultaten + Financiën (eigen commissie); geen advertenties/archief/prognose.
   document.querySelector('.tab[data-tab="advertenties"]').classList.toggle("hidden", agentV);
   document.querySelector('.tab[data-tab="archief"]').classList.toggle("hidden", agentV);
@@ -1217,10 +1262,11 @@ async function renderAds(){
   const spend=Number(k.spend)||0, leads=Number(k.leads)||0, afspr=Number(k.afspraken)||0,
         sales=Number(k.sales)||0, omzet=Number(k.omzet)||0, clicks=Number(k.clicks)||0;
   const prevCpl = kPrev && Number(kPrev.leads)>0 ? Number(kPrev.spend)/Number(kPrev.leads) : null;
+  const sMnd = (mnd||[]).slice(-8);
   $("adKpis").innerHTML =
-    metric("Totaal uitgaven", eur(spend), deltaSub(spend,kPrev&&kPrev.spend,heeftPrevAd,true)) +
+    metric("Totaal uitgaven", eur(spend), deltaSub(spend,kPrev&&kPrev.spend,heeftPrevAd,true)+sparkline(sMnd.map(x=>x.spend),"#94A1B5")) +
     metric("Clicks", clicks.toLocaleString("nl-NL")) +
-    metric("Leads", leads, deltaSub(leads,kPrev&&kPrev.leads,heeftPrevAd)) +
+    metric("Leads", leads, deltaSub(leads,kPrev&&kPrev.leads,heeftPrevAd)+sparkline(sMnd.map(x=>x.leads),"#5B8DEF")) +
     metric("Kosten per lead", leads ? eur(spend/leads) : "—", leads&&prevCpl!=null ? deltaSub(spend/leads,prevCpl,true,true) : "") +
     metric("Afspraken", afspr) +
     metric("Kosten per afspraak", afspr ? eur(spend/afspr) : "—") +
@@ -1620,11 +1666,11 @@ async function renderOwner(){
   const closing = f.closing_rate_pct ?? (f.appointments ? Math.round(f.sales/f.appointments*100) : 0);
   const perAppt = f.appointments ? Math.round(f.revenue/f.appointments) : 0;
   $("cardsTop").innerHTML =
-    metric("Uitgaven",eur(f.spend),deltaSub(f.spend,fp&&fp.spend,heeftPrev,true)) +
-    metricDeal("Leads",f.leads||0,'leads',null,'',false,parkVal==="all"?null:Number(parkVal),deltaSub(f.leads,fp&&fp.leads,heeftPrev)) +
-    metricDeal("Afspraken",f.appointments||0,'afspraken',null,'',false,parkVal==="all"?null:Number(parkVal),deltaSub(f.appointments,fp&&fp.appointments,heeftPrev)) +
-    metricDeal("Sales",f.sales||0,'verkopen',null,'',false,parkVal==="all"?null:Number(parkVal),defSub(dc)+deltaSub(f.sales,fp&&fp.sales,heeftPrev)) +
-    metric("Omzet",eur(f.revenue),deltaSub(f.revenue,fp&&fp.revenue,heeftPrev)) + metric("Omzet per afspraak",eur(perAppt)) +
+    metric("Uitgaven",eur(f.spend),deltaSub(f.spend,fp&&fp.spend,heeftPrev,true)+sparkSlot("uitgaven")) +
+    metricDeal("Leads",f.leads||0,'leads',null,'',false,parkVal==="all"?null:Number(parkVal),deltaSub(f.leads,fp&&fp.leads,heeftPrev)+sparkSlot("leads")) +
+    metricDeal("Afspraken",f.appointments||0,'afspraken',null,'',false,parkVal==="all"?null:Number(parkVal),deltaSub(f.appointments,fp&&fp.appointments,heeftPrev)+sparkSlot("afspraken")) +
+    metricDeal("Sales",f.sales||0,'verkopen',null,'',false,parkVal==="all"?null:Number(parkVal),defSub(dc)+deltaSub(f.sales,fp&&fp.sales,heeftPrev)+sparkSlot("sales")) +
+    metric("Omzet",eur(f.revenue),deltaSub(f.revenue,fp&&fp.revenue,heeftPrev)+sparkSlot("omzet")) + metric("Omzet per afspraak",eur(perAppt)) +
     metric("CPL",eur(f.cost_per_lead)) +
     metric("Closing %",(closing||0)+"%") + metric("Afval %",(f.afval_pct||0)+"%") +
     metric("No-show %",(f.no_show_pct||0)+"%");
@@ -1690,6 +1736,14 @@ async function renderOwner(){
     defMaandMap(agentVal==="all"?null:Number(agentVal), parkVal==="all"?null:Number(parkVal)),
   ]);
   renderMonths(mo, {spend:agentVal==="all", leads:true, def:defMap2});
+  const sMo = mo.slice(-8);
+  vulSparks("cardsTop", {
+    uitgaven:  { values: sMo.map(x=>x.spend),        kleur:"#94A1B5" },
+    leads:     { values: sMo.map(x=>x.leads),        kleur:"#5B8DEF" },
+    afspraken: { values: sMo.map(x=>x.appointments), kleur:accent() },
+    sales:     { values: sMo.map(x=>x.sales),        kleur:"#3FA06B" },
+    omzet:     { values: sMo.map(x=>x.revenue),      kleur:"#8B7CF0" },
+  });
 
   const det = await rpc("appointments_detail", { ...r,
     p_agent_id: agentVal==="all"?null:Number(agentVal),
@@ -1714,9 +1768,9 @@ async function renderAgent(agentId){
   ]);
   const heeftPrevA = !!sPrev;
   $("cardsTop").innerHTML =
-    metricDeal("Mijn afspraken",s.appointments||0,'afspraken',agentId,'',false,null,deltaSub(s.appointments,sPrev&&sPrev.appointments,heeftPrevA)) +
-    metricDeal("Mijn sales",s.sales||0,'verkopen',agentId,'',false,null,defSub(dsAgent)+deltaSub(s.sales,sPrev&&sPrev.sales,heeftPrevA)) +
-    metric("Mijn omzet",eur(s.revenue),deltaSub(s.revenue,sPrev&&sPrev.revenue,heeftPrevA)) + metric("Mijn commissie",eur(s.mijn_commissie)) +
+    metricDeal("Mijn afspraken",s.appointments||0,'afspraken',agentId,'',false,null,deltaSub(s.appointments,sPrev&&sPrev.appointments,heeftPrevA)+sparkSlot("afspraken")) +
+    metricDeal("Mijn sales",s.sales||0,'verkopen',agentId,'',false,null,defSub(dsAgent)+deltaSub(s.sales,sPrev&&sPrev.sales,heeftPrevA)+sparkSlot("sales")) +
+    metric("Mijn omzet",eur(s.revenue),deltaSub(s.revenue,sPrev&&sPrev.revenue,heeftPrevA)+sparkSlot("omzet")) + metric("Mijn commissie",eur(s.mijn_commissie)) +
     metric("Omzet per afspraak",eur(s.revenue_per_appt)) +
     metric("Closing %",(s.closing_rate_pct||0)+"%") + metric("Afval %",(s.afval_pct||0)+"%") +
     metric("No-show %",(s.no_show_pct||0)+"%");
@@ -1734,8 +1788,14 @@ async function renderAgent(agentId){
   $("cardsCallMe").innerHTML =
     metric("Gebeld",cs.gebeld||0) + metric("Gesprek",cs.gesprek||0) + metric("Ingepland",cs.ingepland||0) +
     metric("% gesprek van gebeld", cs.gebeld>0 ? Math.round(cs.gesprek/cs.gebeld*100)+"%" : "—");
-  renderMonths(await rpc("monthly_overview", {p_agent_id:agentId, p_park_id:pp}) || [],
-    {spend:false, leads:false, def: await defMaandMap(agentId, pp)});
+  const moA = await rpc("monthly_overview", {p_agent_id:agentId, p_park_id:pp}) || [];
+  renderMonths(moA, {spend:false, leads:false, def: await defMaandMap(agentId, pp)});
+  const sMoA = moA.slice(-8);
+  vulSparks("cardsTop", {
+    afspraken: { values: sMoA.map(x=>x.appointments), kleur:accent() },
+    sales:     { values: sMoA.map(x=>x.sales),        kleur:"#3FA06B" },
+    omzet:     { values: sMoA.map(x=>x.revenue),      kleur:"#8B7CF0" },
+  });
   const det = await rpc("appointments_detail", {...r, p_agent_id:agentId, p_park_id:pp}) || [];
   $("apptTitle").textContent = `Mijn afspraken (${det.length})`;
   renderAppts(det, false);
@@ -1759,10 +1819,10 @@ async function renderPark(parkId){
     `<div class="metric"><div class="mtxt"><div class="l">Advertentiekosten
        <span class="info" tabindex="0">i<span class="tip">Advertentiekosten van deze periode. Let op: een lead van nu leidt vaak pas weken tot maanden later tot een verkoop, dus deze kosten horen niet één-op-één bij de omzet van dezelfde periode.</span></span>
      </div><div class="v">${eur(f.spend)}</div>${deltaSub(f.spend,fPrev&&fPrev.spend,heeftPrevP,true)}</div></div>` +
-    metric("Leads",f.leads||0,deltaSub(f.leads,fPrev&&fPrev.leads,heeftPrevP)) +
-    metric("Afspraken",f.appointments||0,deltaSub(f.appointments,fPrev&&fPrev.appointments,heeftPrevP)) +
-    metric("Sales",f.sales||0,defSub(dsPark)+deltaSub(f.sales,fPrev&&fPrev.sales,heeftPrevP)) +
-    metric("Omzet",eur(f.revenue),deltaSub(f.revenue,fPrev&&fPrev.revenue,heeftPrevP)) +
+    metric("Leads",f.leads||0,deltaSub(f.leads,fPrev&&fPrev.leads,heeftPrevP)+sparkSlot("leads")) +
+    metric("Afspraken",f.appointments||0,deltaSub(f.appointments,fPrev&&fPrev.appointments,heeftPrevP)+sparkSlot("afspraken")) +
+    metric("Sales",f.sales||0,defSub(dsPark)+deltaSub(f.sales,fPrev&&fPrev.sales,heeftPrevP)+sparkSlot("sales")) +
+    metric("Omzet",eur(f.revenue),deltaSub(f.revenue,fPrev&&fPrev.revenue,heeftPrevP)+sparkSlot("omzet")) +
     metric("Omzet per afspraak (gem.)",eur(perAppt)) +
     metric("Closing %",(f.appointments?Math.round(f.sales/f.appointments*100):0)+"%") +
     metric("No-show %",(f.no_show_pct||0)+"%");
@@ -1772,8 +1832,15 @@ async function renderPark(parkId){
     {label:"Afspraken", value:f.appointments||0, color:accent(), sub:f.leads?`${Math.round((f.appointments||0)/f.leads*100)}% van leads`:""},
     {label:"Sales", value:f.sales||0, color:"#3FA06B", sub:`Closing ${closingP}%`, subHtml:defSub(dsPark)},
   ], { big:(f.leads||0).toLocaleString("nl-NL"), cap:"Leads" });
-  renderMonths(await rpc("monthly_overview", {p_park_id:parkId}) || [],
-    {spend:false, leads:true, def: await defMaandMap(null, parkId)});
+  const moP = await rpc("monthly_overview", {p_park_id:parkId}) || [];
+  renderMonths(moP, {spend:false, leads:true, def: await defMaandMap(null, parkId)});
+  const sMoP = moP.slice(-8);
+  vulSparks("cardsTop", {
+    leads:     { values: sMoP.map(x=>x.leads),        kleur:"#5B8DEF" },
+    afspraken: { values: sMoP.map(x=>x.appointments), kleur:accent() },
+    sales:     { values: sMoP.map(x=>x.sales),        kleur:"#3FA06B" },
+    omzet:     { values: sMoP.map(x=>x.revenue),      kleur:"#8B7CF0" },
+  });
   $("opvolgSec").classList.add("hidden");
   renderInventory(parkId);
 }
@@ -2060,6 +2127,96 @@ function ownerInsightsBouw(dc, agents, calls, opvolgStale){
   return out;
 }
 
+/* ---------- rapport: deelbare samenvatting van de gekozen periode (eigenaar) ---------- */
+let RAPPORT_TEKST = "";
+async function genereerRapport(){
+  if(currentView().role !== "owner") return;
+  const r = periodRange(), rPrev = vorigePeriode(r);
+  const parkVal = $("fPark").value;
+  const pp = parkVal==="all" ? null : Number(parkVal);
+  const parkNaam = pp==null ? "alle parken" : ((PARKS.find(p=>p.id===pp)||{}).name || "park");
+  const perLabel = $("fPeriod").selectedOptions[0]?.textContent || "";
+  const dtNL = d => new Date(d).toLocaleDateString("nl-NL",{day:"numeric",month:"long",year:"numeric"});
+  $("rapportSub").textContent = `${perLabel} · ${parkNaam} · ${dtNL(r.p_from)} t/m ${dtNL(r.p_to)}`;
+  $("rapportInhoud").innerHTML = `<p style="color:var(--muted)">Rapport wordt samengesteld…</p>`;
+  $("rapportMsg").classList.add("hidden");
+  $("rapportOverlay").classList.remove("hidden");
+
+  const funnelRpc = rr => pp==null ? rpc("owner_total_funnel", rr) : rpc("client_park_funnel", {p_park_id:pp, ...rr});
+  const [f, fp, dc, agents, adk, opvolg, ads] = await Promise.all([
+    funnelRpc(r).then(x=>x?.[0]||{}),
+    rPrev ? funnelRpc(rPrev).then(x=>x?.[0]) : Promise.resolve(null),
+    rpc("definitief_check", { ...r, p_park_id:pp }).then(x=>x?.[0]||{}),
+    rpc("owner_agent_performance", r).then(x=>x||[]),
+    rpc("ad_kpis", { ...r, p_park_id:pp }).then(x=>x?.[0]||{}),
+    rpc("opvolg_leads", { p_agent_id:null, p_park_id:pp }).then(x=>x||[]),
+    rpc("ad_overview", { ...r, p_park_id:pp }).then(x=>x||[]),
+  ]);
+
+  const pct = (c,p) => {
+    if(fp==null) return "";
+    c = Number(c)||0; p = Number(p)||0;
+    if(p===0) return c>0 ? " (nieuw t.o.v. de vorige periode)" : "";
+    const d = Math.round((c-p)/p*100);
+    return d===0 ? " (gelijk aan de vorige periode)" : ` (${d>0?"+":""}${d}% t.o.v. de vorige periode)`;
+  };
+  const ds = Number(dc.sales)||0, dd = Number(dc.definitief)||0;
+  const showPct = Math.round((100-(Number(f.no_show_pct)||0))*10)/10;
+  const adSpend = Number(adk.spend)||0, adLeads = Number(adk.leads)||0;
+  const besteAd = ads.filter(a=>Number(a.leads)>=5)
+    .map(a=>({a, c:(Number(a.afspraken)||0)/Number(a.leads)})).sort((x,y)=>y.c-x.c)[0];
+  const lekAd = ads.filter(a=>Number(a.spend)>=100 && Number(a.afspraken)===0)
+    .sort((x,y)=>Number(y.spend)-Number(x.spend))[0];
+  const closer = agents.filter(a=>Number(a.shows)>=3 && Number(a.closing_rate_pct)>0)
+    .sort((x,y)=>Number(y.closing_rate_pct)-Number(x.closing_rate_pct))[0];
+  const topSales = agents.filter(a=>Number(a.sales)>0).sort((x,y)=>Number(y.sales)-Number(x.sales))[0];
+  const stale = opvolg.filter(x=>x.dagen_sinds_contact==null || x.dagen_sinds_contact>=30).length;
+
+  const secties = [];
+  secties.push({ titel:"Funnel", regels:[
+    `Leads: ${f.leads||0}${pct(f.leads, fp&&fp.leads)}`,
+    `Afspraken: ${f.appointments||0}${pct(f.appointments, fp&&fp.appointments)}`,
+    `Sales: ${f.sales||0}${ds>0?` — waarvan ${dd} definitief`:""}${pct(f.sales, fp&&fp.sales)}`,
+    `Omzet: ${eur(f.revenue)}${pct(f.revenue, fp&&fp.revenue)}`,
+  ]});
+  secties.push({ titel:"Kwaliteit", regels:[
+    `Closing: ${f.closing_rate_pct ?? (f.appointments?Math.round((f.sales||0)/f.appointments*100):0)}%`,
+    `Show: ${showPct}% · Afval: ${f.afval_pct||0}%`,
+  ]});
+  const adRegels = [];
+  if(adSpend>0) adRegels.push(`Uitgaven: ${eur(adSpend)}${adLeads>0?` · kosten per lead ${eur(adSpend/adLeads)}`:""}`);
+  if(besteAd && besteAd.c>0) adRegels.push(`Beste advertentie: ${besteAd.a.advertentie} — ${(besteAd.c*100).toFixed(0)}% van de ${besteAd.a.leads} leads werd een afspraak`);
+  if(adRegels.length) secties.push({ titel:"Advertenties", regels:adRegels });
+  const teamRegels = [];
+  if(closer) teamRegels.push(`Beste closing: ${closer.agent} (${closer.closing_rate_pct}% bij ${closer.shows} gehouden afspraken)`);
+  if(topSales) teamRegels.push(`Meeste sales: ${topSales.agent} (${topSales.sales})`);
+  if(teamRegels.length) secties.push({ titel:"Team", regels:teamRegels });
+  const let_op = [];
+  if(ds>0 && dd<ds) let_op.push(`Nog niet alle verkopen zijn definitief (${dd} van ${ds})`);
+  if(stale>0) let_op.push(`${stale} open leads zonder contact in 30+ dagen (opvolglijst)`);
+  if(lekAd) let_op.push(`${lekAd.advertentie}: ${eur(lekAd.spend)} uitgegeven zonder afspraak`);
+  if(let_op.length) secties.push({ titel:"Aandachtspunten", regels:let_op });
+
+  $("rapportInhoud").innerHTML = secties.map(s=>
+    `<div style="margin-bottom:14px"><div class="sec" style="margin-bottom:6px">${s.titel}</div>
+     <ul style="margin:0;padding-left:18px">${s.regels.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`).join("");
+
+  const kop = `RecraVas rapportage · ${perLabel} · ${parkNaam} · ${dtNL(r.p_from)} t/m ${dtNL(r.p_to)}`;
+  RAPPORT_TEKST = kop + "\n" + "".padEnd(kop.length,"=") + "\n\n"
+    + secties.map(s=>`${s.titel}\n${s.regels.map(x=>`- ${x}`).join("\n")}`).join("\n\n")
+    + `\n\nGegenereerd door het RecraVas-dashboard op ${new Date().toLocaleDateString("nl-NL")}.`;
+}
+$("rapportBtn").addEventListener("click", genereerRapport);
+$("rapportSluit").addEventListener("click", ()=>$("rapportOverlay").classList.add("hidden"));
+$("rapportOverlay").addEventListener("click", e=>{ if(e.target.id==="rapportOverlay") $("rapportOverlay").classList.add("hidden"); });
+$("rapportKopieer").addEventListener("click", async ()=>{
+  try{
+    await navigator.clipboard.writeText(RAPPORT_TEKST);
+    $("rapportMsg").textContent = "Gekopieerd ✓";
+  }catch(e){ $("rapportMsg").textContent = "Kopiëren mislukt — selecteer de tekst handmatig."; }
+  $("rapportMsg").classList.remove("hidden");
+});
+
 /* ---------- notitie/fase-bewerkpaneel (gedeeld) ---------- */
 let EDIT_CTX = null;
 function openAdEdit(row, source){
@@ -2186,7 +2343,11 @@ $("edFase").innerHTML = `<option value="">— geen fase —</option>`
 $("edSave").addEventListener("click", saveAdEdit);
 $("edCancel").addEventListener("click", closeAdEdit);
 $("adEditOverlay").addEventListener("click", e=>{ if(e.target.id==="adEditOverlay") closeAdEdit(); });
-document.addEventListener("keydown", e=>{ if(e.key==="Escape" && !$("adEditOverlay").classList.contains("hidden")) closeAdEdit(); });
+document.addEventListener("keydown", e=>{
+  if(e.key!=="Escape") return;
+  if(!$("adEditOverlay").classList.contains("hidden")) closeAdEdit();
+  if(!$("rapportOverlay").classList.contains("hidden")) $("rapportOverlay").classList.add("hidden");
+});
 
 /* ---------- dashboard als PDF: print de actieve tab ---------- */
 function printDashboard(){
