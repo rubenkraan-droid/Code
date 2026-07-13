@@ -90,6 +90,15 @@ in this repo. `list_migrations` on the project is the source of truth, not git l
   filters throughout). Don't remove these filters when refactoring a query.
 - Riverte and Berkenstrand are excluded from `market`/`park` everywhere (`pipeline_park_map` has them
   set to null) — if new pipelines appear for them, leave them unmapped, don't add them back.
+- **Toekomstig geplande afspraken tellen NIET mee.** Overal waar afspraken geteld worden gaat de
+  telling via de helper `afspraak_datum(appointment_date, appointment_date_derived, stage_name,
+  next_activity_date)` i.p.v. `coalesce(appointment_date, appointment_date_derived)`. Die geeft NULL
+  zolang de afspraak in de toekomst gepland staat (stage `Afspraak gepland` én `next_activity_date >
+  current_date`), zodat een geplande afspraak pas meetelt zodra hij heeft plaatsgevonden. Toegepast in
+  owner_total_funnel, client_park_funnel, owner_agent_performance, agent_stats, monthly_overview,
+  appointments_detail én de ad-RPC's (ad_kpis, ad_daily, ad_daily_detail, ad_monthly, ad_overview).
+  Elke NIEUWE afspraaktelling moet dezelfde helper gebruiken. Definitief-matching gebruikt beide
+  spellingen ('B. Koopcontract defitief' + '...definitief').
 - Stage-name string arrays (which Pipedrive stages count as "an appointment happened", "a sale
   happened") are duplicated in **three places** that must be kept in sync: the edge function's
   `AFSPRAAK_NAMEN`/`VERKOOP_NAMEN` sets, `internal_deals_needing_appointment_backfill`'s `stage_name in
