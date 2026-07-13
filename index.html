@@ -1064,7 +1064,7 @@ async function startAsUser(email){
     SCOPED_PARK = scoped ? Number(row.park_id) : null;
     AGENTS = await rpc("owner_agents") || [];
     if(scoped){
-      $("whoami").textContent = email + " · Eigenaar · " + (row.park_name||"") + (row.no_finance ? " · excl. financiën" : "");
+      $("whoami").textContent = email + " · Eigenaar";
       PARKS = [{ id:Number(row.park_id), name: row.park_name }];   // alleen eigen park (geen demopark)
       $("viewAs").innerHTML = `<option value="owner">Master · ${esc(row.park_name||"")}</option>`;
       $("viewAs").value = "owner";
