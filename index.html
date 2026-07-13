@@ -1066,7 +1066,8 @@ async function startAsUser(email){
     $("viewAs").innerHTML =
       `<option value="owner">Master (alles)</option>`
       + `<optgroup label="Makelaar">${AGENTS.map(a=>`<option value="agent:${a.id}">${esc(a.name)}</option>`).join("")}</optgroup>`
-      + `<optgroup label="Recreatieontwikkelaar">${PARKS.map(p=>`<option value="park:${p.id}">${esc(p.name)}</option>`).join("")}</optgroup>`;
+      + `<optgroup label="Recreatieontwikkelaar">${PARKS.map(p=>`<option value="park:${p.id}">${esc(p.name)}</option>`).join("")}</optgroup>`
+      + `<optgroup label="Test"><option value="nofinance">Karl · eigenaar zonder financiën</option></optgroup>`;
     $("viewAs").value = "owner";
     $("viewAs").classList.remove("hidden");            // eigenaar mag view-as gebruiken
     $("viewAs").addEventListener("change", applyRole);
@@ -1117,6 +1118,7 @@ async function boot(){
 function currentView(){
   const v = $("viewAs").value;
   if(v==="owner") return { role:"owner" };
+  if(v==="nofinance") return { role:"owner", nofinance:true };   // testweergave: eigenaar zonder financiën (Karl)
   const [role,id] = v.split(":");
   return { role, id:Number(id) };
 }
@@ -1165,7 +1167,7 @@ async function applyRole(){
     $("subtitle").textContent = "Parkweergave · " + ((PARKS.find(p=>p.id===v.id)||{}).name||"");
     refresh = () => renderPark(v.id);
   }
-  if(LOGIN_NO_FINANCE){   // eigenaar zonder financiën: tab altijd verborgen
+  if(LOGIN_NO_FINANCE || v.nofinance){   // eigenaar zonder financiën (echt óf testweergave Karl): tab verborgen
     document.querySelector('.tab[data-tab="financien"]').classList.add("hidden");
     if(activeTab==="financien"){ activeTab="resultaten"; }
   }
