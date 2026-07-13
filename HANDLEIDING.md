@@ -86,7 +86,7 @@ Aan- en verkoop van bestaande woningen (Pipedrive-pijplijn Resale). Zuivere funn
   "Opslaan als PDF". Afdrukken gebeurt altijd in het lichte thema.
 - **Rapport** (rechtsboven, alleen eigenaar): genereert een deelbare tekst-samenvatting van de
   gekozen periode (funnel, kwaliteit, advertenties, team, aandachtspunten) — kopieer met één klik.
-- **◐-knop** (rechtsboven): thema — automatisch (volgt je systeem/Mac), licht of donker.
+- **◐-knop** (rechtsboven): thema — automatisch (donker van 18:00 tot 09:00), licht of donker.
 - Klik op een **advertentie** (Advertenties-tab): naast het dagverloop verschijnt de creative-foto;
   klik erop voor de grote versie.
 - **Handleiding** (rechtsboven): opent dit document.

@@ -333,7 +333,7 @@
       <button class="tab" data-tab="resale" title="Resale"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-7 9 7M5 10v9h5v-6h4v6h5v-9"/></svg><span class="lbl">Resale</span></button>
     </nav>
     <div class="who">
-      <button id="themeBtn" class="btn" title="Thema: automatisch — volgt je systeem">◐</button>
+      <button id="themeBtn" class="btn" title="Thema: automatisch — donker van 18:00 tot 09:00">◐</button>
       <button id="rapportBtn" class="btn hidden" title="Kant-en-klare samenvatting van de gekozen periode — om te delen of te plakken in een bericht">Rapport</button>
       <a id="helpBtn" class="btn" href="handleiding.html" target="_blank" rel="noopener" title="Handleiding & functie-overzicht">Handleiding</a>
       <button id="printBtn" class="btn" onclick="printDashboard()" title="Sla dit dashboard op als PDF">↓ PDF</button>
@@ -701,16 +701,18 @@ const areaGrad = (hex, topA, botA) => (context) => {
   return g;
 };
 
-/* ---------- thema: automatisch = volgt de Mac (systeem), of handmatig via de knop ---------- */
+/* ---------- thema: automatisch = donker 's avonds/'s nachts (18:00–09:00), of handmatig ---------- */
+const THEMA_DONKER_VANAF = 18;   // vanaf 18:00 donker
+const THEMA_LICHT_VANAF  = 9;    // vanaf 09:00 weer licht
 const THEMA_STANDEN = { auto:"◐", light:"☀", dark:"☾" };
-const THEMA_TITELS = { auto:"Thema: automatisch — volgt je systeem · klik voor licht",
+const THEMA_TITELS = { auto:"Thema: automatisch — donker van 18:00 tot 09:00 · klik voor licht",
   light:"Thema: licht · klik voor donker", dark:"Thema: donker · klik voor automatisch" };
-const systeemDonker = window.matchMedia("(prefers-color-scheme: dark)");
+const isAvondDonker = () => { const h = new Date().getHours(); return h >= THEMA_DONKER_VANAF || h < THEMA_LICHT_VANAF; };
 const themaVoorkeur = () => localStorage.getItem("thema") || "auto";
 function effectiefThema(){
   const p = themaVoorkeur();
   if(p !== "auto") return p;
-  return systeemDonker.matches ? "dark" : "light";   // auto = precies wat de Mac doet
+  return isAvondDonker() ? "dark" : "light";
 }
 const isDark = () => document.documentElement.dataset.theme === "dark";
 const cardKleur = () => isDark() ? "#1C232E" : "#FFFFFF";
@@ -726,12 +728,12 @@ function zetThema(){
   if(btn){ btn.textContent = THEMA_STANDEN[p]; btn.title = THEMA_TITELS[p]; }
 }
 zetThema();
-// live meebewegen als de Mac tussen licht/donker wisselt (alleen in auto-stand)
-systeemDonker.addEventListener("change", () => {
+// elke 5 min checken of de grens (18:00 / 09:00) is gepasseerd terwijl de pagina open staat
+setInterval(() => {
   if(themaVoorkeur()==="auto" && document.documentElement.dataset.theme !== effectiefThema()){
     zetThema(); try { refresh(); renderActieveTab(); } catch(e) {}
   }
-});
+}, 300000);
 $("themeBtn").addEventListener("click", () => {
   const volgorde = { auto:"light", light:"dark", dark:"auto" };
   localStorage.setItem("thema", volgorde[themaVoorkeur()]);
