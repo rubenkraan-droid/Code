@@ -37,7 +37,7 @@
   :root[data-theme="dark"] .fase-oplossingsbewust{background:#173432;color:#5CC5C0}
   :root[data-theme="dark"] .fase-productbewust{background:#37301E;color:#E8B45C}
   :root[data-theme="dark"] .fase-meest_bewust{background:#1E332A;color:#4FBF83}
-  :root[data-theme="dark"] .insight.info .ic{background:#1F2C45}
+  :root[data-theme="dark"] .insight.i-info .ic{background:#1F2C45}
   :root[data-theme="dark"] .info .tip{background:#0C0F14}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);
@@ -110,10 +110,10 @@
     display:flex;gap:11px;align-items:flex-start;font-size:13px;line-height:1.45;color:var(--muted)}
   .insight .ic{flex:none;width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;background:var(--surface-2)}
   .insight b{display:block;font-size:12.5px;margin-bottom:2px;color:var(--ink)}
-  .insight.good .ic{background:var(--good-soft)}
-  .insight.warn .ic{background:var(--warn-soft)}
-  .insight.bad .ic{background:var(--bad-soft)}
-  .insight.info .ic{background:#E4ECFB}
+  .insight.i-good .ic{background:var(--good-soft)}
+  .insight.i-warn .ic{background:var(--warn-soft)}
+  .insight.i-bad .ic{background:var(--bad-soft)}
+  .insight.i-info .ic{background:#E4ECFB}
   .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:24px;box-shadow:var(--shadow)}
   .panel .scroll{max-height:440px;overflow-y:auto}
   table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
@@ -2124,8 +2124,10 @@ function renderFunnel(stages, center){
 }
 
 /* ---------- automatische inzichten ---------- */
+// let op: variantklasse krijgt prefix "i-" zodat hij nooit botst met globale
+// klassen als .info (het tooltip-rondje) of .good/.bad (tabelcel-kleuren)
 const insight = (cls, icon, titel, tekst) =>
-  `<div class="insight ${cls}"><div class="ic">${icon}</div><div><b>${titel}</b>${tekst}</div></div>`;
+  `<div class="insight i-${cls}"><div class="ic">${icon}</div><div><b>${titel}</b>${tekst}</div></div>`;
 
 // advertentiekwaliteit: conversie, CPL, budgetlekken, CPL-trend, fase-dekking
 function adInsightsBouw(rows, dd){
