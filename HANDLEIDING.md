@@ -84,12 +84,14 @@ Aan- en verkoop van bestaande woningen (Pipedrive-pijplijn Resale). Zuivere funn
 | Begrip | Betekenis |
 |--------|-----------|
 | **Lead** | Elke Pipedrive-deal (aanmaakdatum = leaddatum). |
-| **Afspraak** | Deal die (ooit) in een afspraak-stage kwam. |
+| **Afspraak** | Deal die (ooit) in een afspraak-stage kwam. Een afspraak die nog in de toekomst gepland staat, telt pas mee zodra hij is geweest. |
+| **Shows** | Afspraken die daadwerkelijk hebben plaatsgevonden (afspraken − no-shows). |
 | **Verkoop** | Deal vanaf "Informeel akkoord ontvangen" en verder, niet verloren. |
-| **Closing %** | Verkopen ÷ afspraken. |
+| **Closing %** | Verkopen ÷ **shows** (dus op de afspraken die geweest zijn, niet op no-shows). |
 | **Afval %** | Verloren deals ÷ leads. |
 | **No-show %** | Afspraken met "Klant niet geweest" ÷ afspraken. |
 | **Show %** | 100 % − no-show %. |
+| **Kanaal** | De bron van de advertentie (Meta, Google, LinkedIn, organisch); instelbaar per advertentie, filterbaar en per-kanaal op te tellen. |
 | **CPL** | Advertentie-uitgaven ÷ leads. |
 | **CPA** | Advertentie-uitgaven ÷ afspraken. |
 | **Conv. %** | Afspraken ÷ leads per advertentie (kwaliteit van de leads). |

@@ -401,7 +401,7 @@
       </div>
       <div id="ownerInsights" class="insights"></div>
     </div>
-    <div class="sec">Per agent</div>
+    <div class="sec">Per makelaar</div>
     <div class="panel"><table id="agentTable"></table></div>
     <p id="definitiefNote" class="foot" style="margin-top:6px"></p>
     <div class="sec">Gebeld · gesprek · ingepland
@@ -447,7 +447,7 @@
 
   <div id="inventorySec" class="hidden">
     <div class="sec">Uitverkoop van het park
-      <span class="info" tabindex="0">i<span class="tip">Verkocht / gereserveerd / beschikbaar uit de kavelvoorraad. De prognose = beschikbaar ÷ het aantal woningen dat in de vórige kalendermaand is verkocht.</span></span>
+      <span class="info" tabindex="0">i<span class="tip">Verkocht / beschikbaar uit de kavelvoorraad. De prognose = beschikbaar ÷ het aantal woningen dat in de vórige kalendermaand is verkocht.</span></span>
     </div>
     <div class="cards" id="inventoryKpis"></div>
   </div>
@@ -483,6 +483,7 @@
       <div id="adWarnBanner" class="hidden banner" style="background:var(--warn-soft);color:var(--warn);padding:10px 14px;border-radius:8px"></div>
       <div class="sec" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
         <span style="flex:1;min-width:200px">Per advertentie · klik op een rij voor het dagverloop, op een aantal voor de deals, op een <b>fase-pill</b> voor de notities</span>
+        <select id="adKanaalFilter" style="text-transform:none;font-weight:400;letter-spacing:0"></select>
         <select id="adFaseFilter" style="text-transform:none;font-weight:400;letter-spacing:0"></select>
         <select id="adStatusFilter" style="text-transform:none;font-weight:400;letter-spacing:0"></select>
       </div>
@@ -515,6 +516,12 @@
         <span class="info" tabindex="0">i<span class="tip">Alle advertenties met dezelfde awareness-fase bij elkaar opgeteld, voor de gekozen periode en dit park. Zo zie je of bijv. probleembewuste advertenties beter converteren dan oplossingsbewuste. Klik op een rij om de advertentietabel hierboven op die fase te filteren.</span></span>
       </div>
       <div class="panel"><div class="scroll"><table id="adFaseTable"></table></div></div>
+    </div>
+    <div id="adKanaalSec" class="hidden" style="margin-top:8px">
+      <div class="sec">Performance per kanaal
+        <span class="info" tabindex="0">i<span class="tip">Alle advertenties per kanaal (Meta, Google, LinkedIn, organisch) bij elkaar opgeteld, voor de gekozen periode en dit park: uitgaven, leads, CPL, afspraken, CPA, sales, kosten per sale en ROAS. Klik op een rij om de advertentietabel hierboven op dat kanaal te filteren.</span></span>
+      </div>
+      <div class="panel"><div class="scroll"><table id="adKanaalTable"></table></div></div>
     </div>
     <p class="foot" id="adFoot"></p>
   </div>
@@ -615,6 +622,10 @@
         <select id="edFase"></select>
       </div>
       <div class="ep-field">
+        <label for="edKanaal">Kanaal</label>
+        <select id="edKanaal"></select>
+      </div>
+      <div class="ep-field">
         <label for="edWerkte">Werkte deze advertentie?</label>
         <select id="edWerkte">
           <option value="">— niet ingevuld —</option>
@@ -676,6 +687,14 @@ function fasePill(stage){
            : `<span class="fase fase-leeg" title="Nog geen fase ingesteld">—</span>`;
 }
 const WERKTE_LBL = { wel:"Werkte wel", niet:"Werkte niet", onbekend:"Nog onbekend" };
+
+/* ---------- kanaal (Meta/Google/LinkedIn/organisch), instelbaar per advertentie ---------- */
+const KANALEN = [
+  { key:"meta", label:"Meta" }, { key:"google", label:"Google" },
+  { key:"linkedin", label:"LinkedIn" }, { key:"organisch", label:"Organisch" }, { key:"overig", label:"Overig" },
+];
+const KANAAL_LABEL = k => { const s=String(k||"").toLowerCase();
+  return (KANALEN.find(x=>x.key===s)||{}).label || (k?String(k):"—"); };
 
 /* ---------- mini-donut voor % stat-kaarten + gradient chart-vullingen ---------- */
 function donutMini(pct, color){
@@ -811,9 +830,9 @@ function demoThumb(code, kleur){
 function demoAds(){
   const r = demoRng(2);
   const defs = [
-    ["DEMO-AD1","oplossingsbewust","active","#6C5CE7"], ["DEMO-AD2","productbewust","active","#3FA06B"],
-    ["DEMO-AD3","probleembewust","paused","#5B8DEF"], ["DEMO-AD4","meest_bewust","active","#F4A63B"],
-    ["DEMO-AD5","onbewust","paused","#F16D9A"], ["DEMO-AD6","oplossingsbewust","killed","#7A8598"],
+    ["DEMO-AD1","oplossingsbewust","active","#6C5CE7","meta"], ["DEMO-AD2","productbewust","active","#3FA06B","meta"],
+    ["DEMO-AD3","probleembewust","paused","#5B8DEF","google"], ["DEMO-AD4","meest_bewust","active","#F4A63B","meta"],
+    ["DEMO-AD5","onbewust","paused","#F16D9A","linkedin"], ["DEMO-AD6","oplossingsbewust","killed","#7A8598","organisch"],
   ];
   return defs.map((d,i)=>{
     const leads = Math.round(20 + r()*90), spend = Math.round(leads*(90+r()*90));   // CPL ~€90-180 -> CPA rond €400
@@ -822,7 +841,7 @@ function demoAds(){
     const sales = (i<3 && afspraken>0) ? Math.max(1, Math.round(afspraken*(0.25+r()*0.25))) : 0;
     const omzet = sales * 342000, clicks = Math.round(leads*(20+r()*40));
     const ongek = Math.round(leads*(0.05+r()*0.22));
-    return { ad_id: 90000+i, code:d[0], advertentie:d[0], status:d[2], platform:"meta",
+    return { ad_id: 90000+i, code:d[0], advertentie:d[0], status:d[2], platform:d[4], kanaal:d[4],
       thumbnail_url: demoThumb(d[0], d[3]), spend, clicks, cpc: clicks?+(spend/clicks).toFixed(2):0,
       leads, cpl: leads?Math.round(spend/leads):0, afspraken, cpa: afspraken?Math.round(spend/afspraken):0,
       no_show_pct: +(r()*12).toFixed(1), ongekwalificeerd_pct: leads?+(ongek/leads*100).toFixed(1):0, ongekwalificeerd_n: ongek,
@@ -858,9 +877,9 @@ function demoData(fn, args){
     case "monthly_definitief": return mo.map(m=>({maand:m.maand, definitief:m.definitief}));
     case "definitief_stats": case "definitief_check": return [{sales, definitief}];
     case "park_sellthrough": {
-      const totaal=120, verkocht=Math.round(40+r()*30), gereserveerd=Math.round(4+r()*8),
-        beschikbaar=totaal-verkocht-gereserveerd, perMnd=mo[mo.length-1].sales||3;
-      return [{ totaal, verkocht, gereserveerd, beschikbaar, verkocht_pct: Math.round(verkocht/totaal*100),
+      const totaal=120, verkocht=Math.round(40+r()*30),
+        beschikbaar=totaal-verkocht, perMnd=mo[mo.length-1].sales||3;
+      return [{ totaal, verkocht, gereserveerd:0, beschikbaar, verkocht_pct: Math.round(verkocht/totaal*100),
         verkoop_per_maand: perMnd, maanden_tot_uitverkocht: perMnd?Math.round(beschikbaar/perMnd):null }]; }
     case "ad_kpis": return [{ spend, clicks: Math.round(leads*35), impressions: Math.round(leads*900),
       leads, leads_met_ad: Math.round(leads*0.85), afspraken: afspr, sales, omzet,
@@ -978,6 +997,10 @@ function defSub(ds){
   return `<div class="l" style="margin:5px 0 0;color:${ok?'var(--good)':'var(--warn)'};font-weight:600">${d} definitief`
     + ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">${tip}</span></span></div>`;
 }
+// shows = afspraken die daadwerkelijk plaatsvonden (afspraken - no-shows); closing rekent op shows
+const showsVan = (afspraken, noShowPct) => Math.max(0, Math.round((Number(afspraken)||0) * (100-(Number(noShowPct)||0))/100));
+const closingOpShows = (sales, shows) => shows>0 ? Math.round((Number(sales)||0)/shows*100) : 0;
+
 /* klikbare deals-cellen/cards: leads/afspraken/verkopen -> lijst met Pipedrive-links */
 const KINDLBL = { leads:"Leads", afspraken:"Afspraken", verkopen:"Verkopen" };
 const dcell = (waarde, kind, agentId, naam, resale) => Number(waarde)>0
@@ -1069,7 +1092,7 @@ async function applyRole(){
     $("title").textContent = "Master dashboard";
     $("subtitle").textContent = "Masterweergave";
     fillSelect($("fPark"), PARKS.filter(p=>!isDemo(p.id)).map(p=>({value:p.id,label:p.name})), "Alle parken");
-    fillSelect($("fAgent"), AGENTS.map(a=>({value:a.id,label:a.name})), "Alle agents");
+    fillSelect($("fAgent"), AGENTS.map(a=>({value:a.id,label:a.name})), "Alle makelaars");
     $("fPark").value = "all"; $("fAgent").value = "all";
     refresh = renderOwner;
   } else if(agentV){
@@ -1457,8 +1480,15 @@ async function renderAds(){
   if(ADSTATUS!=="all" && !adStatussen.includes(ADSTATUS)) ADSTATUS = "all";
   $("adStatusFilter").innerHTML = `<option value="all">Alle statussen</option>`
     + adStatussen.map(s=>`<option value="${s}" ${s===ADSTATUS?"selected":""}>${(STATUSNL[s]||[s])[0]}</option>`).join("");
+  // kanaal-filter vullen met de kanalen die in dit park voorkomen
+  const adKanalen = [...new Set(ADROWS.map(a=>String(a.kanaal||"").toLowerCase()).filter(Boolean))];
+  if(ADKANAAL!=="all" && !adKanalen.includes(ADKANAAL)) ADKANAAL = "all";
+  $("adKanaalFilter").innerHTML = `<option value="all">Alle kanalen</option>`
+    + KANALEN.filter(k=>adKanalen.includes(k.key)).map(k=>`<option value="${k.key}" ${k.key===ADKANAAL?"selected":""}>${k.label}</option>`).join("")
+    + adKanalen.filter(k=>!KANALEN.some(x=>x.key===k)).map(k=>`<option value="${k}" ${k===ADKANAAL?"selected":""}>${esc(KANAAL_LABEL(k))}</option>`).join("");
   drawAdTable();
   drawFaseTable();
+  drawKanaalTable();
   renderBestAds();
   renderAdMonths(mnd || []);
   closeAdDetail();
@@ -1529,7 +1559,7 @@ async function renderAdDetail(adId, naam){
 const ADCOLS = [
   ["advertentie","Advertentie"], ["status","Status"], ["awareness_stage","Fase"], ["spend","Uitgaven"], ["clicks","Clicks"],
   ["cpc","CPC"], ["leads","Leads"], ["cpl","CPL"], ["afspraken","Afspraken"], ["cpa","CPA"], ["conv_pct","Conv. %"],
-  ["ongekwalificeerd_pct","Ongekwalificeerd %"], ["sales","Sales"], ["omzet","Omzet"], ["roas","ROAS"],
+  ["ongekwalificeerd_pct","Ongekwalificeerd %"], ["sales","Sales"], ["omzet","Omzet"], ["roas","ROAS"], ["kanaal","Kanaal"],
 ];
 // conversie lead -> afspraak (kwaliteitsmaat per advertentie); niet in de RPC, dus hier afgeleid
 const convPct = a => Number(a.leads)>0 ? Math.round((Number(a.afspraken)||0)/Number(a.leads)*100) : null;
@@ -1537,6 +1567,7 @@ const convPct = a => Number(a.leads)>0 ? Math.round((Number(a.afspraken)||0)/Num
 const FASE_ORDER = Object.fromEntries(FASES.map((f,i)=>[f.key,i+1]));
 let ADFASE = "all";   // actieve fase-filter in de advertentietabel
 let ADSTATUS = "all"; // actieve status-filter (actief / gepauzeerd / gestopt ...)
+let ADKANAAL = "all"; // actieve kanaal-filter (Meta / Google / LinkedIn / organisch)
 // --- Afkeuren op ongekwalificeerde leads (twee niveaus) ------------------------
 // "Let op" (oranje) = zachte attentie op het rauwe percentage. "Overweeg uitzetten"
 // (rood) = statistisch onderbouwd via de Wilson-ondergrens (95%), die automatisch
@@ -1586,6 +1617,7 @@ function drawAdTable(){
   const rows = ADROWS
     .filter(a => ADFASE==="all" || (ADFASE==="none" ? !a.awareness_stage : a.awareness_stage===ADFASE))
     .filter(a => ADSTATUS==="all" || a.status===ADSTATUS)
+    .filter(a => ADKANAAL==="all" || String(a.kanaal||"").toLowerCase()===ADKANAAL)
     .sort((a,b)=>{
       if(s.key==="awareness_stage") return (faseSortVal(a)-faseSortVal(b)) * s.dir;
       if(s.key==="conv_pct") return ((convPct(a)||0)-(convPct(b)||0)) * s.dir;
@@ -1599,7 +1631,7 @@ function drawAdTable(){
         ? ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">${FASE_UITLEG}</span></span>`
         : key==='conv_pct'
         ? ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">Conversie van lead naar afspraak (afspraken ÷ leads). Dé kwaliteitsmaat naast de prijs per lead: een goedkope lead die nooit een afspraak wordt, is alsnog duur.</span></span>` : "";
-      const tl = (key==='advertentie'||key==='status'||key==='awareness_stage') ? 'tl' : '';
+      const tl = (key==='advertentie'||key==='status'||key==='awareness_stage'||key==='kanaal') ? 'tl' : '';
       return `<th data-key="${key}" class="${tl}" style="cursor:pointer;user-select:none">${label}${arrow}${info}</th>`;
     }).join("")}</tr></thead>
      <tbody>${(()=>{ const ctx = ongekStats(); return rows.map(a=>{
@@ -1631,7 +1663,8 @@ function drawAdTable(){
          <td>${convPct(a)!=null ? convPct(a)+"%" : "—"}</td>
          <td class="${okCls}">${a.leads>0 ? ok+"%"+relMark : "—"}</td>
          <td>${adLink(a.sales,'verkopen',a.ad_id,a.advertentie)}</td><td>${a.omzet>0 ? eur(a.omzet) : "—"}</td>
-         <td>${Number(a.roas)>0 ? Math.min(100,Number(a.roas)).toFixed(2) : "—"}</td></tr>`;
+         <td>${Number(a.roas)>0 ? Math.min(100,Number(a.roas)).toFixed(2) : "—"}</td>
+         <td class="tl kanaal-cell" data-code="${escAttr(a.code)}" style="cursor:pointer" title="Klik om het kanaal/notities te wijzigen">${esc(KANAAL_LABEL(a.kanaal))}</td></tr>`;
      }).join("") || `<tr><td colspan="${ADCOLS.length}" style="color:var(--muted);padding:14px">Geen advertenties in deze selectie.</td></tr>`; })()}</tbody>`;
   document.querySelectorAll("#adTable th").forEach(th => th.addEventListener("click", () => {
     const key = th.dataset.key;
@@ -1641,7 +1674,7 @@ function drawAdTable(){
   document.querySelectorAll("#adTable tbody tr").forEach(tr => tr.addEventListener("click", () => {
     renderAdDetail(Number(tr.dataset.adid), tr.dataset.naam);
   }));
-  document.querySelectorAll("#adTable .fase-cell").forEach(el => el.addEventListener("click", (e) => {
+  document.querySelectorAll("#adTable .fase-cell, #adTable .kanaal-cell").forEach(el => el.addEventListener("click", (e) => {
     e.stopPropagation();
     const row = ADROWS.find(r => r.code === el.dataset.code);
     if(row) openAdEdit(row, "ad");
@@ -1686,6 +1719,39 @@ function drawFaseTable(){
   document.querySelectorAll("#adFaseTable tbody tr").forEach(tr => tr.addEventListener("click", ()=>{
     ADFASE = tr.dataset.fase;
     $("adFaseFilter").value = ADFASE;
+    drawAdTable();
+    $("adOverviewSec").scrollIntoView({ behavior:"smooth", block:"start" });
+  }));
+}
+
+/* ---------- performance per kanaal (Meta/Google/LinkedIn/organisch) ---------- */
+function drawKanaalTable(){
+  const groepen = {};
+  ADROWS.forEach(a => { const k = String(a.kanaal||"overig").toLowerCase(); (groepen[k]=groepen[k]||[]).push(a); });
+  const aanwezig = Object.keys(groepen);
+  // pas tonen als er meer dan één kanaal is (anders zegt het niets)
+  $("adKanaalSec").classList.toggle("hidden", aanwezig.length < 2);
+  if(aanwezig.length < 2) return;
+  const volgorde = KANALEN.map(k=>k.key).filter(k=>groepen[k]).concat(aanwezig.filter(k=>!KANALEN.some(x=>x.key===k)));
+  const som = (ads,k) => ads.reduce((t,a)=>t+(Number(a[k])||0),0);
+  $("adKanaalTable").innerHTML =
+    `<thead><tr><th class="tl">Kanaal</th><th>Advertenties</th><th>Uitgaven</th><th>Leads</th><th>CPL</th>
+      <th>Afspraken</th><th>CPA</th><th>Sales</th><th>Kost/sale</th><th>Omzet</th><th>ROAS</th></tr></thead>
+     <tbody>${volgorde.map(k=>{ const ads=groepen[k];
+       const spend=som(ads,"spend"), leads=som(ads,"leads"), afspr=som(ads,"afspraken"), sales=som(ads,"sales"), omzet=som(ads,"omzet");
+       return `<tr data-kanaal="${k}" style="cursor:pointer" title="Klik om de advertentietabel op ${KANAAL_LABEL(k)} te filteren">
+         <td class="tl" style="font-weight:600">${esc(KANAAL_LABEL(k))}</td>
+         <td>${ads.length}</td>
+         <td style="font-weight:600">${eur(spend)}</td>
+         <td>${leads}</td><td>${leads>0?eur(spend/leads):"—"}</td>
+         <td>${afspr}</td><td>${afspr>0?eur(spend/afspr):"—"}</td>
+         <td>${sales}</td><td>${sales>0?eur(spend/sales):"—"}</td>
+         <td>${omzet>0?eur(omzet):"—"}</td>
+         <td>${spend>0&&omzet>0?Math.min(100,omzet/spend).toFixed(2):"—"}</td></tr>`;
+     }).join("")}</tbody>`;
+  document.querySelectorAll("#adKanaalTable tbody tr").forEach(tr => tr.addEventListener("click", ()=>{
+    ADKANAAL = tr.dataset.kanaal;
+    $("adKanaalFilter").value = ADKANAAL;
     drawAdTable();
     $("adOverviewSec").scrollIntoView({ behavior:"smooth", block:"start" });
   }));
@@ -1887,12 +1953,14 @@ async function renderOwner(){
     rpc("definitief_check", { ...r, p_park_id: parkVal==="all"?null:Number(parkVal) }).then(x=>x?.[0]||{}),
   ]);
   const f = fRes || {}, fp = fpRes, heeftPrev = !!fp;
-  const closing = f.closing_rate_pct ?? (f.appointments ? Math.round(f.sales/f.appointments*100) : 0);
+  const shows = showsVan(f.appointments, f.no_show_pct);
+  const closing = closingOpShows(f.sales, shows);   // closing telt op shows (afspraken die geweest zijn)
   const perAppt = f.appointments ? Math.round(f.revenue/f.appointments) : 0;
   $("cardsTop").innerHTML =
     metric("Uitgaven",eur(f.spend),deltaSub(f.spend,fp&&fp.spend,heeftPrev,true)+sparkSlot("uitgaven")) +
     metricDeal("Leads",f.leads||0,'leads',null,'',false,parkVal==="all"?null:Number(parkVal),deltaSub(f.leads,fp&&fp.leads,heeftPrev)+sparkSlot("leads")) +
     metricDeal("Afspraken",f.appointments||0,'afspraken',null,'',false,parkVal==="all"?null:Number(parkVal),deltaSub(f.appointments,fp&&fp.appointments,heeftPrev)+sparkSlot("afspraken")) +
+    metric("Shows",shows,`<div class="l" style="margin:5px 0 0">afspraken die geweest zijn</div>`) +
     metricDeal("Sales",f.sales||0,'verkopen',null,'',false,parkVal==="all"?null:Number(parkVal),defSub(dc)+deltaSub(f.sales,fp&&fp.sales,heeftPrev)+sparkSlot("sales")) +
     metric("Omzet",eur(f.revenue),deltaSub(f.revenue,fp&&fp.revenue,heeftPrev)+sparkSlot("omzet")) + metric("Omzet per afspraak",eur(perAppt)) +
     metric("CPL",eur(f.cost_per_lead)) +
@@ -1901,7 +1969,8 @@ async function renderOwner(){
   renderFunnel([
     {label:"Leads", value:f.leads||0, color:"#5B8DEF"},
     {label:"Afspraken", value:f.appointments||0, color:accent(), sub:f.leads?`${Math.round((f.appointments||0)/f.leads*100)}% van leads`:""},
-    {label:"Sales", value:f.sales||0, color:"#3FA06B", sub:`Closing ${closing||0}%`, subHtml:defSub(dc)},
+    {label:"Shows", value:shows, color:"#33C2C0", sub:`${f.appointments?Math.round(shows/f.appointments*100):0}% kwam opdagen`},
+    {label:"Sales", value:f.sales||0, color:"#3FA06B", sub:`Closing ${closing||0}% (op shows)`, subHtml:defSub(dc)},
   ], { big:(f.leads||0).toLocaleString("nl-NL"), cap:"Leads" });
 
   let agents = await rpc("owner_agent_performance", r) || [];
@@ -1909,7 +1978,7 @@ async function renderOwner(){
   const defRows = await rpc("agent_definitief", r) || [];
   const defMap = {}; defRows.forEach(x=>defMap[x.agent_id]=Number(x.definitief)||0);
   $("agentTable").innerHTML =
-    `<thead><tr><th>Agent</th><th>Leads</th><th>Afspraken</th><th>Show %</th><th>Shows</th><th>Closing %</th><th>Sales</th><th>Definitief</th><th>Omzet per afspraak</th><th>Omzet</th></tr></thead>
+    `<thead><tr><th>Makelaar</th><th>Leads</th><th>Afspraken</th><th>Show %</th><th>Shows</th><th>Closing %</th><th>Sales</th><th>Definitief</th><th>Omzet per afspraak</th><th>Omzet</th></tr></thead>
      <tbody>${agents.map(a=>{
        const showPct = Math.round((100 - (a.no_show_pct||0))*10)/10;
        const scls = showPct>=90?"good":showPct<80?"bad":"";
@@ -1930,7 +1999,7 @@ async function renderOwner(){
   const calls = await rpc("call_overview", { p_from:r.p_from, p_to:r.p_to, p_park_id:parkNum,
     p_agent_id: agentVal==="all"?null:Number(agentVal) }) || [];
   $("callTable").innerHTML =
-    `<thead><tr><th>Agent</th><th>Gebeld</th><th>Gesprek</th><th>Ingepland</th><th>% gesprek van gebeld</th><th>Gesprek &#8594; afspraak %</th></tr></thead>
+    `<thead><tr><th>Makelaar</th><th>Gebeld</th><th>Gesprek</th><th>Ingepland</th><th>% gesprek van gebeld</th><th>Gesprek &#8594; afspraak %</th></tr></thead>
      <tbody>${calls.map(c=>`<tr><td style="text-align:left">${esc(c.agent)}</td><td>${c.gebeld}</td><td>${c.gesprek}</td>
        <td>${c.ingepland}</td><td>${c.gebeld>0 ? Math.round(c.gesprek/c.gebeld*100)+"%" : "—"}</td>
        <td>${c.gesprek_naar_afspraak_pct!=null ? c.gesprek_naar_afspraak_pct+"%" : "—"}</td></tr>`).join("")
@@ -1991,16 +2060,20 @@ async function renderAgent(agentId){
     rPrevA ? rpc("agent_stats", {p_agent_id:agentId, p_park_id:pp, ...rPrevA}).then(x=>x?.[0]) : Promise.resolve(null),
   ]);
   const heeftPrevA = !!sPrev;
+  const showsA = showsVan(s.appointments, s.no_show_pct);
+  const closingA = closingOpShows(s.sales, showsA);
   $("cardsTop").innerHTML =
     metricDeal("Mijn afspraken",s.appointments||0,'afspraken',agentId,'',false,null,deltaSub(s.appointments,sPrev&&sPrev.appointments,heeftPrevA)+sparkSlot("afspraken")) +
+    metric("Mijn shows",showsA,`<div class="l" style="margin:5px 0 0">afspraken die geweest zijn</div>`) +
     metricDeal("Mijn sales",s.sales||0,'verkopen',agentId,'',false,null,defSub(dsAgent)+deltaSub(s.sales,sPrev&&sPrev.sales,heeftPrevA)+sparkSlot("sales")) +
     metric("Mijn omzet",eur(s.revenue),deltaSub(s.revenue,sPrev&&sPrev.revenue,heeftPrevA)+sparkSlot("omzet")) + metric("Mijn commissie",eur(s.mijn_commissie)) +
     metric("Omzet per afspraak",eur(s.revenue_per_appt)) +
-    metric("Closing %",(s.closing_rate_pct||0)+"%") + metric("Afval %",(s.afval_pct||0)+"%") +
+    metric("Closing %",(closingA||0)+"%") + metric("Afval %",(s.afval_pct||0)+"%") +
     metric("No-show %",(s.no_show_pct||0)+"%");
   renderFunnel([
     {label:"Afspraken", value:s.appointments||0, color:accent()},
-    {label:"Sales", value:s.sales||0, color:"#3FA06B", sub:`Closing ${s.closing_rate_pct||0}%`, subHtml:defSub(dsAgent)},
+    {label:"Shows", value:showsA, color:"#33C2C0", sub:`${s.appointments?Math.round(showsA/s.appointments*100):0}% kwam opdagen`},
+    {label:"Sales", value:s.sales||0, color:"#3FA06B", sub:`Closing ${closingA||0}% (op shows)`, subHtml:defSub(dsAgent)},
   ], { big:(s.appointments||0).toLocaleString("nl-NL"), cap:"Afspraken" });
   $("cardsTeam").innerHTML =
     metricT("Omzet per afspraak",eur(s.team_revenue_per_appt)) +
@@ -2048,16 +2121,18 @@ async function renderPark(parkId){
      </div><div class="v">${eur(f.spend)}</div>${deltaSub(f.spend,fPrev&&fPrev.spend,heeftPrevP,true)}</div></div>` +
     metric("Leads",f.leads||0,deltaSub(f.leads,fPrev&&fPrev.leads,heeftPrevP)+sparkSlot("leads")) +
     metric("Afspraken",f.appointments||0,deltaSub(f.appointments,fPrev&&fPrev.appointments,heeftPrevP)+sparkSlot("afspraken")) +
+    metric("Shows",showsVan(f.appointments,f.no_show_pct),`<div class="l" style="margin:5px 0 0">afspraken die geweest zijn</div>`) +
     metric("Sales",f.sales||0,defSub(dsPark)+deltaSub(f.sales,fPrev&&fPrev.sales,heeftPrevP)+sparkSlot("sales")) +
     metric("Omzet",eur(f.revenue),deltaSub(f.revenue,fPrev&&fPrev.revenue,heeftPrevP)+sparkSlot("omzet")) +
     metric("Omzet per afspraak (gem.)",eur(perAppt)) +
-    metric("Closing %",(f.appointments?Math.round(f.sales/f.appointments*100):0)+"%") +
+    metric("Closing %",closingOpShows(f.sales,showsVan(f.appointments,f.no_show_pct))+"%") +
     metric("No-show %",(f.no_show_pct||0)+"%");
-  const closingP = f.appointments?Math.round(f.sales/f.appointments*100):0;
+  const showsP = showsVan(f.appointments,f.no_show_pct);
   renderFunnel([
     {label:"Leads", value:f.leads||0, color:"#5B8DEF"},
     {label:"Afspraken", value:f.appointments||0, color:accent(), sub:f.leads?`${Math.round((f.appointments||0)/f.leads*100)}% van leads`:""},
-    {label:"Sales", value:f.sales||0, color:"#3FA06B", sub:`Closing ${closingP}%`, subHtml:defSub(dsPark)},
+    {label:"Shows", value:showsP, color:"#33C2C0", sub:`${f.appointments?Math.round(showsP/f.appointments*100):0}% kwam opdagen`},
+    {label:"Sales", value:f.sales||0, color:"#3FA06B", sub:`Closing ${closingOpShows(f.sales,showsP)}% (op shows)`, subHtml:defSub(dsPark)},
   ], { big:(f.leads||0).toLocaleString("nl-NL"), cap:"Leads" });
   const moP = await rpc("monthly_overview", {p_park_id:parkId}) || [];
   renderMonths(moP, {spend:false, leads:true, def: await defMaandMap(null, parkId)});
@@ -2256,9 +2331,11 @@ async function renderInventory(parkId){
   const prog = s.maanden_tot_uitverkocht;
   const progTxt = prog==null ? "onvoldoende verkoopdata"
     : (Number(prog)>=24 ? Math.round(prog/12)+" jaar" : Math.round(prog)+" mnd");
+  // "gereserveerd" tellen we niet apart; het valt onder beschikbaar (verkocht + beschikbaar = totaal)
+  const beschikbaar = (Number(s.beschikbaar)||0) + (Number(s.gereserveerd)||0);
   $("inventoryKpis").innerHTML =
-    metric("Verkocht", s.verkocht) + metric("Gereserveerd", s.gereserveerd) +
-    metric("Beschikbaar", s.beschikbaar) + metric("% verkocht", (s.verkocht_pct||0)+"%") +
+    metric("Verkocht", s.verkocht) +
+    metric("Beschikbaar", beschikbaar) + metric("% verkocht", (s.verkocht_pct||0)+"%") +
     metric("Vorige maand verkocht", (Number(s.verkoop_per_maand)||0)) +
     metric("Prognose uitverkocht", progTxt);
 }
@@ -2453,6 +2530,9 @@ function openAdEdit(row, source){
   $("adEditTitle").textContent = row.advertentie || row.code;
   $("adEditSub").textContent = "Code: " + row.code + (row.status ? " · " + (STATUSNL[row.status]||[row.status])[0] : "");
   $("edFase").value   = row.awareness_stage || "";
+  // kanaal: leeg = automatisch (uit platform). Alleen voorvullen als er een echte override is.
+  $("edKanaal").value = (row.kanaal && String(row.kanaal).toLowerCase() !== String(row.platform||"").toLowerCase())
+    ? String(row.kanaal).toLowerCase() : "";
   $("edWerkte").value = row.werkte || "";
   $("edWaarom").value = row.waarom || "";
   $("edKill").value   = row.kill_reason || "";
@@ -2470,6 +2550,7 @@ async function saveAdEdit(){
     p_werkte: $("edWerkte").value || null,
     p_waarom: $("edWaarom").value.trim() || null,
     p_kill_reason: $("edKill").value.trim() || null,
+    p_kanaal: $("edKanaal").value || null,
   };
   const { error } = await sb.rpc("set_ad_annotation", args);
   if(error){
@@ -2482,7 +2563,8 @@ async function saveAdEdit(){
   // lokale datasets meteen bijwerken zodat beide tabs kloppen zonder herladen
   const patch = a => { if(a && a.code===EDIT_CTX.code){
     a.awareness_stage = args.p_awareness_stage; a.werkte = args.p_werkte;
-    a.waarom = args.p_waarom; a.kill_reason = args.p_kill_reason; } };
+    a.waarom = args.p_waarom; a.kill_reason = args.p_kill_reason;
+    a.kanaal = args.p_kanaal || a.platform || a.kanaal; } };
   ADROWS.forEach(patch); ARCHROWS.forEach(patch);
   const src = EDIT_CTX.source;
   closeAdEdit();
@@ -2565,11 +2647,14 @@ function fillFaseFilter(el, allLabel){
 fillFaseFilter($("adFaseFilter"), "Alle fases");
 $("adFaseFilter").addEventListener("change", e=>{ ADFASE = e.target.value; drawAdTable(); });
 $("adStatusFilter").addEventListener("change", e=>{ ADSTATUS = e.target.value; drawAdTable(); });
+$("adKanaalFilter").addEventListener("change", e=>{ ADKANAAL = e.target.value; drawAdTable(); });
 fillFaseFilter($("archFaseFilter"), "Alle fases");
 $("archFaseFilter").addEventListener("change", e=>{ ARCHFASE = e.target.value; drawArchGrid(); });
 $("archStatusFilter").addEventListener("change", e=>{ ARCHSTATUS = e.target.value; drawArchGrid(); });
 $("edFase").innerHTML = `<option value="">— geen fase —</option>`
   + FASES.map(f=>`<option value="${f.key}">${f.afk} · ${f.label}</option>`).join("");
+$("edKanaal").innerHTML = `<option value="">— automatisch (uit platform) —</option>`
+  + KANALEN.map(k=>`<option value="${k.key}">${k.label}</option>`).join("");
 $("edSave").addEventListener("click", saveAdEdit);
 $("edCancel").addEventListener("click", closeAdEdit);
 $("adEditOverlay").addEventListener("click", e=>{ if(e.target.id==="adEditOverlay") closeAdEdit(); });
