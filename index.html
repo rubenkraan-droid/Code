@@ -465,11 +465,18 @@
       </div>
       <div class="panel" style="margin-bottom:26px"><div class="scroll"><table id="adMonthTable"></table></div></div>
     </div>
+    <div id="adFaseSec" class="hidden">
+      <div class="sec">Performance per fase (awareness)
+        <span class="info" tabindex="0">i<span class="tip">Alle advertenties met dezelfde awareness-fase bij elkaar opgeteld, voor de gekozen periode en dit park. Zo zie je of bijv. probleembewuste advertenties beter converteren dan oplossingsbewuste. Klik op een rij om de advertentietabel hieronder op die fase te filteren.</span></span>
+      </div>
+      <div class="panel"><div class="scroll"><table id="adFaseTable"></table></div></div>
+    </div>
     <div id="adOverviewSec">
       <div id="adWarnBanner" class="hidden banner" style="background:var(--warn-soft);color:var(--warn);padding:10px 14px;border-radius:8px"></div>
       <div class="sec" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
         <span style="flex:1;min-width:200px">Per advertentie · klik op een rij voor het dagverloop, op een aantal voor de deals, op een <b>fase-pill</b> voor de notities</span>
         <select id="adFaseFilter" style="text-transform:none;font-weight:400;letter-spacing:0"></select>
+        <select id="adStatusFilter" style="text-transform:none;font-weight:400;letter-spacing:0"></select>
       </div>
       <div class="panel"><div class="scroll"><table id="adTable"></table></div></div>
     </div>
@@ -1287,7 +1294,14 @@ async function renderAds(){
   });
 
   ADROWS = ov || [];
+  // status-filter vullen met wat er in dit park voorkomt ("Actief" eerst, dan de rest)
+  const adStatussen = [...new Set(ADROWS.map(a=>a.status).filter(Boolean))]
+    .sort((a,b)=>(a==="active"?-1:b==="active"?1:0));
+  if(ADSTATUS!=="all" && !adStatussen.includes(ADSTATUS)) ADSTATUS = "all";
+  $("adStatusFilter").innerHTML = `<option value="all">Alle statussen</option>`
+    + adStatussen.map(s=>`<option value="${s}" ${s===ADSTATUS?"selected":""}>${(STATUSNL[s]||[s])[0]}</option>`).join("");
   drawAdTable();
+  drawFaseTable();
   renderBestAds();
   renderAdMonths(mnd || []);
   closeAdDetail();
@@ -1296,7 +1310,8 @@ async function renderAds(){
   $("adInsights").innerHTML = adIns.join("");
   $("adOverviewSec").classList.toggle("hidden", !ADROWS.length);
   const ctx = ongekStats();
-  const flags = ADROWS.map(a => ({ a, f: ongekFlag(a, ctx) }));
+  // alleen ACTIEVE advertenties waarschuwen: een gepauzeerde/gestopte ad "uitzetten" heeft geen zin
+  const flags = ADROWS.filter(a => a.status === "active").map(a => ({ a, f: ongekFlag(a, ctx) }));
   const uit = flags.filter(x => x.f.level===2), letop = flags.filter(x => x.f.level===1);
   $("adWarnBanner").classList.toggle("hidden", !(uit.length||letop.length));
   if(uit.length||letop.length){
@@ -1353,7 +1368,8 @@ const ADCOLS = [
 const convPct = a => Number(a.leads)>0 ? Math.round((Number(a.afspraken)||0)/Number(a.leads)*100) : null;
 // sorteervolgorde voor de Fase-kolom: op funnel-positie (koud -> warm), leeg onderaan
 const FASE_ORDER = Object.fromEntries(FASES.map((f,i)=>[f.key,i+1]));
-let ADFASE = "all"; // actieve fase-filter in de advertentietabel
+let ADFASE = "all";   // actieve fase-filter in de advertentietabel
+let ADSTATUS = "all"; // actieve status-filter (actief / gepauzeerd / gestopt ...)
 // --- Afkeuren op ongekwalificeerde leads (twee niveaus) ------------------------
 // "Let op" (oranje) = zachte attentie op het rauwe percentage. "Overweeg uitzetten"
 // (rood) = statistisch onderbouwd via de Wilson-ondergrens (95%), die automatisch
@@ -1402,6 +1418,7 @@ function drawAdTable(){
   const s = ADSORT;
   const rows = ADROWS
     .filter(a => ADFASE==="all" || (ADFASE==="none" ? !a.awareness_stage : a.awareness_stage===ADFASE))
+    .filter(a => ADSTATUS==="all" || a.status===ADSTATUS)
     .sort((a,b)=>{
       if(s.key==="awareness_stage") return (faseSortVal(a)-faseSortVal(b)) * s.dir;
       if(s.key==="conv_pct") return ((convPct(a)||0)-(convPct(b)||0)) * s.dir;
@@ -1421,7 +1438,8 @@ function drawAdTable(){
      <tbody>${(()=>{ const ctx = ongekStats(); return rows.map(a=>{
        const st = STATUSNL[a.status] || [a.status||"—","held"];
        const ok = Number(a.ongekwalificeerd_pct)||0;
-       const f = ongekFlag(a, ctx);
+       // waarschuwingsvlag alleen voor actieve advertenties; een gestopte ad hoeft niet meer "uitgezet"
+       const f = a.status === "active" ? ongekFlag(a, ctx) : { level:0, pct:ok, lb:0, base:ctx.basePct };
        const relOn = ctx.totLeads>=ONGEK_BASELINE_MIN_LEADS && ctx.basePct>0 && a.leads>0;
        const relMark = relOn
          ? (ok > ctx.basePct+0.5 ? ` <span title="boven je gemiddelde (${ctx.basePct.toFixed(1)}%)" style="color:var(--bad)">&#9650;</span>`
@@ -1464,6 +1482,45 @@ function drawAdTable(){
   document.querySelectorAll("#adTable .ad-deal-link").forEach(el => el.addEventListener("click", (e) => {
     e.stopPropagation();
     toonAdDeals(Number(el.dataset.adid), el.dataset.kind, el.dataset.naam);
+  }));
+}
+
+/* ---------- performance per awareness-fase (aggregatie over ADROWS) ---------- */
+function drawFaseTable(){
+  const groepen = {};
+  ADROWS.forEach(a => { const k = a.awareness_stage || "__geen"; (groepen[k] = groepen[k] || []).push(a); });
+  // alleen tonen als er minstens één advertentie een fase heeft
+  const heeftFases = FASES.some(f => (groepen[f.key]||[]).length);
+  $("adFaseSec").classList.toggle("hidden", !heeftFases);
+  if(!heeftFases) return;
+  const rijen = [
+    ...FASES.map(f => ({ key:f.key, pill:fasePill(f.key), label:f.label, ads:groepen[f.key]||[] })),
+    { key:"none", pill:`<span class="fase fase-leeg">—</span>`, label:"Zonder fase", ads:groepen["__geen"]||[] },
+  ].filter(r => r.ads.length);
+  const som = (ads,k) => ads.reduce((t,a)=>t+(Number(a[k])||0),0);
+  $("adFaseTable").innerHTML =
+    `<thead><tr><th class="tl">Fase</th><th>Advertenties</th><th>Uitgaven</th><th>Leads</th><th>CPL</th>
+      <th>Afspraken</th><th>CPA</th><th>Conv. %</th><th>Ongekwalificeerd %</th><th>Sales</th><th>Omzet</th><th>ROAS</th></tr></thead>
+     <tbody>${rijen.map(r=>{
+       const spend=som(r.ads,"spend"), leads=som(r.ads,"leads"), afspr=som(r.ads,"afspraken"),
+             sales=som(r.ads,"sales"), omzet=som(r.ads,"omzet"),
+             ongek=r.ads.reduce((t,a)=>t+ongekN(a),0);
+       return `<tr data-fase="${r.key}" style="cursor:pointer" title="Klik om de advertentietabel op ${r.label} te filteren">
+         <td class="tl">${r.pill} <span style="color:var(--muted);font-size:12px">${r.label}</span></td>
+         <td>${r.ads.length}</td>
+         <td style="font-weight:600">${eur(spend)}</td>
+         <td>${leads}</td><td>${leads>0?eur(spend/leads):"—"}</td>
+         <td>${afspr}</td><td>${afspr>0?eur(spend/afspr):"—"}</td>
+         <td>${leads>0?Math.round(afspr/leads*100)+"%":"—"}</td>
+         <td>${leads>0?Math.round(ongek/leads*100)+"%":"—"}</td>
+         <td>${sales}</td><td>${omzet>0?eur(omzet):"—"}</td>
+         <td>${spend>0&&omzet>0?(omzet/spend).toFixed(2):"—"}</td></tr>`;
+     }).join("")}</tbody>`;
+  document.querySelectorAll("#adFaseTable tbody tr").forEach(tr => tr.addEventListener("click", ()=>{
+    ADFASE = tr.dataset.fase;
+    $("adFaseFilter").value = ADFASE;
+    drawAdTable();
+    $("adOverviewSec").scrollIntoView({ behavior:"smooth", block:"start" });
   }));
 }
 
@@ -2335,6 +2392,7 @@ function fillFaseFilter(el, allLabel){
 }
 fillFaseFilter($("adFaseFilter"), "Alle fases");
 $("adFaseFilter").addEventListener("change", e=>{ ADFASE = e.target.value; drawAdTable(); });
+$("adStatusFilter").addEventListener("change", e=>{ ADSTATUS = e.target.value; drawAdTable(); });
 fillFaseFilter($("archFaseFilter"), "Alle fases");
 $("archFaseFilter").addEventListener("change", e=>{ ARCHFASE = e.target.value; drawArchGrid(); });
 $("archStatusFilter").addEventListener("change", e=>{ ARCHSTATUS = e.target.value; drawArchGrid(); });
