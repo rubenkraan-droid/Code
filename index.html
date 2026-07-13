@@ -84,6 +84,8 @@
   #adParkTabs.tabs .tab.active{background:none;color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
   .info{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--line);color:var(--muted);font-size:11px;font-style:normal;margin-left:6px;cursor:help;position:relative;vertical-align:middle}
   .info .tip{display:none;position:absolute;left:0;bottom:22px;width:250px;background:var(--ink);color:#fff;font-size:12px;font-weight:400;line-height:1.45;padding:10px 12px;border-radius:10px;z-index:20;text-align:left;text-transform:none;box-shadow:var(--shadow-hover);font-variant-numeric:normal}
+  /* in tabelkoppen opent de tooltip naar beneden-links, anders kapt de panel-rand ('overflow:hidden') hem af */
+  th .info .tip{top:24px;bottom:auto;left:auto;right:0}
   .info{text-transform:none}
   .info:hover .tip,.info:focus .tip{display:block}
   select,input,textarea{font:inherit;font-size:13.5px;padding:9px 11px;border:1px solid var(--line-strong);
