@@ -16,8 +16,8 @@ Meta Ads          ─┘
 - **`sync-pipedrive`** haalt elk uur alle deals op (leads, afspraken, verkopen, makelaar, advertentie,
   notities, e-mails en het eerstvolgende agendapunt).
 - **`sync-meta`** haalt uitgaven, clicks, thumbnails en advertentiestatus uit Meta.
-- Het dashboard leest **nooit** rechtstreeks tabellen, maar altijd via **RPC-functies** die per rol
-  bepalen wat je mag zien.
+- Het dashboard leest **nooit** rechtstreeks tabellen, maar altijd via **RPC-functies** die bepalen
+  wat je mag zien.
 
 **Datumlogica.** In de meeste weergaven telt elk cijfer op zijn eigen datum (lead = aanmaakdatum,
 afspraak = afspraakdatum, verkoop = verkoopdatum). In het **advertentiedashboard** is alles
@@ -25,30 +25,14 @@ afspraak = afspraakdatum, verkoop = verkoopdatum). In het **advertentiedashboard
 
 ---
 
-## 2. Rollen & toegang
-
-Kies rechtsboven bij **"Bekijk als"** de rol (in de huidige preview-modus zonder inloggen).
-
-| Rol | Wat je ziet | Tabbladen |
-|-----|-------------|-----------|
-| **Makelaar** | Eigen cijfers naast het teamgemiddelde (zonder namen van collega's) | Resultaten · Resale |
-| **Ontwikkelaar (park)** | Parkgemiddelden en de uitverkoop van het eigen park | Resultaten |
-
-Een makelaar of ontwikkelaar ziet **nooit** cijfers van collega's bij naam, alleen het geanonimiseerde
-teamgemiddelde.
-
----
-
-## 3. De tabbladen
+## 2. De tabbladen
 
 ### Resultaten
-De hoofdfunnel: leads → afspraken → verkopen, met closing %, afval % en no-show %.
-- **Makelaar**: de eigen cijfers naast het teamgemiddelde.
-- **Ontwikkelaar**: parkgemiddelden + de **uitverkoop** van het park (verkocht / gereserveerd /
-  beschikbaar, % verkocht en een prognose tot uitverkocht).
-- **Opvolglijst**: open leads in de stage "In contact" die nog opvolging nodig hebben — gesorteerd
-  op wanneer er voor het laatst contact was (notitie of e-mail). Leads met een toekomstig agendapunt
-  vallen eruit (die staan al gepland).
+De hoofdfunnel: leads → afspraken → verkopen, met closing %, afval % en no-show %, plus de
+**uitverkoop** van het park (verkocht / gereserveerd / beschikbaar, % verkocht en een prognose tot
+uitverkocht). De **opvolglijst** toont open leads in de stage "In contact" die nog opvolging nodig
+hebben — gesorteerd op wanneer er voor het laatst contact was (notitie of e-mail). Leads met een
+toekomstig agendapunt vallen eruit (die staan al gepland).
 
 ### Advertenties
 Per park. Uitgaven, clicks, leads, kosten per lead (CPL), kosten per afspraak (CPA) en de
@@ -76,7 +60,7 @@ Aan- en verkoop van bestaande woningen (Pipedrive-pijplijn Resale). Zuivere funn
 
 ---
 
-## 4. Wat je kunt aanklikken
+## 3. Wat je kunt aanklikken
 
 - **Elk deal-aantal is klikbaar** (leads, afspraken, verkopen) — je krijgt de onderliggende deals in
   een lijst met **een Pipedrive-link per deal**.
@@ -95,7 +79,7 @@ Aan- en verkoop van bestaande woningen (Pipedrive-pijplijn Resale). Zuivere funn
 
 ---
 
-## 5. Begrippen & definities
+## 4. Begrippen & definities
 
 | Begrip | Betekenis |
 |--------|-----------|
@@ -118,7 +102,7 @@ Riverte en Berkenstrand zijn bewust ongemapt en worden uit de funnel gehouden.
 
 ---
 
-## 6. Advertentie-attributie (hoe leads aan advertenties hangen)
+## 5. Advertentie-attributie (hoe leads aan advertenties hangen)
 
 - Pipedrive legt de advertentie vast in het veld **"AD naam"** (bv. `DB-AD3`). Dat matcht op de
   naam van de advertentie in Supabase.
@@ -130,9 +114,7 @@ Riverte en Berkenstrand zijn bewust ongemapt en worden uit de funnel gehouden.
 
 ---
 
-## 7. Functie-overzicht (RPC's)
-
-**Rollen & toegang:** `is_owner`, `has_park_access`, `owner_agents`, `owner_parks`.
+## 6. Functie-overzicht (RPC's)
 
 **Resultaten:** `owner_total_funnel`, `owner_agent_performance`, `owner_park_agent`,
 `client_park_funnel`, `agent_stats`, `monthly_overview`, `appointments_detail`.
@@ -156,17 +138,9 @@ deal een Pipedrive-link.
 
 ---
 
-## 8. Bekende beperkingen
+## 7. Bekende beperkingen
 
 - **Bel-activiteiten** worden nog niet altijd gelogd, en **"Betrokken verkoper"** is vaak niet
   ingevuld → per-makelaar-cijfers deels leeg.
 - **Wielsche Dreef Meta-account** nog niet gekoppeld → daar staan de advertentiekosten op €0.
 - De **uitverkoopprognose** is nog dun zolang er weinig recente verkopen in het systeem staan.
-
----
-
-## 9. Beheer
-
-- **Deploy** = commit + push naar `main`; GitHub Pages herbouwt automatisch (~1 min).
-- **Let op:** er wordt soms parallel aan dezelfde Supabase-functies gewerkt — altijd eerst
-  `git fetch`/rebase, en niet twee sessies tegelijk aan de advertentie-backend.
