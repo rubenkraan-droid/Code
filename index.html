@@ -767,6 +767,128 @@ function setBranding(parkId){
 const dt = d => new Date(d).toLocaleDateString("nl-NL",{day:"2-digit",month:"short",year:"2-digit"});
 let PARKS = [], AGENTS = [];
 
+/* ================= DEMOPARK =================================================
+   Een volledig verzonnen "voorbeeldpark" om het dashboard te tonen zonder echte
+   cijfers. Alles wordt client-side gegenereerd met een seed op de DATUM: stabiel
+   binnen de dag, maar beweegt elke dag logisch mee. Raakt NOOIT de database of de
+   echte data — de rpc()-laag onderschept elke call met p_park_id === DEMO_ID.    */
+const DEMO_ID = -777;
+const DEMO_PARK = { id: DEMO_ID, name: "Demopark (voorbeeld)", accent_color: "#6C5CE7" };
+const isDemo = id => Number(id) === DEMO_ID;
+// kleine, deterministische pseudo-random op basis van de dag (mulberry32)
+function demoRng(offset){
+  const d = new Date(); let a = (d.getFullYear()*372 + d.getMonth()*31 + d.getDate() + (offset||0)) | 0;
+  return function(){ a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a>>>15, 1|a);
+    t = t + Math.imul(t ^ t>>>7, 61|t) ^ t; return ((t ^ t>>>14) >>> 0) / 4294967296; };
+}
+const demoIso = d => d.toISOString().slice(0,10);
+// coherente maandreeks (laatste 8 maanden): leads -> afspraken -> sales -> omzet
+function demoMonths(){
+  const r = demoRng(1), now = new Date(), out = [];
+  const GEM_VERKOOPSOM = 342000;
+  for(let i=7;i>=0;i--){
+    const m = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    const groei = 1 + (7-i)*0.06;                       // langzame opbouw over de maanden
+    const leads = Math.round((60 + r()*70) * groei);
+    const afspraken = Math.round(leads * (0.30 + r()*0.10));
+    const sales = Math.round(afspraken * (0.34 + r()*0.14));
+    const spend = Math.round(leads * (14 + r()*7));
+    const omzet = sales * Math.round(GEM_VERKOOPSOM * (0.9 + r()*0.2));
+    // recentste maand nog niet volledig definitief; oudere maanden wel
+    const definitief = i===0 ? Math.max(0, sales-1) : sales;
+    out.push({ maand: demoIso(m), leads, appointments: afspraken, afspraken, sales, spend, revenue: omzet, omzet, definitief });
+  }
+  return out;
+}
+const demoSom = (mo,k) => mo.reduce((t,x)=>t+(Number(x[k])||0),0);
+// vaste set demo-advertenties (met SVG-thumbnail + awareness-fase)
+function demoThumb(code, kleur){
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='${kleur}'/><stop offset='1' stop-color='${kleur}99'/></linearGradient></defs><rect width='200' height='200' fill='url(%23g)'/><text x='100' y='108' font-family='Georgia,serif' font-size='30' fill='white' text-anchor='middle'>${code}</text></svg>`;
+  return "data:image/svg+xml;utf8," + svg.replace(/#/g,'%23').replace(/"/g,"'");
+}
+function demoAds(){
+  const r = demoRng(2);
+  const defs = [
+    ["DEMO-AD1","oplossingsbewust","active","#6C5CE7"], ["DEMO-AD2","productbewust","active","#3FA06B"],
+    ["DEMO-AD3","probleembewust","paused","#5B8DEF"], ["DEMO-AD4","meest_bewust","active","#F4A63B"],
+    ["DEMO-AD5","onbewust","paused","#F16D9A"], ["DEMO-AD6","oplossingsbewust","killed","#7A8598"],
+  ];
+  return defs.map((d,i)=>{
+    const leads = Math.round(20 + r()*90), spend = Math.round(leads*(12+r()*9));
+    const afspraken = Math.round(leads*(0.18+r()*0.22)), sales = Math.round(afspraken*(0.3+r()*0.3));
+    const omzet = sales * 342000, clicks = Math.round(leads*(20+r()*40));
+    const ongek = Math.round(leads*(0.05+r()*0.22));
+    return { ad_id: 90000+i, code:d[0], advertentie:d[0], status:d[2], platform:"meta",
+      thumbnail_url: demoThumb(d[0], d[3]), spend, clicks, cpc: clicks?+(spend/clicks).toFixed(2):0,
+      leads, cpl: leads?Math.round(spend/leads):0, afspraken, cpa: afspraken?Math.round(spend/afspraken):0,
+      no_show_pct: +(r()*12).toFixed(1), ongekwalificeerd_pct: leads?+(ongek/leads*100).toFixed(1):0, ongekwalificeerd_n: ongek,
+      sales, omzet, kost_per_sale: sales?Math.round(spend/sales):0, roas: spend?+(omzet/spend).toFixed(2):0,
+      awareness_stage: d[1], werkte: sales>0?"wel":(afspraken===0?"niet":null),
+      waarom: i===0?"Sterke hook op rendement; veel gekwalificeerde leads.":(i===5?"Publiek uitgeput, CPL liep op.":null),
+      kill_reason: d[2]==="killed"?"Te hoge kosten per lead na 3 weken.":null };
+  });
+}
+function demoDeals(kind){
+  const r = demoRng(3), n = 3 + Math.floor(r()*4), out=[];
+  for(let i=0;i<n;i++) out.push({ deal_id: 8000+i, titel:"Demo-lead "+(i+1), stage_name:"Afspraak geweest",
+    status:"open", lead_created: demoIso(new Date(Date.now())), appointment_date:null, appointment_date_derived:null,
+    sale_date:null, bedrag: kind==="verkopen"?342000:0, woningwaarde:342000, amount:342000,
+    mijn_commissie:3500, pipedrive_url:"#" });
+  return out;
+}
+// centrale demo-router: geeft de juiste vorm terug per RPC, of undefined (val terug op leeg)
+function demoData(fn, args){
+  const mo = demoMonths(), r = demoRng(9);
+  const leads = demoSom(mo,"leads"), afspr = demoSom(mo,"appointments"), sales = demoSom(mo,"sales"),
+        omzet = demoSom(mo,"revenue"), spend = demoSom(mo,"spend"), definitief = demoSom(mo,"definitief");
+  const noShow = Math.round(afspr*0.08), verloren = Math.round(leads*0.19);
+  const funnel = { spend, leads, appointments: afspr, sales, revenue: omzet,
+    closing_rate_pct: afspr?Math.round(sales/afspr*100):0, afval_pct: leads?Math.round(verloren/leads*100):0,
+    no_show_pct: afspr?+(noShow/afspr*100).toFixed(1):0, cost_per_lead: leads?Math.round(spend/leads):0,
+    revenue_per_appt: afspr?Math.round(omzet/afspr):0, marge: Math.round(omzet*0.045) };
+  switch(fn){
+    case "client_park_funnel": return [funnel];
+    case "owner_total_funnel": return [funnel];
+    case "monthly_overview": return mo.map(m=>({maand:m.maand, spend:m.spend, leads:m.leads,
+      appointments:m.appointments, sales:m.sales, revenue:m.revenue}));
+    case "monthly_definitief": return mo.map(m=>({maand:m.maand, definitief:m.definitief}));
+    case "definitief_stats": case "definitief_check": return [{sales, definitief}];
+    case "park_sellthrough": {
+      const totaal=120, verkocht=Math.round(40+r()*30), gereserveerd=Math.round(4+r()*8),
+        beschikbaar=totaal-verkocht-gereserveerd, perMnd=mo[mo.length-1].sales||3;
+      return [{ totaal, verkocht, gereserveerd, beschikbaar, verkocht_pct: Math.round(verkocht/totaal*100),
+        verkoop_per_maand: perMnd, maanden_tot_uitverkocht: perMnd?Math.round(beschikbaar/perMnd):null }]; }
+    case "ad_kpis": return [{ spend, clicks: Math.round(leads*35), impressions: Math.round(leads*900),
+      leads, leads_met_ad: Math.round(leads*0.85), afspraken: afspr, sales, omzet,
+      verloren, afval_pct: funnel.afval_pct, marge: funnel.marge }];
+    case "ad_daily": {
+      const days=[], today=new Date();
+      for(let i=27;i>=0;i--){ const d=new Date(today); d.setDate(d.getDate()-i);
+        const l=Math.round(r()*6), s=Math.round(r()*45);
+        days.push({dag:demoIso(d), spend:s, clicks:Math.round(s*1.5), leads:l, afspraken: r()>0.85?1:0}); }
+      return days; }
+    case "ad_daily_detail": {
+      const days=[], today=new Date();
+      for(let i=27;i>=0;i--){ const d=new Date(today); d.setDate(d.getDate()-i);
+        const s=Math.round(r()*30); days.push({dag:demoIso(d), spend:s, clicks:Math.round(s*1.5), leads:Math.round(r()*3), afspraken: r()>0.9?1:0}); }
+      return days; }
+    case "ad_overview": return demoAds();
+    case "ad_archive": return demoAds().map(a=>({ ...a, launch_date:null, kill_date:null }));
+    case "ad_monthly": return mo.map(m=>({ maand:m.maand, spend:m.spend, leads:m.leads,
+      cpl: m.leads?Math.round(m.spend/m.leads):0, afspraken:m.appointments, cpa:m.appointments?Math.round(m.spend/m.appointments):0,
+      sales:m.sales, omzet:m.revenue, kost_per_sale:m.sales?Math.round(m.spend/m.sales):0,
+      roas:m.spend?+(m.revenue/m.spend).toFixed(2):0, gem_leadleeftijd: 30+Math.round(r()*60) }));
+    case "ad_deals": case "agent_deals": case "resale_deals": return demoDeals(args.p_kind);
+    case "lost_reasons": return [
+      {fase:"Voor afspraak (wilde niet komen)", reden:"Geen budget", aantal: Math.round(verloren*0.4)},
+      {fase:"Voor afspraak (wilde niet komen)", reden:"Wil eerst huren", aantal: Math.round(verloren*0.2)},
+      {fase:"Na afspraak (wilde niet kopen)", reden:"Locatie beviel niet", aantal: Math.round(verloren*0.15)}];
+    case "opvolg_leads": return [];
+    default: return undefined;   // val terug op leeg (UI toont nul)
+  }
+}
+/* ============================================================================ */
+
 function periodRange(){
   const v = $("fPeriod").value, today = new Date();
   let from, to = today;
@@ -863,7 +985,14 @@ const adLink = (v,kind,adId,naam) => Number(v)>0
   ? `<span class="ad-deal-link" data-adid="${adId}" data-kind="${kind}" data-naam="${String(naam||'').replace(/"/g,'')}" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px">${v}</span>`
   : v;
 const metricT = (l,v) => `<div class="metric team"><div class="l">${l}</div><div class="v">${v}</div></div>`;
-async function rpc(fn, args){ const {data,error} = await sb.rpc(fn, args||{});
+async function rpc(fn, args){
+  // demopark: onderschep elke call en geef verzonnen (maar coherente) cijfers terug
+  if(args && isDemo(args.p_park_id)){
+    const d = demoData(fn, args);
+    if(d !== undefined) return d;
+    return [];   // niet-gemodelleerde RPC's: leeg -> UI toont netjes nul
+  }
+  const {data,error} = await sb.rpc(fn, args||{});
   if(error){ console.error(fn, error); return null; } return data; }
 
 /* ---------- auth (dormant while preview mode is on) ---------- */
@@ -887,6 +1016,7 @@ async function boot(){
   $("logout").classList.add("hidden");
   PARKS  = await rpc("owner_parks")  || [];
   AGENTS = await rpc("owner_agents") || [];
+  PARKS.push(DEMO_PARK);   // demopark meelopen in naam-/branding-lookups en de sub-tabs
   $("viewAs").innerHTML =
     `<option value="owner">Eigenaar (alles)</option>`
     + `<optgroup label="Makelaar">${AGENTS.map(a=>`<option value="agent:${a.id}">${a.name}</option>`).join("")}</optgroup>`
@@ -934,14 +1064,14 @@ async function applyRole(){
   if(owner){
     $("title").textContent = "Master dashboard";
     $("subtitle").textContent = "Eigenaarweergave";
-    fillSelect($("fPark"), PARKS.map(p=>({value:p.id,label:p.name})), "Alle parken");
+    fillSelect($("fPark"), PARKS.filter(p=>!isDemo(p.id)).map(p=>({value:p.id,label:p.name})), "Alle parken");
     fillSelect($("fAgent"), AGENTS.map(a=>({value:a.id,label:a.name})), "Alle agents");
     $("fPark").value = "all"; $("fAgent").value = "all";
     refresh = renderOwner;
   } else if(agentV){
     $("title").textContent = "Mijn resultaten";
     $("subtitle").textContent = "Makelaarweergave · " + ((AGENTS.find(a=>a.id===v.id)||{}).name||"");
-    fillSelect($("fPark"), PARKS.map(p=>({value:p.id,label:p.name})), "Alle parken");
+    fillSelect($("fPark"), PARKS.filter(p=>!isDemo(p.id)).map(p=>({value:p.id,label:p.name})), "Alle parken");
     $("fPark").value = "all";
     setBranding(null);
     refresh = () => renderAgent(v.id);
