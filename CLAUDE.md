@@ -105,6 +105,21 @@ in this repo. `list_migrations` on the project is the source of truth, not git l
   (...)` filter, and `call_overview`'s `ingepland` filter. No single source of truth — changing the
   appointment/sale definition means editing all three.
 
+## Handmatig kanaal zonder API (bv. LinkedIn) — patroon
+
+LinkedIn heeft (nog) geen sync. Zo is het handmatig gekoppeld (2026-07-13), herbruikbaar patroon voor
+elk niet-API-kanaal:
+1. In Pipedrive het veld **"AD naam"** op de betreffende leads op een code zetten (LinkedIn WD → `LI-WD`).
+   Dat veld → `deals.ad_naam_pd`; attributie in `sync_deals_from_json` loopt via
+   `ad_name_alias.source_norm = upper(ad_naam zonder spaties)` (NIET via `ad_raw`).
+2. Een `ads`-rij aanmaken met `platform='linkedin'` (→ kanaal), naam `... - LI-WD` (code = LI-WD),
+   `external_id='LI-WD'`. Hier: **ad_id 67**, park 3, paused.
+3. `ad_name_alias(source_norm='LI-WD', ad_id=67)` toevoegen → sync koppelt de leads blijvend
+   (elke sync herbevestigt ad_id via de alias).
+4. Uitgaven uit de LinkedIn-CSV per dag in `ad_stats_daily(ad_id=67, stat_date, spend, clicks,
+   impressions)` zetten (leads/sales blijven 0 — die komen uit Pipedrive). sync-meta raakt dit niet
+   (alleen Meta-ads). Bij nieuwe CSV-periode: nieuwe dagregels toevoegen.
+
 ## Gotchas (discovered the hard way)
 
 - **Postgres won't let `CREATE OR REPLACE FUNCTION` change a return type.** Adding a column to an RPC's
