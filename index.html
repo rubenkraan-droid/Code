@@ -1151,7 +1151,8 @@ async function applyRole(){
   document.querySelector('.tab[data-tab="advertenties"]').classList.toggle("hidden", agentV);
   document.querySelector('.tab[data-tab="archief"]').classList.toggle("hidden", agentV);
   document.querySelector('.tab[data-tab="financien"]').classList.toggle("hidden", parkV);
-  document.querySelector('.tab[data-tab="resale"]').classList.toggle("hidden", parkV);
+  // Resale (cross-park pijplijn) niet voor parkgebruiker of park-gebonden eigenaar (Carl/Karl)
+  document.querySelector('.tab[data-tab="resale"]').classList.toggle("hidden", parkV || SCOPED_PARK != null || v.park != null);
   $("tabs").classList.remove("hidden");
   activeTab = "resultaten";
   document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active", x.dataset.tab==="resultaten"));
