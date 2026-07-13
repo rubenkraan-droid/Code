@@ -479,12 +479,6 @@
       </div>
       <div class="panel" style="margin-bottom:26px"><div class="scroll"><table id="adMonthTable"></table></div></div>
     </div>
-    <div id="adFaseSec" class="hidden">
-      <div class="sec">Performance per fase (awareness)
-        <span class="info" tabindex="0">i<span class="tip">Alle advertenties met dezelfde awareness-fase bij elkaar opgeteld, voor de gekozen periode en dit park. Zo zie je of bijv. probleembewuste advertenties beter converteren dan oplossingsbewuste. Klik op een rij om de advertentietabel hieronder op die fase te filteren.</span></span>
-      </div>
-      <div class="panel"><div class="scroll"><table id="adFaseTable"></table></div></div>
-    </div>
     <div id="adOverviewSec">
       <div id="adWarnBanner" class="hidden banner" style="background:var(--warn-soft);color:var(--warn);padding:10px 14px;border-radius:8px"></div>
       <div class="sec" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
@@ -515,6 +509,12 @@
         <div class="chartbox"><canvas id="adDetailChart" height="200"></canvas></div>
       </div>
       <div class="panel" style="margin-bottom:26px"><div class="scroll"><table id="adDetailTable"></table></div></div>
+    </div>
+    <div id="adFaseSec" class="hidden" style="margin-top:8px">
+      <div class="sec">Performance per fase (awareness)
+        <span class="info" tabindex="0">i<span class="tip">Alle advertenties met dezelfde awareness-fase bij elkaar opgeteld, voor de gekozen periode en dit park. Zo zie je of bijv. probleembewuste advertenties beter converteren dan oplossingsbewuste. Klik op een rij om de advertentietabel hierboven op die fase te filteren.</span></span>
+      </div>
+      <div class="panel"><div class="scroll"><table id="adFaseTable"></table></div></div>
     </div>
     <p class="foot" id="adFoot"></p>
   </div>
@@ -794,7 +794,7 @@ function demoMonths(){
     const leads = Math.round((60 + r()*70) * groei);
     const afspraken = Math.round(leads * (0.30 + r()*0.10));
     const sales = Math.round(afspraken * (0.34 + r()*0.14));
-    const spend = Math.round(leads * (14 + r()*7));
+    const spend = Math.round(leads * (95 + r()*70));   // realistische CPL (~€95-165)
     const omzet = sales * Math.round(GEM_VERKOOPSOM * (0.9 + r()*0.2));
     // recentste maand nog niet volledig definitief; oudere maanden wel
     const definitief = i===0 ? Math.max(0, sales-1) : sales;
@@ -816,15 +816,17 @@ function demoAds(){
     ["DEMO-AD5","onbewust","paused","#F16D9A"], ["DEMO-AD6","oplossingsbewust","killed","#7A8598"],
   ];
   return defs.map((d,i)=>{
-    const leads = Math.round(20 + r()*90), spend = Math.round(leads*(12+r()*9));
-    const afspraken = Math.round(leads*(0.18+r()*0.22)), sales = Math.round(afspraken*(0.3+r()*0.3));
+    const leads = Math.round(20 + r()*90), spend = Math.round(leads*(90+r()*90));   // CPL ~€90-180 -> CPA rond €400
+    const afspraken = Math.round(leads*(0.18+r()*0.22));
+    // niet elke advertentie heeft al sales: een paar winnaars, de rest nog niet
+    const sales = (i<3 && afspraken>0) ? Math.max(1, Math.round(afspraken*(0.25+r()*0.25))) : 0;
     const omzet = sales * 342000, clicks = Math.round(leads*(20+r()*40));
     const ongek = Math.round(leads*(0.05+r()*0.22));
     return { ad_id: 90000+i, code:d[0], advertentie:d[0], status:d[2], platform:"meta",
       thumbnail_url: demoThumb(d[0], d[3]), spend, clicks, cpc: clicks?+(spend/clicks).toFixed(2):0,
       leads, cpl: leads?Math.round(spend/leads):0, afspraken, cpa: afspraken?Math.round(spend/afspraken):0,
       no_show_pct: +(r()*12).toFixed(1), ongekwalificeerd_pct: leads?+(ongek/leads*100).toFixed(1):0, ongekwalificeerd_n: ongek,
-      sales, omzet, kost_per_sale: sales?Math.round(spend/sales):0, roas: spend?+(omzet/spend).toFixed(2):0,
+      sales, omzet, kost_per_sale: sales?Math.round(spend/sales):0, roas: spend?Math.min(100,+(omzet/spend).toFixed(2)):0,
       awareness_stage: d[1], werkte: sales>0?"wel":(afspraken===0?"niet":null),
       waarom: i===0?"Sterke hook op rendement; veel gekwalificeerde leads.":(i===5?"Publiek uitgeput, CPL liep op.":null),
       kill_reason: d[2]==="killed"?"Te hoge kosten per lead na 3 weken.":null };
@@ -879,7 +881,7 @@ function demoData(fn, args){
     case "ad_monthly": return mo.map(m=>({ maand:m.maand, spend:m.spend, leads:m.leads,
       cpl: m.leads?Math.round(m.spend/m.leads):0, afspraken:m.appointments, cpa:m.appointments?Math.round(m.spend/m.appointments):0,
       sales:m.sales, omzet:m.revenue, kost_per_sale:m.sales?Math.round(m.spend/m.sales):0,
-      roas:m.spend?+(m.revenue/m.spend).toFixed(2):0, gem_leadleeftijd: 30+Math.round(r()*60) }));
+      roas:m.spend?Math.min(100,+(m.revenue/m.spend).toFixed(2)):0, gem_leadleeftijd: 30+Math.round(r()*60) }));
     case "ad_deals": case "agent_deals": case "resale_deals": return demoDeals(args.p_kind);
     case "lost_reasons": return [
       {fase:"Voor afspraak (wilde niet komen)", reden:"Geen budget", aantal: Math.round(verloren*0.4)},
@@ -1435,7 +1437,7 @@ async function renderAds(){
     metric("Sales", sales, defSub(dsAds)) +
     metric("Kosten per sale", sales ? eur(spend/sales) : "—") +
     metric("Omzet", eur(omzet)) +
-    metric("ROAS", spend ? (omzet/spend).toFixed(2) : "—");
+    metric("ROAS", spend ? Math.min(100, omzet/spend).toFixed(2) : "—");
 
   const dd = daily || [];
   const dt2 = d => new Date(d).toLocaleDateString("nl-NL",{day:"numeric",month:"short"});
@@ -1629,7 +1631,7 @@ function drawAdTable(){
          <td>${convPct(a)!=null ? convPct(a)+"%" : "—"}</td>
          <td class="${okCls}">${a.leads>0 ? ok+"%"+relMark : "—"}</td>
          <td>${adLink(a.sales,'verkopen',a.ad_id,a.advertentie)}</td><td>${a.omzet>0 ? eur(a.omzet) : "—"}</td>
-         <td>${Number(a.roas)>0 ? Number(a.roas).toFixed(2) : "—"}</td></tr>`;
+         <td>${Number(a.roas)>0 ? Math.min(100,Number(a.roas)).toFixed(2) : "—"}</td></tr>`;
      }).join("") || `<tr><td colspan="${ADCOLS.length}" style="color:var(--muted);padding:14px">Geen advertenties in deze selectie.</td></tr>`; })()}</tbody>`;
   document.querySelectorAll("#adTable th").forEach(th => th.addEventListener("click", () => {
     const key = th.dataset.key;
@@ -1679,7 +1681,7 @@ function drawFaseTable(){
          <td>${leads>0?Math.round(afspr/leads*100)+"%":"—"}</td>
          <td>${leads>0?Math.round(ongek/leads*100)+"%":"—"}</td>
          <td>${sales}</td><td>${omzet>0?eur(omzet):"—"}</td>
-         <td>${spend>0&&omzet>0?(omzet/spend).toFixed(2):"—"}</td></tr>`;
+         <td>${spend>0&&omzet>0?Math.min(100,omzet/spend).toFixed(2):"—"}</td></tr>`;
      }).join("")}</tbody>`;
   document.querySelectorAll("#adFaseTable tbody tr").forEach(tr => tr.addEventListener("click", ()=>{
     ADFASE = tr.dataset.fase;
@@ -1757,7 +1759,7 @@ function renderAdMonths(rows){
        <td>${m.leads}</td><td>${m.leads>0?eur(m.cpl):"—"}</td>
        <td>${m.afspraken}</td><td>${m.afspraken>0?eur(m.cpa):"—"}</td>
        <td>${m.sales}</td><td style="font-weight:600">${Number(m.omzet)>0?eur(m.omzet):"—"}</td>
-       <td>${m.sales>0?eur(m.kost_per_sale):"—"}</td><td>${Number(m.roas)>0?Number(m.roas).toFixed(2):"—"}</td></tr>`).join("")}</tbody>`;
+       <td>${m.sales>0?eur(m.kost_per_sale):"—"}</td><td>${Number(m.roas)>0?Math.min(100,Number(m.roas)).toFixed(2):"—"}</td></tr>`).join("")}</tbody>`;
 }
 
 /* ---------- monthly overview (all roles) ---------- */
