@@ -2747,8 +2747,9 @@ function printDashboard(){
   window.print();
 }
 
-// ?login = echte per-gebruiker login (rol/park uit my_access); anders de normale preview-modus
-if(new URLSearchParams(location.search).has("login")) loginBoot(); else boot();
+// Login verplicht voor iedereen — preview (anonieme toegang) is uitgeschakeld.
+// De oude preview-modus boot() blijft in de code staan maar wordt niet meer aangeroepen.
+loginBoot();
 </script>
 </body>
 </html>
