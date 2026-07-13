@@ -1563,11 +1563,13 @@ async function renderAdDetail(adId, naam){
 
 const ADCOLS = [
   ["advertentie","Advertentie"], ["status","Status"], ["awareness_stage","Fase"], ["spend","Uitgaven"], ["clicks","Clicks"],
-  ["cpc","CPC"], ["leads","Leads"], ["cpl","CPL"], ["afspraken","Afspraken"], ["cpa","CPA"], ["conv_pct","Conv. %"],
+  ["cpc","CPC"], ["leads","Leads"], ["cpl","CPL"], ["afspraken","Afspraken"], ["cpa","CPA"], ["conv_pct","Conv. %"], ["clos_pct","Closing %"],
   ["ongekwalificeerd_pct","Ongekwalificeerd %"], ["sales","Sales"], ["omzet","Omzet"], ["roas","ROAS"], ["kanaal","Kanaal"],
 ];
 // conversie lead -> afspraak (kwaliteitsmaat per advertentie); niet in de RPC, dus hier afgeleid
 const convPct = a => Number(a.leads)>0 ? Math.round((Number(a.afspraken)||0)/Number(a.leads)*100) : null;
+// closing afspraak -> sale (sales ÷ afspraken); ook hier afgeleid uit de bestaande velden
+const closPct = a => Number(a.afspraken)>0 ? Math.round((Number(a.sales)||0)/Number(a.afspraken)*100) : null;
 // sorteervolgorde voor de Fase-kolom: op funnel-positie (koud -> warm), leeg onderaan
 const FASE_ORDER = Object.fromEntries(FASES.map((f,i)=>[f.key,i+1]));
 let ADFASE = "all";   // actieve fase-filter in de advertentietabel
@@ -1629,6 +1631,7 @@ function drawAdTable(){
     .sort((a,b)=>{
       if(s.key==="awareness_stage") return (faseSortVal(a)-faseSortVal(b)) * s.dir;
       if(s.key==="conv_pct") return ((convPct(a)||0)-(convPct(b)||0)) * s.dir;
+      if(s.key==="clos_pct") return ((closPct(a)||0)-(closPct(b)||0)) * s.dir;
       const av=a[s.key], bv=b[s.key];
       return (typeof av==="string" ? av.localeCompare(bv) : (Number(av)||0)-(Number(bv)||0)) * s.dir;
     });
@@ -1638,7 +1641,9 @@ function drawAdTable(){
       const info = key==='awareness_stage'
         ? ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">${FASE_UITLEG}</span></span>`
         : key==='conv_pct'
-        ? ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">Conversie van lead naar afspraak (afspraken ÷ leads). Dé kwaliteitsmaat naast de prijs per lead: een goedkope lead die nooit een afspraak wordt, is alsnog duur.</span></span>` : "";
+        ? ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">Conversie van lead naar afspraak (afspraken ÷ leads). Dé kwaliteitsmaat naast de prijs per lead: een goedkope lead die nooit een afspraak wordt, is alsnog duur.</span></span>`
+        : key==='clos_pct'
+        ? ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">Closing van afspraak naar sale (sales ÷ afspraken). Laat zien hoe goed de afspraken uit deze advertentie ook echt tot een verkoop leiden.</span></span>` : "";
       const tl = (key==='advertentie'||key==='status'||key==='awareness_stage'||key==='kanaal') ? 'tl' : '';
       return `<th data-key="${key}" class="${tl}" style="cursor:pointer;user-select:none">${label}${arrow}${info}</th>`;
     }).join("")}</tr></thead>
@@ -1669,6 +1674,7 @@ function drawAdTable(){
          <td>${adLink(a.leads,'leads',a.ad_id,a.advertentie)}</td><td>${a.leads>0 ? eur(a.cpl) : "—"}</td>
          <td>${adLink(a.afspraken,'afspraken',a.ad_id,a.advertentie)}</td><td>${a.afspraken>0 ? eur(a.cpa) : "—"}</td>
          <td>${convPct(a)!=null ? convPct(a)+"%" : "—"}</td>
+         <td>${closPct(a)!=null ? closPct(a)+"%" : "—"}</td>
          <td class="${okCls}">${a.leads>0 ? ok+"%"+relMark : "—"}</td>
          <td>${adLink(a.sales,'verkopen',a.ad_id,a.advertentie)}</td><td>${a.omzet>0 ? eur(a.omzet) : "—"}</td>
          <td>${Number(a.roas)>0 ? Math.min(ADROASCAP,Number(a.roas)).toFixed(2) : "—"}</td>
