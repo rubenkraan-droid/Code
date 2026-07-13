@@ -1065,7 +1065,7 @@ async function startAsUser(email){
     AGENTS = await rpc("owner_agents") || [];
     if(scoped){
       $("whoami").textContent = email + " · Eigenaar · " + (row.park_name||"") + (row.no_finance ? " · excl. financiën" : "");
-      PARKS = [{ id:Number(row.park_id), name: row.park_name }, DEMO_PARK];
+      PARKS = [{ id:Number(row.park_id), name: row.park_name }];   // alleen eigen park (geen demopark)
       $("viewAs").innerHTML = `<option value="owner">Master · ${esc(row.park_name||"")}</option>`;
       $("viewAs").value = "owner";
       $("viewAs").classList.add("hidden");             // op slot: alleen eigen park, geen andere weergaven
@@ -1159,7 +1159,19 @@ async function applyRole(){
   $("tabAdvertenties").classList.add("hidden");
   $("tabArchief").classList.add("hidden");
   $("tabResale").classList.add("hidden");
-  if(owner){
+  if(owner && SCOPED_PARK != null){
+    // park-gebonden eigenaar (Carl): eigen-park-weergave, géén master-benaming of parkkeuze
+    const pnaam = (PARKS.find(p=>p.id===SCOPED_PARK)||{}).name || "Dashboard";
+    $("title").textContent = pnaam;
+    $("subtitle").textContent = "Eigenaar · " + pnaam;
+    $("liveSec").classList.add("hidden");              // geen multi-park master-overzicht
+    $("fPark").classList.add("hidden");                // enkel eigen park, geen parkfilter
+    fillSelect($("fPark"), PARKS.filter(p=>!isDemo(p.id)).map(p=>({value:p.id,label:p.name})), null);
+    fillSelect($("fAgent"), AGENTS.map(a=>({value:a.id,label:a.name})), "Alle makelaars");
+    $("fPark").value = String(SCOPED_PARK); $("fAgent").value = "all";
+    setBranding(SCOPED_PARK);
+    refresh = renderOwner;
+  } else if(owner){
     $("title").textContent = "Master dashboard";
     $("subtitle").textContent = "Masterweergave";
     fillSelect($("fPark"), PARKS.filter(p=>!isDemo(p.id)).map(p=>({value:p.id,label:p.name})), "Alle parken");
