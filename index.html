@@ -578,11 +578,13 @@
 
     <div id="belCutoffSec" class="hidden" style="margin-top:26px">
       <div class="sec">Cut-off · tot hoe vaak doorbellen loont
-        <span class="info" tabindex="0">i<span class="tip">Alleen voor eigenaren. Waarde per afspraak = closing % × marge per sale. Waarde per call = conversie bij dat aantal belpogingen × waarde per afspraak. Break-even-conversie = kost per belslot ÷ waarde per afspraak: zolang de conversie daarboven ligt, loont doorbellen. Zet de kost op €0 als de makelaar toch de hele dag belt (dan loont bijna elke call); vul de waarde van een verse 1e-call in als de belslots schaars zijn.</span></span>
+        <span class="info" tabindex="0">i<span class="tip">Alleen voor eigenaren. Waarde per afspraak = closing % × marge per sale. Waarde per call = conversie bij dat aantal belpogingen × waarde per afspraak. Kost per call = setterkost (uurtarief ÷ belletjes per uur, bv. €20 ÷ 10 = €2) + eventuele kost/opportuniteit per belslot. Break-even-conversie = kost per call ÷ waarde per afspraak: zolang de conversie daarboven ligt, loont doorbellen. Belt de makelaar zelf en kost een extra call niets? Zet dan het uurtarief en de kost op €0. Zijn de belslots schaars, vul dan bij kost/opportuniteit de waarde van een verse 1e-call in.</span></span>
       </div>
       <div class="chartbox" style="display:flex;flex-wrap:wrap;gap:18px;align-items:flex-end;margin-bottom:12px">
         <label style="font-size:12px;color:var(--muted)">Closing % (afspraak → sale)<br><input id="coClosing" type="number" min="0" max="100" step="1" value="25" style="width:100px;margin-top:5px"></label>
         <label style="font-size:12px;color:var(--muted)">Marge per sale (€)<br><input id="coMarge" type="number" min="0" step="50" value="2575" style="width:120px;margin-top:5px"></label>
+        <label style="font-size:12px;color:var(--muted)">Belletjes per uur (setter)<br><input id="coBelUur" type="number" min="0" step="1" value="10" style="width:130px;margin-top:5px"></label>
+        <label style="font-size:12px;color:var(--muted)">Uurtarief setter (€)<br><input id="coUurtarief" type="number" min="0" step="1" value="20" style="width:130px;margin-top:5px"></label>
         <label style="font-size:12px;color:var(--muted)">Kost/opportuniteit per belslot (€)<br><input id="coKost" type="number" min="0" step="1" value="0" style="width:150px;margin-top:5px"></label>
         <div id="coBreakeven" style="font-weight:600;font-size:13px;flex-basis:100%;margin-top:2px;color:var(--accent-ink)"></div>
       </div>
@@ -2358,11 +2360,19 @@ let belCurveChart, BEL_CONV = [];
 function berekenCutoff(){
   const closing = (parseFloat($("coClosing").value)||0)/100;
   const marge = parseFloat($("coMarge").value)||0;
-  const kost = parseFloat($("coKost").value)||0;
+  const kost = parseFloat($("coKost").value)||0;      // handmatige kost/opportuniteit per belslot
+  // setterkost per belslot = uurtarief ÷ belletjes per uur (bv. €20 / 10 = €2 per call)
+  const belUur = parseFloat($("coBelUur").value)||0;
+  const uurtarief = parseFloat($("coUurtarief").value)||0;
+  const setterKost = belUur>0 ? uurtarief/belUur : 0;
+  const kostTotaal = setterKost + kost;               // setter + eventuele opportuniteitskost
   const waarde = closing*marge;                       // waarde per afspraak
-  const breakeven = waarde>0 ? kost/waarde*100 : 0;   // break-even-conversie (%)
+  const breakeven = waarde>0 ? kostTotaal/waarde*100 : 0;   // break-even-conversie (%)
+  const eur2 = n => "€" + n.toFixed(2).replace(".", ",");
   $("coBreakeven").textContent = waarde>0
-    ? `Waarde per afspraak: ${eur(Math.round(waarde))} · break-even-conversie: ${breakeven.toFixed(2)}%`
+    ? `Waarde per afspraak: ${eur(Math.round(waarde))} · kost per call: ${eur2(kostTotaal)}`
+      + (setterKost>0 ? ` (setter ${eur2(setterKost)}${kost>0?` + opportuniteit ${eur2(kost)}`:""})` : "")
+      + ` · break-even-conversie: ${breakeven.toFixed(2)}%`
     : "Vul closing % en marge in.";
   $("belCutoffTable").innerHTML =
     `<thead><tr><th>Keer gebeld</th><th>Conversie</th><th>Waarde per call</th><th>Loont?</th></tr></thead>
@@ -2371,7 +2381,7 @@ function berekenCutoff(){
          <td class="${loont?"good":"bad"}">${loont?"✓ loont":"✕ stop"}</td></tr>`; }).join("")
        || `<tr><td colspan="4" style="color:var(--muted);padding:14px">Geen conversiedata.</td></tr>`}</tbody>`;
 }
-["coClosing","coMarge","coKost"].forEach(id=>$(id).addEventListener("input", berekenCutoff));
+["coClosing","coMarge","coKost","coBelUur","coUurtarief"].forEach(id=>$(id).addEventListener("input", berekenCutoff));
 async function renderBellen(){
   const r = periodRange();
   const v = currentView();
