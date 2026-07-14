@@ -804,6 +804,10 @@ let PARKS = [], AGENTS = [];
 const DEMO_ID = -777;
 const DEMO_PARK = { id: DEMO_ID, name: "Demopark (voorbeeld)", accent_color: "#6C5CE7" };
 const isDemo = id => Number(id) === DEMO_ID;
+// demo-makelaar: zelfde principe, rpc()-laag onderschept elke call met p_agent_id === DEMO_AGENT_ID
+const DEMO_AGENT_ID = -778;
+const DEMO_AGENT = { id: DEMO_AGENT_ID, name: "Demo-makelaar (voorbeeld)" };
+const isDemoAgent = id => Number(id) === DEMO_AGENT_ID;
 // kleine, deterministische pseudo-random op basis van de dag (mulberry32)
 function demoRng(offset){
   const d = new Date(); let a = (d.getFullYear()*372 + d.getMonth()*31 + d.getDate() + (offset||0)) | 0;
@@ -826,6 +830,20 @@ function demoMonths(){
     // recentste maand nog niet volledig definitief; oudere maanden wel
     const definitief = i===0 ? Math.max(0, sales-1) : sales;
     out.push({ maand: demoIso(m), leads, appointments: afspraken, afspraken, sales, spend, revenue: omzet, omzet, definitief });
+  }
+  return out;
+}
+// coherente maandreeks voor één demo-makelaar (kleiner dan het hele park)
+function demoAgentMonths(){
+  const r = demoRng(5), now = new Date(), out = [];
+  const GEM = 342000;
+  for(let i=7;i>=0;i--){
+    const m = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    const afspraken = Math.round(6 + r()*7);
+    const sales = Math.round(afspraken * (0.28 + r()*0.16));
+    const omzet = sales * Math.round(GEM * (0.9 + r()*0.2));
+    const definitief = i===0 ? Math.max(0, sales-1) : sales;
+    out.push({ maand: demoIso(m), leads: 0, appointments: afspraken, afspraken, sales, spend: null, revenue: omzet, omzet, definitief });
   }
   return out;
 }
@@ -853,7 +871,7 @@ function demoAds(){
       thumbnail_url: demoThumb(d[0], d[3]), spend, clicks, cpc: clicks?+(spend/clicks).toFixed(2):0,
       leads, cpl: leads?Math.round(spend/leads):0, afspraken, cpa: afspraken?Math.round(spend/afspraken):0,
       no_show_pct: +(r()*12).toFixed(1), ongekwalificeerd_pct: leads?+(ongek/leads*100).toFixed(1):0, ongekwalificeerd_n: ongek,
-      sales, omzet, kost_per_sale: sales?Math.round(spend/sales):0, roas: spend?Math.min(100,+(omzet/spend).toFixed(2)):0,
+      sales, omzet, kost_per_sale: sales?Math.round(spend/sales):0, roas: spend?+(omzet/spend).toFixed(2):0,
       awareness_stage: d[1], werkte: sales>0?"wel":(afspraken===0?"niet":null),
       waarom: i===0?"Sterke hook op rendement; veel gekwalificeerde leads.":(i===5?"Publiek uitgeput, CPL liep op.":null),
       kill_reason: d[2]==="killed"?"Te hoge kosten per lead na 3 weken.":null };
@@ -908,7 +926,7 @@ function demoData(fn, args){
     case "ad_monthly": return mo.map(m=>({ maand:m.maand, spend:m.spend, leads:m.leads,
       cpl: m.leads?Math.round(m.spend/m.leads):0, afspraken:m.appointments, cpa:m.appointments?Math.round(m.spend/m.appointments):0,
       sales:m.sales, omzet:m.revenue, kost_per_sale:m.sales?Math.round(m.spend/m.sales):0,
-      roas:m.spend?Math.min(100,+(m.revenue/m.spend).toFixed(2)):0, gem_leadleeftijd: 30+Math.round(r()*60) }));
+      roas:m.spend?+(m.revenue/m.spend).toFixed(2):0, gem_leadleeftijd: 30+Math.round(r()*60) }));
     case "ad_deals": case "agent_deals": case "resale_deals": return demoDeals(args.p_kind);
     case "lost_reasons": return [
       {fase:"Voor afspraak (wilde niet komen)", reden:"Geen budget", aantal: Math.round(verloren*0.4)},
@@ -916,6 +934,36 @@ function demoData(fn, args){
       {fase:"Na afspraak (wilde niet kopen)", reden:"Locatie beviel niet", aantal: Math.round(verloren*0.15)}];
     case "opvolg_leads": return [];
     default: return undefined;   // val terug op leeg (UI toont nul)
+  }
+}
+// demo-makelaar: eigen (kleinere) cijfers + een plausibel teamgemiddelde uit de parkcijfers
+function demoAgentData(fn, args){
+  const am = demoAgentMonths();
+  const appt = demoSom(am,'appointments'), sales = demoSom(am,'sales'),
+        rev = demoSom(am,'revenue'), definitief = demoSom(am,'definitief');
+  const noShow = 8, afval = 17;
+  const shows = Math.max(0, Math.round(appt*(100-noShow)/100));
+  const pm = demoMonths(), TEAM = 4;
+  const p_appt = demoSom(pm,'appointments'), p_sales = demoSom(pm,'sales'), p_rev = demoSom(pm,'revenue');
+  switch(fn){
+    case "agent_stats": return [{
+      agent: DEMO_AGENT.name, leads: 0, appointments: appt, sales, revenue: rev,
+      mijn_commissie: sales*3500, revenue_per_appt: appt?Math.round(rev/appt):0,
+      closing_rate_pct: shows?Math.round(sales/shows*100):0, afval_pct: afval, no_show_pct: noShow,
+      team_revenue_per_appt: p_appt?Math.round(p_rev/p_appt):0,
+      team_closing_rate_pct: p_appt?Math.round(p_sales/p_appt*100):0,
+      team_avg_appointments: Math.round(p_appt/TEAM),
+      team_avg_revenue: Math.round(p_rev/TEAM),
+      team_afval_pct: 18 }];
+    case "monthly_overview": return am.map(m=>({ maand:m.maand, spend:null, leads:0, appointments:m.appointments, sales:m.sales, revenue:m.revenue }));
+    case "monthly_definitief": return am.map(m=>({ maand:m.maand, definitief:m.definitief }));
+    case "definitief_stats": case "definitief_check": return [{ sales, definitief }];
+    case "call_overview": {
+      const rc = demoRng(6); const gebeld = 55 + Math.round(rc()*45), gesprek = Math.round(gebeld*0.75), ingepland = Math.round(gesprek*(0.10+rc()*0.08));
+      return [{ agent: DEMO_AGENT.name, gebeld, gesprek, ingepland, gesprek_naar_afspraak_pct: gesprek?+(ingepland/gesprek*100).toFixed(1):0 }]; }
+    case "agent_deals": return demoDeals(args.p_kind);
+    case "opvolg_leads": return [];
+    default: return undefined;
   }
 }
 /* ============================================================================ */
@@ -1034,9 +1082,9 @@ const adLink = (v,kind,adId,naam) => Number(v)>0
   : v;
 const metricT = (l,v) => `<div class="metric team"><div class="l">${l}</div><div class="v">${v}</div></div>`;
 async function rpc(fn, args){
-  // demopark: onderschep elke call en geef verzonnen (maar coherente) cijfers terug
-  if(args && isDemo(args.p_park_id)){
-    const d = demoData(fn, args);
+  // demopark / demo-makelaar: onderschep elke call en geef verzonnen (maar coherente) cijfers terug
+  if(args && (isDemo(args.p_park_id) || isDemoAgent(args.p_agent_id))){
+    const d = isDemoAgent(args.p_agent_id) ? demoAgentData(fn, args) : demoData(fn, args);
     if(d !== undefined) return d;
     return [];   // niet-gemodelleerde RPC's: leeg -> UI toont netjes nul
   }
@@ -1092,6 +1140,7 @@ async function startAsUser(email){
       $("whoami").textContent = email + " · Eigenaar" + (row.no_finance ? " · excl. financiën" : "");
       PARKS  = await rpc("owner_parks")  || [];
       PARKS.push(DEMO_PARK);
+      AGENTS.push(DEMO_AGENT);   // demo-makelaar meelopen in de "Bekijk als"-lijst
       $("viewAs").innerHTML =
         `<option value="owner">Master (alles)</option>`
         + `<optgroup label="Makelaar">${AGENTS.map(a=>`<option value="agent:${a.id}">${esc(a.name)}</option>`).join("")}</optgroup>`
@@ -1135,6 +1184,7 @@ async function boot(){
   PARKS  = await rpc("owner_parks")  || [];
   AGENTS = await rpc("owner_agents") || [];
   PARKS.push(DEMO_PARK);   // demopark meelopen in naam-/branding-lookups en de sub-tabs
+  AGENTS.push(DEMO_AGENT); // demo-makelaar in de "Bekijk als"-lijst
   $("viewAs").innerHTML =
     `<option value="owner">Master (alles)</option>`
     + `<optgroup label="Makelaar">${AGENTS.map(a=>`<option value="agent:${a.id}">${a.name}</option>`).join("")}</optgroup>`
@@ -1187,7 +1237,7 @@ async function applyRole(){
     $("liveSec").classList.add("hidden");              // geen multi-park master-overzicht
     $("fPark").classList.add("hidden");                // enkel eigen park, geen parkfilter
     fillSelect($("fPark"), PARKS.filter(p=>!isDemo(p.id)).map(p=>({value:p.id,label:p.name})), null);
-    fillSelect($("fAgent"), AGENTS.map(a=>({value:a.id,label:a.name})), "Alle makelaars");
+    fillSelect($("fAgent"), AGENTS.filter(a=>!isDemoAgent(a.id)).map(a=>({value:a.id,label:a.name})), "Alle makelaars");
     $("fPark").value = String(SCOPED_PARK); $("fAgent").value = "all";
     setBranding(SCOPED_PARK);
     refresh = renderOwner;
@@ -1195,7 +1245,7 @@ async function applyRole(){
     $("title").textContent = "Master dashboard";
     $("subtitle").textContent = "Masterweergave";
     fillSelect($("fPark"), PARKS.filter(p=>!isDemo(p.id)).map(p=>({value:p.id,label:p.name})), "Alle parken");
-    fillSelect($("fAgent"), AGENTS.map(a=>({value:a.id,label:a.name})), "Alle makelaars");
+    fillSelect($("fAgent"), AGENTS.filter(a=>!isDemoAgent(a.id)).map(a=>({value:a.id,label:a.name})), "Alle makelaars");
     $("fPark").value = "all"; $("fAgent").value = "all";
     refresh = renderOwner;
   } else if(agentV){
@@ -1481,7 +1531,7 @@ async function renderAds(){
     }));
   }
   setBranding(pp);
-  ADROASCAP = isDemo(pp) ? 100 : Infinity;   // cap alleen bij het demopark
+  ADROASCAP = Infinity;   // ROAS wordt nergens meer gecapt (ook demopark rekent op echte cijfers)
   const r = periodRange();
   const rPrevAd = vorigePeriode(r);
   const [k, daily, ov, mnd, dsAds, kPrev] = await Promise.all([
@@ -2018,8 +2068,7 @@ async function renderOwner(){
   const shows = showsVan(f.appointments, f.no_show_pct);
   const closing = closingOpShows(f.sales, shows);   // closing telt op shows (afspraken die geweest zijn)
   const perAppt = f.appointments ? Math.round(f.revenue/f.appointments) : 0;
-  const roasCap = isDemo(parkNum) ? 100 : Infinity;
-  const roasTxt = Number(f.spend)>0 ? Math.min(roasCap, f.revenue/f.spend).toFixed(2) : "—";
+  const roasTxt = Number(f.spend)>0 ? (f.revenue/f.spend).toFixed(2) : "—";
   $("cardsTop").innerHTML =
     metric("Uitgaven",eur(f.spend),deltaSub(f.spend,fp&&fp.spend,heeftPrev,true)+sparkSlot("uitgaven")) +
     metricDeal("Leads",f.leads||0,'leads',null,'',false,parkVal==="all"?null:Number(parkVal),deltaSub(f.leads,fp&&fp.leads,heeftPrev)+sparkSlot("leads")) +
@@ -2156,7 +2205,7 @@ async function renderAgent(agentId){
   // opvolglijst: makelaar ziet de volledige werk-wachtrij (open "In contact"-leads), niet op
   // eigen naam gefilterd — de meeste leads hebben geen makelaar toegewezen, en iedereen mag
   // opvolgen. Respecteert wel het parkfilter. Makelaar-kolom aan zodat toewijzing zichtbaar is.
-  renderOpvolg(null, pp, true);
+  renderOpvolg(isDemoAgent(agentId) ? DEMO_AGENT_ID : null, pp, true);
 }
 
 /* ---------- RECREATIEONTWIKKELAAR: alleen parkgemiddelden ---------- */
@@ -2171,8 +2220,7 @@ async function renderPark(parkId){
   ]);
   const heeftPrevP = !!fPrev;
   const perAppt = f.appointments ? Math.round(f.revenue/f.appointments) : 0;
-  const roasCapP = isDemo(parkId) ? 100 : Infinity;
-  const roasTxtP = Number(f.spend)>0 ? Math.min(roasCapP, f.revenue/f.spend).toFixed(2) : "—";
+  const roasTxtP = Number(f.spend)>0 ? (f.revenue/f.spend).toFixed(2) : "—";
   $("cardsTop").innerHTML =
     `<div class="metric"><div class="mtxt"><div class="l">Advertentiekosten
        <span class="info" tabindex="0">i<span class="tip">Advertentiekosten van deze periode. Let op: een lead van nu leidt vaak pas weken tot maanden later tot een verkoop, dus deze kosten horen niet één-op-één bij de omzet van dezelfde periode.</span></span>
