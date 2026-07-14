@@ -349,6 +349,7 @@
       <button class="tab" data-tab="advertenties" title="Advertenties"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M7 13h4M7 16h7"/></svg><span class="lbl">Advertenties</span></button>
       <button class="tab" data-tab="archief" title="Archief · creative-library"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></svg><span class="lbl">Archief</span></button>
       <button class="tab" data-tab="financien" title="Financiën"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5c0-1.4 1.2-2 2.5-2s2.5.7 2.5 1.8c0 2.4-5 1.3-5 3.7 0 1.1 1.2 1.8 2.5 1.8s2.5-.6 2.5-2"/></svg><span class="lbl">Financiën</span></button>
+      <button class="tab" data-tab="bellen" title="Bellen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3h3l2 5-2.5 1.5a11 11 0 0 0 5 5L16 13l5 2v3a2 2 0 0 1-2.2 2A16 16 0 0 1 3 5.2 2 2 0 0 1 5 3z"/></svg><span class="lbl">Bellen</span></button>
       <button class="tab" data-tab="resale" title="Resale"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-7 9 7M5 10v9h5v-6h4v6h5v-9"/></svg><span class="lbl">Resale</span></button>
     </nav>
     <div class="who">
@@ -427,11 +428,7 @@
     <div class="sec">Per makelaar</div>
     <div class="panel"><table id="agentTable"></table></div>
     <p id="definitiefNote" class="foot" style="margin-top:6px"></p>
-    <div class="sec">Gebeld · gesprek · ingepland
-      <span class="info" tabindex="0">i<span class="tip">Gesprek &#8594; afspraak % = van de deals waar deze makelaar een gesprek (activiteit) mee had, hoeveel procent ook daadwerkelijk als afspraak is ingepland.</span></span>
-    </div>
-    <div class="panel" style="margin-bottom:26px"><table id="callTable"></table></div>
-    <div class="sec">Omzet per park</div>
+    <div class="sec" style="margin-top:24px">Omzet per park</div>
     <div class="chartbox" style="margin-bottom:26px"><canvas id="parkChart" height="200"></canvas></div>
     <div class="sec">Waarom leads afvallen · verloren redenen uit Pipedrive · klik op een reden voor de deals</div>
     <div class="grid2">
@@ -562,6 +559,28 @@
     <div class="sec">Per deal</div>
     <div class="panel"><div class="scroll"><table id="finTable"></table></div></div>
     <p class="foot">Notarisdatum en ontbindende voorwaarden komen uit de handmatige Pipedrive-velden; staat daar niets, dan toont het dashboard "Nog niet bekend".</p>
+  </div>
+
+  <div id="tabBellen" class="hidden">
+    <div class="sec">Gebeld · gesprek · ingepland
+      <span class="info" tabindex="0">i<span class="tip">Gesprek &#8594; afspraak % = van de deals waar deze makelaar een gesprek (activiteit) mee had, hoeveel procent ook daadwerkelijk als afspraak is ingepland.</span></span>
+    </div>
+    <div class="panel" style="margin-bottom:26px"><table id="callTable"></table></div>
+
+    <div class="sec">Belcurve · hoe vaak bellen tot je iemand bereikt
+      <span class="info" tabindex="0">i<span class="tip">Van alle leads met belactiviteit: bij welke poging kreeg je iemand aan de lijn? Vóór 13 juli werden missers niet apart gelogd; daarom nemen we bij meerdere belactiviteiten aan dat alleen de laatste een gesprek was en de eerdere "geen gehoor". Vanaf 13 juli tellen de echte types.</span></span>
+    </div>
+    <div id="belCurveKop" class="banner" style="margin-bottom:10px"></div>
+    <div class="hero" style="grid-template-columns:1fr">
+      <div class="chartbox" style="margin-bottom:14px"><canvas id="belCurveChart" height="200"></canvas></div>
+    </div>
+    <div class="panel" style="margin-bottom:26px"><table id="belCurveTable"></table></div>
+
+    <div class="sec">Conversie naar afspraak per aantal keer gebeld
+      <span class="info" tabindex="0">i<span class="tip">Van de leads die je X keer belde, welk deel werd uiteindelijk een afspraak. Let op: nog kleine aantallen, dus indicatief; wordt betrouwbaarder naarmate er meer data is.</span></span>
+    </div>
+    <div class="panel"><table id="belConvTable"></table></div>
+    <p class="foot">De belcurve en conversie worden over álle beldata berekend (niet beperkt tot de gekozen periode), zodat er genoeg leads in zitten.</p>
   </div>
 
   <div id="tabResale" class="hidden">
@@ -1220,6 +1239,7 @@ async function applyRole(){
   document.querySelector('.tab[data-tab="advertenties"]').classList.toggle("hidden", agentV);
   document.querySelector('.tab[data-tab="archief"]').classList.toggle("hidden", agentV);
   document.querySelector('.tab[data-tab="financien"]').classList.toggle("hidden", parkV);
+  document.querySelector('.tab[data-tab="bellen"]').classList.toggle("hidden", !owner);   // beloverzicht: alleen eigenaar
   // Resale (cross-park pijplijn) niet voor parkgebruiker of park-gebonden eigenaar (Carl/Karl)
   document.querySelector('.tab[data-tab="resale"]').classList.toggle("hidden", parkV || SCOPED_PARK != null || v.park != null);
   $("tabs").classList.remove("hidden");
@@ -1279,6 +1299,7 @@ function renderActieveTab(){
   if(activeTab==="advertenties") renderAds();
   else if(activeTab==="archief") renderArchief();
   else if(activeTab==="financien"){ const cv=currentView(); if(cv.role==="agent") renderFinanceAgent(cv.id); else renderFinance(); }
+  else if(activeTab==="bellen") renderBellen();
   else if(activeTab==="resale") renderResale();
 }
 $("fPeriod").addEventListener("change", e=>{
@@ -1308,13 +1329,15 @@ function toonTab(tab, opts){
   $("tabAdvertenties").classList.toggle("hidden", tab!=="advertenties");
   $("tabArchief").classList.toggle("hidden", tab!=="archief");
   $("tabFinance").classList.toggle("hidden", tab!=="financien");
+  $("tabBellen").classList.toggle("hidden", tab!=="bellen");
   $("tabResale").classList.toggle("hidden", tab!=="resale");
   $("fAgent").classList.toggle("hidden", tab!=="resultaten" || !currentView || currentView().role!=="owner");
-  $("fPark").classList.toggle("hidden", (currentView && currentView().role==="park") || tab==="advertenties" || tab==="archief" || tab==="financien" || tab==="resale");
+  $("fPark").classList.toggle("hidden", (currentView && currentView().role==="park") || tab==="advertenties" || tab==="archief" || tab==="financien" || tab==="bellen" || tab==="resale");
   if(!opts.silent) localStorage.setItem("activeTab", tab);
   if(tab==="advertenties") renderAds();
   if(tab==="archief") renderArchief();
   if(tab==="financien"){ const cv=currentView(); if(cv.role==="agent") renderFinanceAgent(cv.id); else renderFinance(); }
+  if(tab==="bellen") renderBellen();
   if(tab==="resale") renderResale();
 }
 // een verborgen tab (niet beschikbaar voor deze rol) is geen geldige bestemming
@@ -2105,15 +2128,6 @@ async function renderOwner(){
   const _ds = Number(dc.sales)||0, _dd = Number(dc.definitief)||0;
   $("definitiefNote").textContent = _ds===0 ? "" : (_dd>=_ds ? "Alle verkopen zijn definitief." : "Nog niet alle koopovereenkomsten zijn definitief voor deze maand.");
 
-  const calls = await rpc("call_overview", { p_from:r.p_from, p_to:r.p_to, p_park_id:parkNum,
-    p_agent_id: agentVal==="all"?null:Number(agentVal) }) || [];
-  $("callTable").innerHTML =
-    `<thead><tr><th>Makelaar</th><th>Gebeld</th><th>Gesprek</th><th>Ingepland</th><th>% gesprek van gebeld</th><th>Gesprek &#8594; afspraak %</th></tr></thead>
-     <tbody>${calls.map(c=>`<tr><td style="text-align:left">${esc(c.agent)}</td><td>${c.gebeld}</td><td>${c.gesprek}</td>
-       <td>${c.ingepland}</td><td>${c.gebeld>0 ? Math.round(c.gesprek/c.gebeld*100)+"%" : "—"}</td>
-       <td>${c.gesprek_naar_afspraak_pct!=null ? c.gesprek_naar_afspraak_pct+"%" : "—"}</td></tr>`).join("")
-       || `<tr><td colspan="6" style="color:var(--muted);padding:14px">Nog geen belactiviteiten gelogd.</td></tr>`}</tbody>`;
-
   const pa = await rpc("owner_park_agent", {...r, p_park_id: scopePark}) || [];
   const parkNames = [...new Set(pa.map(x=>x.park))];
   const agentNames = [...new Set(pa.map(x=>x.agent))];
@@ -2126,6 +2140,9 @@ async function renderOwner(){
 
   renderReasons(r);
   const opvolgStale = await renderOpvolg(agentVal==="all"?null:Number(agentVal), parkVal==="all"?null:Number(parkVal), true);
+  // belcijfers alleen nog voor het inzicht 'sterkste beller' (de tabel staat nu op het Bellen-tabblad)
+  const calls = await rpc("call_overview", { p_from:r.p_from, p_to:r.p_to, p_park_id:parkNum,
+    p_agent_id: agentVal==="all"?null:Number(agentVal) }) || [];
   const ownIns = ownerInsightsBouw(dc, agents, calls, opvolgStale);
   $("ownerInsightsSec").classList.toggle("hidden", !ownIns.length);
   $("ownerInsights").innerHTML = ownIns.join("");
@@ -2314,6 +2331,58 @@ async function toonAgentDeals(agentId, kind, naam, parkId){
        || `<tr><td colspan="7" style="color:var(--muted);padding:14px">Geen deals gevonden.</td></tr>`}</tbody>`;
   $("lostDealsSec").classList.remove("hidden");
   $("lostDealsSec").scrollIntoView({ behavior:"smooth", block:"nearest" });
+}
+
+/* ---------- BELLEN: belcijfers + belcurve (reachability) + conversie per aantal keer gebeld ---------- */
+let belCurveChart;
+async function renderBellen(){
+  const r = periodRange();
+  // belcijfers per makelaar (respecteert de periode); park wordt voor Carl backend gescoopt
+  const calls = await rpc("call_overview", { p_from:r.p_from, p_to:r.p_to, p_park_id:null, p_agent_id:null }) || [];
+  $("callTable").innerHTML =
+    `<thead><tr><th>Makelaar</th><th>Gebeld</th><th>Gesprek</th><th>Ingepland</th><th>% gesprek van gebeld</th><th>Gesprek &#8594; afspraak %</th></tr></thead>
+     <tbody>${calls.map(c=>`<tr><td style="text-align:left">${esc(c.agent)}</td><td>${c.gebeld}</td><td>${c.gesprek}</td>
+       <td>${c.ingepland}</td><td>${c.gebeld>0 ? Math.round(c.gesprek/c.gebeld*100)+"%" : "—"}</td>
+       <td>${c.gesprek_naar_afspraak_pct!=null ? c.gesprek_naar_afspraak_pct+"%" : "—"}</td></tr>`).join("")
+       || `<tr><td colspan="6" style="color:var(--muted);padding:14px">Nog geen belactiviteiten gelogd.</td></tr>`}</tbody>`;
+
+  // belcurve (alle beldata, niet periode-gebonden)
+  const curve = await rpc("call_reach_curve", { p_park_id:null }) || [];
+  const gebeld = curve[0] ? Number(curve[0].nog_niet_bereikt) : 0;   // alle gebelde leads
+  const bereiktTot = curve.reduce((s,x)=>s+Number(x.bereikt),0);
+  let cum = 0;
+  const rows = curve.map(x=>{ const at=Number(x.nog_niet_bereikt), br=Number(x.bereikt); cum+=br;
+    return { poging:x.poging, at, br, reachPct: at>0?Math.round(br/at*100):0, cumPct: gebeld>0?Math.round(cum/gebeld*100):0 }; });
+  const r90 = rows.find(x=>x.cumPct>=90), nooit = gebeld - bereiktTot;
+  $("belCurveKop").innerHTML = gebeld>0
+    ? `${gebeld} leads gebeld · ${bereiktTot} bereikt (${Math.round(bereiktTot/gebeld*100)}%)`
+      + (r90 ? ` · ${r90.cumPct}% bereikt binnen ${r90.poging} ${r90.poging===1?"poging":"pogingen"}` : "")
+      + (nooit>0 ? ` · ${nooit} nooit bereikt` : "")
+    : "Nog geen belactiviteiten om een curve op te bouwen.";
+  $("belCurveTable").innerHTML =
+    `<thead><tr><th>Poging</th><th>Nog niet bereikt · belt</th><th>Bereikt bij deze poging</th><th>Reach-kans</th><th>Cumulatief bereikt</th></tr></thead>
+     <tbody>${rows.map(x=>`<tr><td style="text-align:left">${x.poging}e</td><td>${x.at}</td><td>${x.br}</td>
+       <td>${x.reachPct}%</td><td>${x.cumPct}%</td></tr>`).join("")
+       || `<tr><td colspan="5" style="color:var(--muted);padding:14px">Geen data.</td></tr>`}</tbody>`;
+  if(belCurveChart) belCurveChart.destroy();
+  belCurveChart = new Chart($("belCurveChart"), {
+    data:{ labels: rows.map(x=>x.poging+"e"), datasets:[
+      { type:"bar", label:"Bereikt bij poging", data: rows.map(x=>x.br), backgroundColor: accent(), borderRadius:6, yAxisID:"y" },
+      { type:"line", label:"Cumulatief bereikt %", data: rows.map(x=>x.cumPct), borderColor:"#3FA06B", backgroundColor:"#3FA06B", borderWidth:2, tension:.3, pointRadius:3, yAxisID:"y1" },
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{position:"bottom",labels:{boxWidth:10,font:{size:11}}}, tooltip:{callbacks:{title:i=>`${i[0].label} belpoging`}} },
+      scales:{ x:{grid:{display:false}}, y:{beginAtZero:true,grid:{display:false},title:{display:true,text:"leads bereikt"}},
+               y1:{position:"right",min:0,max:100,grid:{display:false},ticks:{callback:v=>v+"%"}} } }
+  });
+
+  // conversie naar afspraak per aantal keer gebeld
+  const conv = await rpc("call_conversion_by_attempts", { p_park_id:null }) || [];
+  $("belConvTable").innerHTML =
+    `<thead><tr><th>Keer gebeld</th><th>Leads</th><th>Met afspraak</th><th>Afspraak %</th></tr></thead>
+     <tbody>${conv.map(c=>`<tr><td style="text-align:left">${c.keer_gebeld}&#215;</td><td>${c.leads}</td><td>${c.met_afspraak}</td>
+       <td>${c.afspraak_pct}%</td></tr>`).join("")
+       || `<tr><td colspan="4" style="color:var(--muted);padding:14px">Geen data.</td></tr>`}</tbody>`;
 }
 
 /* ---------- RESALE (rolbewust: eigenaar = totaal + per makelaar; makelaar = eigen + teamgemiddelde) ---------- */
