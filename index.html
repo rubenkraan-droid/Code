@@ -576,6 +576,19 @@
     <div class="panel"><table id="belConvTable"></table></div>
     <p class="foot">De belcurve en conversie worden over álle beldata berekend (niet beperkt tot de gekozen periode), zodat er genoeg leads in zitten.</p>
 
+    <div id="belCutoffSec" class="hidden" style="margin-top:26px">
+      <div class="sec">Cut-off · tot hoe vaak doorbellen loont
+        <span class="info" tabindex="0">i<span class="tip">Alleen voor eigenaren. Waarde per afspraak = closing % × marge per sale. Waarde per call = conversie bij dat aantal belpogingen × waarde per afspraak. Break-even-conversie = kost per belslot ÷ waarde per afspraak: zolang de conversie daarboven ligt, loont doorbellen. Zet de kost op €0 als de makelaar toch de hele dag belt (dan loont bijna elke call); vul de waarde van een verse 1e-call in als de belslots schaars zijn.</span></span>
+      </div>
+      <div class="chartbox" style="display:flex;flex-wrap:wrap;gap:18px;align-items:flex-end;margin-bottom:12px">
+        <label style="font-size:12px;color:var(--muted)">Closing % (afspraak → sale)<br><input id="coClosing" type="number" min="0" max="100" step="1" value="25" style="width:100px;margin-top:5px"></label>
+        <label style="font-size:12px;color:var(--muted)">Marge per sale (€)<br><input id="coMarge" type="number" min="0" step="50" value="2575" style="width:120px;margin-top:5px"></label>
+        <label style="font-size:12px;color:var(--muted)">Kost/opportuniteit per belslot (€)<br><input id="coKost" type="number" min="0" step="1" value="0" style="width:150px;margin-top:5px"></label>
+        <div id="coBreakeven" style="font-weight:600;font-size:13px;flex-basis:100%;margin-top:2px;color:var(--accent-ink)"></div>
+      </div>
+      <div class="panel"><table id="belCutoffTable"></table></div>
+    </div>
+
     <div id="opvolgSec" class="hidden" style="margin-top:26px">
       <div class="sec"><span id="opvolgTitle">Opvolgen</span>
         <span class="info" tabindex="0">i<span class="tip">Alleen leads in de stage "In contact". Leads met een toekomstig agendapunt vallen eruit (die staan al gepland). Gesorteerd op het laatste contactmoment — de nieuwste van notitie óf e-mail: leads zonder contact bovenaan, daarna de langst geleden. "Type" en "Door" tonen wat het laatste contact was en van wie. Rood = 30+ dagen (of nooit).</span></span>
@@ -2339,7 +2352,26 @@ async function toonAgentDeals(agentId, kind, naam, parkId){
 }
 
 /* ---------- BELLEN: belcijfers + belcurve (reachability) + conversie per aantal keer gebeld ---------- */
-let belCurveChart;
+let belCurveChart, BEL_CONV = [];
+// cut-off-rekenmodel (alleen eigenaar): waarde per afspraak = closing% × marge; loont zolang
+// de conversie boven de break-even (kost ÷ waarde per afspraak) ligt.
+function berekenCutoff(){
+  const closing = (parseFloat($("coClosing").value)||0)/100;
+  const marge = parseFloat($("coMarge").value)||0;
+  const kost = parseFloat($("coKost").value)||0;
+  const waarde = closing*marge;                       // waarde per afspraak
+  const breakeven = waarde>0 ? kost/waarde*100 : 0;   // break-even-conversie (%)
+  $("coBreakeven").textContent = waarde>0
+    ? `Waarde per afspraak: ${eur(Math.round(waarde))} · break-even-conversie: ${breakeven.toFixed(2)}%`
+    : "Vul closing % en marge in.";
+  $("belCutoffTable").innerHTML =
+    `<thead><tr><th>Keer gebeld</th><th>Conversie</th><th>Waarde per call</th><th>Loont?</th></tr></thead>
+     <tbody>${(BEL_CONV||[]).map(c=>{ const conv=Number(c.afspraak_pct)||0, wpc=conv/100*waarde, loont=conv>=breakeven;
+       return `<tr><td style="text-align:left">${c.keer_gebeld}&#215;</td><td>${conv}%</td><td>${eur(Math.round(wpc))}</td>
+         <td class="${loont?"good":"bad"}">${loont?"✓ loont":"✕ stop"}</td></tr>`; }).join("")
+       || `<tr><td colspan="4" style="color:var(--muted);padding:14px">Geen conversiedata.</td></tr>`}</tbody>`;
+}
+["coClosing","coMarge","coKost"].forEach(id=>$(id).addEventListener("input", berekenCutoff));
 async function renderBellen(){
   const r = periodRange();
   const v = currentView();
@@ -2385,11 +2417,15 @@ async function renderBellen(){
 
   // conversie naar afspraak per aantal keer gebeld
   const conv = await rpc("call_conversion_by_attempts", { p_park_id:null }) || [];
+  BEL_CONV = conv;
   $("belConvTable").innerHTML =
     `<thead><tr><th>Keer gebeld</th><th>Leads</th><th>Met afspraak</th><th>Afspraak %</th></tr></thead>
      <tbody>${conv.map(c=>`<tr><td style="text-align:left">${c.keer_gebeld}&#215;</td><td>${c.leads}</td><td>${c.met_afspraak}</td>
        <td>${c.afspraak_pct}%</td></tr>`).join("")
        || `<tr><td colspan="4" style="color:var(--muted);padding:14px">Geen data.</td></tr>`}</tbody>`;
+  // cut-off-rekenmodel: alleen voor de eigenaar (niet voor makelaars)
+  $("belCutoffSec").classList.toggle("hidden", v.role!=="owner");
+  if(v.role==="owner") berekenCutoff();
 
   // opvolglijst (volledige werk-wachtrij, verhuisd vanuit Resultaten); demo-makelaar krijgt de demo (leeg)
   await renderOpvolg(isDemoAgent(eigenAgent) ? DEMO_AGENT_ID : null, null, true);
