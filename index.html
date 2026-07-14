@@ -472,12 +472,6 @@
     <div class="cards" id="inventoryKpis"></div>
   </div>
 
-  <div id="opvolgSec" class="hidden">
-    <div class="sec"><span id="opvolgTitle">Opvolgen</span>
-      <span class="info" tabindex="0">i<span class="tip">Alleen leads in de stage "In contact". Leads met een toekomstig agendapunt vallen eruit (die staan al gepland). Gesorteerd op het laatste contactmoment — de nieuwste van notitie óf e-mail: leads zonder contact bovenaan, daarna de langst geleden. "Type" en "Door" tonen wat het laatste contact was en van wie. Rood = 30+ dagen (of nooit).</span></span>
-    </div>
-    <div class="panel"><div class="scroll"><table id="opvolgTable"></table></div></div>
-  </div>
   </div><!-- /tabResultaten -->
 
   <div id="tabAdvertenties" class="hidden">
@@ -581,6 +575,13 @@
     </div>
     <div class="panel"><table id="belConvTable"></table></div>
     <p class="foot">De belcurve en conversie worden over álle beldata berekend (niet beperkt tot de gekozen periode), zodat er genoeg leads in zitten.</p>
+
+    <div id="opvolgSec" class="hidden" style="margin-top:26px">
+      <div class="sec"><span id="opvolgTitle">Opvolgen</span>
+        <span class="info" tabindex="0">i<span class="tip">Alleen leads in de stage "In contact". Leads met een toekomstig agendapunt vallen eruit (die staan al gepland). Gesorteerd op het laatste contactmoment — de nieuwste van notitie óf e-mail: leads zonder contact bovenaan, daarna de langst geleden. "Type" en "Door" tonen wat het laatste contact was en van wie. Rood = 30+ dagen (of nooit).</span></span>
+      </div>
+      <div class="panel"><div class="scroll"><table id="opvolgTable"></table></div></div>
+    </div>
   </div>
 
   <div id="tabResale" class="hidden">
@@ -2226,10 +2227,7 @@ async function renderAgent(agentId){
   $("apptTitle").textContent = `Mijn afspraken (${det.length})`;
   renderAppts(det, false);
   $("inventorySec").classList.add("hidden");
-  // opvolglijst: makelaar ziet de volledige werk-wachtrij (open "In contact"-leads), niet op
-  // eigen naam gefilterd — de meeste leads hebben geen makelaar toegewezen, en iedereen mag
-  // opvolgen. Respecteert wel het parkfilter. Makelaar-kolom aan zodat toewijzing zichtbaar is.
-  renderOpvolg(isDemoAgent(agentId) ? DEMO_AGENT_ID : null, pp, true);
+  // de opvolglijst staat nu op het Bellen-tabblad (renderBellen)
 }
 
 /* ---------- RECREATIEONTWIKKELAAR: alleen parkgemiddelden ---------- */
@@ -2392,6 +2390,9 @@ async function renderBellen(){
      <tbody>${conv.map(c=>`<tr><td style="text-align:left">${c.keer_gebeld}&#215;</td><td>${c.leads}</td><td>${c.met_afspraak}</td>
        <td>${c.afspraak_pct}%</td></tr>`).join("")
        || `<tr><td colspan="4" style="color:var(--muted);padding:14px">Geen data.</td></tr>`}</tbody>`;
+
+  // opvolglijst (volledige werk-wachtrij, verhuisd vanuit Resultaten); demo-makelaar krijgt de demo (leeg)
+  await renderOpvolg(isDemoAgent(eigenAgent) ? DEMO_AGENT_ID : null, null, true);
 }
 
 /* ---------- RESALE (rolbewust: eigenaar = totaal + per makelaar; makelaar = eigen + teamgemiddelde) ---------- */
