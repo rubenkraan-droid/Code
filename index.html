@@ -1344,12 +1344,24 @@ $("fPeriod").addEventListener("change", e=>{
 });
 let refresh = ()=>{};
 ["fFrom","fTo","fPark","fAgent"].forEach(id=>$(id).addEventListener("change", ()=>{ refresh(); renderActieveTab(); }));
-// Vernieuwen: alle data van de huidige weergave opnieuw uit Supabase halen (geen paginaherlaad)
+// Vernieuwen: forceer een verse Pipedrive-sync (server-side), wacht tot die klaar is, en
+// herteken dan de huidige weergave met de nieuwe data. Geen paginaherlaad.
 $("refreshBtn").addEventListener("click", async ()=>{
   const b = $("refreshBtn"); if(b.classList.contains("laden")) return;
-  b.classList.add("laden");
+  b.classList.add("laden"); b.title = "Synchroniseren met Pipedrive…";
+  try {
+    const voor = await rpc("trigger_pipedrive_sync");   // vuurt Pipedrive -> Supabase af (async)
+    if(voor){
+      const start = Date.now();
+      while(Date.now() - start < 50000){                // wacht tot de sync doorliep (max ~50s)
+        await new Promise(r=>setTimeout(r,3000));
+        const nu = await rpc("latest_deal_sync");
+        if(nu && new Date(nu) > new Date(voor)) break;
+      }
+    }
+  } catch(e){ console.error("pipedrive-sync", e); }
   try { await refresh(); await renderActieveTab(); } catch(e){ console.error("vernieuwen", e); }
-  finally { b.classList.remove("laden"); }
+  finally { b.classList.remove("laden"); b.title = "Vernieuwen · verse Pipedrive-sync + data opnieuw ophalen"; }
 });
 
 /* ---------- zijbalk in-/uitklappen ---------- */
