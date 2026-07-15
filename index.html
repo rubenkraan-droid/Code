@@ -561,6 +561,11 @@
     </div>
     <div class="panel" style="margin-bottom:26px"><table id="callTable"></table></div>
 
+    <div class="sec">Belactiviteit per uur <span id="belUurPeriode" style="font-weight:400;text-transform:none;color:var(--muted)"></span>
+      <span class="info" tabindex="0">i<span class="tip">Aantal belletjes per makelaar per uur (lokale tijd, 9:00–17:00) in de gekozen periode. Zet de periode op "Vandaag" voor het overzicht van vandaag. Belletjes buiten 9–17 staan onder "overig". Donkerder = meer belletjes.</span></span>
+    </div>
+    <div class="panel" style="overflow-x:auto;margin-bottom:26px"><table id="belUurTable"></table></div>
+
     <div id="belAnalyseSec" class="hidden">
       <div class="sec">Belcurve · hoe vaak bellen tot je iemand bereikt
         <span class="info" tabindex="0">i<span class="tip">Van alle leads met belactiviteit: bij welke poging kreeg je iemand aan de lijn? Vóór 13 juli werden missers niet apart gelogd; daarom nemen we bij meerdere belactiviteiten aan dat alleen de laatste een gesprek was en de eerdere "geen gehoor". Vanaf 13 juli tellen de echte types.</span></span>
@@ -2384,6 +2389,26 @@ function berekenCutoff(){
        || `<tr><td colspan="4" style="color:var(--muted);padding:14px">Geen conversiedata.</td></tr>`}</tbody>`;
 }
 ["coClosing","coMarge","coKost","coBelUur","coUurtarief"].forEach(id=>$(id).addEventListener("input", berekenCutoff));
+// heatmap: aantal belletjes per makelaar per uur (9-17) in de gekozen periode
+async function renderBelUur(r, agentId){
+  const rows = await rpc("call_hours_by_agent", { p_from:r.p_from, p_to:r.p_to, p_park_id:null, p_agent_id:agentId }) || [];
+  const uren = [9,10,11,12,13,14,15,16];
+  const perAgent = {};
+  rows.forEach(x=>{ const nm=x.agent; if(!perAgent[nm]) perAgent[nm]={u:{},overig:0,tot:0};
+    const u=Number(x.uur), n=Number(x.aantal);
+    if(uren.includes(u)) perAgent[nm].u[u]=(perAgent[nm].u[u]||0)+n; else perAgent[nm].overig+=n;
+    perAgent[nm].tot+=n; });
+  const namen = Object.keys(perAgent).sort();
+  const maxCel = Math.max(1, ...namen.flatMap(nm=>uren.map(u=>perAgent[nm].u[u]||0)));
+  const cel = n => n
+    ? `<td style="background:color-mix(in srgb, var(--accent) ${Math.round(15+(n/maxCel)*70)}%, transparent);font-weight:600">${n}</td>`
+    : `<td style="color:var(--faint)">·</td>`;
+  const kop = `<thead><tr><th>Makelaar</th>${uren.map(u=>`<th>${u}u</th>`).join("")}<th>overig</th><th>Totaal</th></tr></thead>`;
+  $("belUurTable").innerHTML = namen.length
+    ? kop + `<tbody>${namen.map(nm=>{ const a=perAgent[nm];
+        return `<tr><td style="text-align:left">${esc(nm)}</td>${uren.map(u=>cel(a.u[u]||0)).join("")}<td>${a.overig||"·"}</td><td style="font-weight:700">${a.tot}</td></tr>`; }).join("")}</tbody>`
+    : kop + `<tbody><tr><td colspan="${uren.length+3}" style="color:var(--muted);padding:14px">Geen belactiviteiten in deze periode.</td></tr></tbody>`;
+}
 async function renderBellen(){
   const r = periodRange();
   const v = currentView();
@@ -2396,6 +2421,10 @@ async function renderBellen(){
        <td>${c.ingepland}</td><td>${c.gebeld>0 ? Math.round(c.gesprek/c.gebeld*100)+"%" : "—"}</td>
        <td>${c.gesprek_naar_afspraak_pct!=null ? c.gesprek_naar_afspraak_pct+"%" : "—"}</td></tr>`).join("")
        || `<tr><td colspan="6" style="color:var(--muted);padding:14px">Nog geen belactiviteiten gelogd.</td></tr>`}</tbody>`;
+
+  // belactiviteit per uur (heatmap) — respecteert de periode; makelaar ziet alleen zichzelf
+  $("belUurPeriode").textContent = "· " + ($("fPeriod").selectedOptions[0]?.textContent || "");
+  await renderBelUur(r, eigenAgent);
 
   // belcurve, conversie en cut-off zijn eigenaar-analyses: makelaars zien alleen hun eigen
   // belcijfers + de opvolglijst.
