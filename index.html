@@ -97,6 +97,12 @@
   .banner{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;margin:0 0 12px;color:var(--accent-ink)}
   .banner.hide{color:var(--bad)}
   .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:12px;margin-bottom:24px}
+  /* funnel-weergave: 7 vaste kolommen zodat elke afgeleide KPI (CPL, Afspraak %, No-show %,
+     Closing %, Afval %) exact ónder zijn bron-KPI staat (Leads, Afspraken, Shows, Sales, Definitief) */
+  .cards.pairs2{grid-template-columns:repeat(7,1fr)}
+  @media(max-width:1180px){.cards.pairs2{grid-template-columns:repeat(4,1fr)}}
+  @media(max-width:860px){.cards.pairs2{grid-template-columns:1fr 1fr}}
+  @media(max-width:340px){.cards.pairs2{grid-template-columns:1fr}}
   .metric{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px 17px;box-shadow:var(--shadow)}
   .metric.hasdonut{display:flex;align-items:center;gap:13px}
   .metric .mtxt{min-width:0}
@@ -1117,6 +1123,16 @@ function defSub(ds){
   const tip = ok ? "Alle verkopen in deze selectie zijn definitief."
                  : `Nog niet alle verkopen in deze selectie zijn definitief (${d} van ${s}).`;
   return `<div class="l" style="margin:5px 0 0;color:${ok?'var(--good)':'var(--warn)'};font-weight:600">${d} definitief`
+    + ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">${tip}</span></span></div>`;
+}
+// subregel voor de losse "Definitief"-kaart: het getal staat al als waarde, hier alleen de context
+function defSubKaart(ds){
+  const s = Number(ds && ds.sales)||0, d = Number(ds && ds.definitief)||0;
+  if(s===0) return `<div class="l" style="margin:5px 0 0">nog geen verkopen</div>`;
+  const ok = d>=s;
+  const tip = ok ? "Alle verkopen in deze selectie zijn definitief."
+                 : `Nog niet alle verkopen in deze selectie zijn definitief (${d} van ${s}).`;
+  return `<div class="l" style="margin:5px 0 0;color:${ok?'var(--good)':'var(--warn)'};font-weight:600">van ${s} verkopen`
     + ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">${tip}</span></span></div>`;
 }
 // shows = afspraken die daadwerkelijk plaatsvonden (afspraken - no-shows); closing rekent op shows
@@ -2149,18 +2165,24 @@ async function renderOwner(){
   const closing = closingOpShows(f.sales, shows);   // closing telt op shows (afspraken die geweest zijn)
   const perAppt = f.appointments ? Math.round(f.revenue/f.appointments) : 0;
   const roasTxt = Number(f.spend)>0 ? (f.revenue/f.spend).toFixed(2) : "—";
+  $("cardsTop").className = "cards pairs2";
+  const defAant = Number(dc.definitief)||0;
   $("cardsTop").innerHTML =
+    // bovenste rij: bron-KPI's (de trechter van uitgaven tot definitief)
     metric("Uitgaven",eur(f.spend),deltaSub(f.spend,fp&&fp.spend,heeftPrev,true)+sparkSlot("uitgaven")) +
+    metric("Omzet",eur(f.revenue),deltaSub(f.revenue,fp&&fp.revenue,heeftPrev)+sparkSlot("omzet")) +
     metricDeal("Leads",f.leads||0,'leads',null,'',false,parkVal==="all"?null:Number(parkVal),deltaSub(f.leads,fp&&fp.leads,heeftPrev)+sparkSlot("leads")) +
     metricDeal("Afspraken",f.appointments||0,'afspraken',null,'',false,parkVal==="all"?null:Number(parkVal),deltaSub(f.appointments,fp&&fp.appointments,heeftPrev)+sparkSlot("afspraken")) +
     metric("Shows",shows,`<div class="l" style="margin:5px 0 0">afspraken die geweest zijn</div>`) +
-    metric("No-show %",(f.no_show_pct||0)+"%") +
-    metricDeal("Sales",f.sales||0,'verkopen',null,'',false,parkVal==="all"?null:Number(parkVal),defSub(dc)+deltaSub(f.sales,fp&&fp.sales,heeftPrev)+sparkSlot("sales")) +
-    metric("Closing %",(closing||0)+"%") +
-    metric("Omzet",eur(f.revenue),deltaSub(f.revenue,fp&&fp.revenue,heeftPrev)+sparkSlot("omzet")) + metric("Omzet per afspraak",eur(perAppt)) +
+    metricDeal("Sales",f.sales||0,'verkopen',null,'',false,parkVal==="all"?null:Number(parkVal),deltaSub(f.sales,fp&&fp.sales,heeftPrev)+sparkSlot("sales")) +
+    metric("Definitief",defAant,defSubKaart(dc)) +
+    // onderste rij: afgeleide KPI's — exact ónder hun bron-KPI
     metric(`ROAS <span class="info" tabindex="0">i<span class="tip">Omzet (verkoopsom) &divide; advertentiekosten van deze periode. Let op: dit zet de totale omzet af tegen de advertentie-uitgaven — ook omzet uit leads die niet via een advertentie binnenkwamen telt mee. Een lead van nu leidt bovendien vaak pas later tot omzet.</span></span>`, roasTxt) +
+    metric("Omzet per afspraak",eur(perAppt)) +
     metric("CPL",eur(f.cost_per_lead)) +
     metric("Afspraak %",(f.leads ? (f.appointments/f.leads*100).toFixed(1) : "0")+"%") +
+    metric("No-show %",(f.no_show_pct||0)+"%") +
+    metric("Closing %",(closing||0)+"%") +
     metric("Afval %",(f.afval_pct||0)+"%");
   $("heroWrap").classList.add("hidden");   // trechter verwijderd op verzoek — alleen de Afspraken/Shows/Sales-tegels
 
@@ -2247,6 +2269,7 @@ async function renderAgent(agentId){
   const heeftPrevA = !!sPrev;
   const showsA = showsVan(s.appointments, s.no_show_pct);
   const closingA = closingOpShows(s.sales, showsA);
+  $("cardsTop").className = "cards";
   $("cardsTop").innerHTML =
     metricDeal("Mijn afspraken",s.appointments||0,'afspraken',agentId,'',false,null,deltaSub(s.appointments,sPrev&&sPrev.appointments,heeftPrevA)+sparkSlot("afspraken")) +
     metric("Mijn shows",showsA,`<div class="l" style="margin:5px 0 0">afspraken die geweest zijn</div>`) +
@@ -2294,20 +2317,27 @@ async function renderPark(parkId){
   const heeftPrevP = !!fPrev;
   const perAppt = f.appointments ? Math.round(f.revenue/f.appointments) : 0;
   const roasTxtP = Number(f.spend)>0 ? (f.revenue/f.spend).toFixed(2) : "—";
+  $("cardsTop").className = "cards pairs2";
+  const defAantP = Number(dsPark.definitief)||0;
   $("cardsTop").innerHTML =
+    // bovenste rij: bron-KPI's
     `<div class="metric"><div class="mtxt"><div class="l">Advertentiekosten
        <span class="info" tabindex="0">i<span class="tip">Advertentiekosten van deze periode. Let op: een lead van nu leidt vaak pas weken tot maanden later tot een verkoop, dus deze kosten horen niet één-op-één bij de omzet van dezelfde periode.</span></span>
      </div><div class="v">${eur(f.spend)}</div>${deltaSub(f.spend,fPrev&&fPrev.spend,heeftPrevP,true)}</div></div>` +
+    metric("Omzet",eur(f.revenue),deltaSub(f.revenue,fPrev&&fPrev.revenue,heeftPrevP)+sparkSlot("omzet")) +
     metric("Leads",f.leads||0,deltaSub(f.leads,fPrev&&fPrev.leads,heeftPrevP)+sparkSlot("leads")) +
     metric("Afspraken",f.appointments||0,deltaSub(f.appointments,fPrev&&fPrev.appointments,heeftPrevP)+sparkSlot("afspraken")) +
     metric("Shows",showsVan(f.appointments,f.no_show_pct),`<div class="l" style="margin:5px 0 0">afspraken die geweest zijn</div>`) +
-    metric("No-show %",(f.no_show_pct||0)+"%") +
-    metric("Sales",f.sales||0,defSub(dsPark)+deltaSub(f.sales,fPrev&&fPrev.sales,heeftPrevP)+sparkSlot("sales")) +
-    metric("Closing %",closingOpShows(f.sales,showsVan(f.appointments,f.no_show_pct))+"%") +
-    metric("Omzet",eur(f.revenue),deltaSub(f.revenue,fPrev&&fPrev.revenue,heeftPrevP)+sparkSlot("omzet")) +
-    metric("Omzet per afspraak (gem.)",eur(perAppt)) +
+    metric("Sales",f.sales||0,deltaSub(f.sales,fPrev&&fPrev.sales,heeftPrevP)+sparkSlot("sales")) +
+    metric("Definitief",defAantP,defSubKaart(dsPark)) +
+    // onderste rij: afgeleide KPI's — exact ónder hun bron-KPI
     metric(`ROAS <span class="info" tabindex="0">i<span class="tip">Omzet (verkoopsom) &divide; advertentiekosten van deze periode. Let op: dit zet de totale omzet af tegen de advertentie-uitgaven — ook omzet uit leads die niet via een advertentie binnenkwamen telt mee. Een lead van nu leidt bovendien vaak pas later tot omzet.</span></span>`, roasTxtP) +
-    metric("Afspraak %",(f.leads ? (f.appointments/f.leads*100).toFixed(1) : "0")+"%");
+    metric("Omzet per afspraak (gem.)",eur(perAppt)) +
+    metric("CPL",eur(f.cost_per_lead)) +
+    metric("Afspraak %",(f.leads ? (f.appointments/f.leads*100).toFixed(1) : "0")+"%") +
+    metric("No-show %",(f.no_show_pct||0)+"%") +
+    metric("Closing %",closingOpShows(f.sales,showsVan(f.appointments,f.no_show_pct))+"%") +
+    metric("Afval %",(f.afval_pct||0)+"%");
   const showsP = showsVan(f.appointments,f.no_show_pct);
   $("heroWrap").classList.add("hidden");   // trechter verwijderd op verzoek — alleen de Afspraken/Shows/Sales-tegels
   const moP = await rpc("monthly_overview", {p_park_id:parkId}) || [];
