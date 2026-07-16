@@ -950,8 +950,10 @@ function demoData(fn, args){
   const leads = demoSom(mo,"leads"), afspr = demoSom(mo,"appointments"), sales = demoSom(mo,"sales"),
         omzet = demoSom(mo,"revenue"), spend = demoSom(mo,"spend"), definitief = demoSom(mo,"definitief");
   const noShow = Math.round(afspr*0.08), verloren = Math.round(leads*0.19);
+  // Afval % = afhakers na mondeling akkoord / iedereen die akkoord gaf (niet: verloren leads)
+  const afhakers = Math.max(1, Math.round(sales*0.14)), akkoorden = sales + afhakers;
   const funnel = { spend, leads, appointments: afspr, sales, revenue: omzet,
-    closing_rate_pct: afspr?Math.round(sales/afspr*100):0, afval_pct: leads?Math.round(verloren/leads*100):0,
+    closing_rate_pct: afspr?Math.round(sales/afspr*100):0, afval_pct: akkoorden?Math.round(afhakers/akkoorden*100):null,
     no_show_pct: afspr?+(noShow/afspr*100).toFixed(1):0, cost_per_lead: leads?Math.round(spend/leads):0,
     revenue_per_appt: afspr?Math.round(omzet/afspr):0, marge: Math.round(omzet*0.045) };
   switch(fn){
@@ -1000,7 +1002,7 @@ function demoAgentData(fn, args){
   const am = demoAgentMonths();
   const appt = demoSom(am,'appointments'), sales = demoSom(am,'sales'),
         rev = demoSom(am,'revenue'), definitief = demoSom(am,'definitief');
-  const noShow = 8, afval = 17;
+  const noShow = 8, afval = 13;   // afval = afhaakratio na mondeling akkoord
   const shows = Math.max(0, Math.round(appt*(100-noShow)/100));
   const pm = demoMonths(), TEAM = 4;
   const p_appt = demoSom(pm,'appointments'), p_sales = demoSom(pm,'sales'), p_rev = demoSom(pm,'revenue');
@@ -1013,7 +1015,7 @@ function demoAgentData(fn, args){
       team_closing_rate_pct: p_appt?Math.round(p_sales/p_appt*100):0,
       team_avg_appointments: Math.round(p_appt/TEAM),
       team_avg_revenue: Math.round(p_rev/TEAM),
-      team_afval_pct: 18 }];
+      team_afval_pct: 15 }];
     case "monthly_overview": return am.map(m=>({ maand:m.maand, spend:null, leads:0, appointments:m.appointments, sales:m.sales, revenue:m.revenue }));
     case "monthly_definitief": return am.map(m=>({ maand:m.maand, definitief:m.definitief }));
     case "definitief_stats": case "definitief_check": return [{ sales, definitief }];
@@ -1125,6 +1127,12 @@ function defSub(ds){
   return `<div class="l" style="margin:5px 0 0;color:${ok?'var(--good)':'var(--warn)'};font-weight:600">${d} definitief`
     + ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">${tip}</span></span></div>`;
 }
+/* Afval % = van iedereen die mondeling akkoord gaf (stage 'Informeel akkoord ontvangen' of
+   verder), het percentage dat daarna alsnog verloren ging: afhaken of financiering niet rond.
+   De RPC geeft NULL zodra er nog geen akkoorden in de selectie zitten -> we tonen "—",
+   want 0% zou onterecht suggereren dat er akkoorden waren waar niemand afhaakte. */
+const AFVAL_TIP = `<span class="info" tabindex="0">i<span class="tip">Van iedereen die mondeling akkoord gaf (stage &lsquo;Informeel akkoord ontvangen&rsquo; of verder), het percentage dat daarna alsnog afhaakte of de financiering niet rond kreeg. Dit gaat dus niet over verloren leads, maar over deals die al ja hadden gezegd. Toont &ldquo;—&rdquo; zolang er nog geen akkoorden in deze selectie zijn.</span></span>`;
+const afvalWaarde = v => v==null ? "—" : v+"%";
 // subregel voor de losse "Definitief"-kaart: het getal staat al als waarde, hier alleen de context
 function defSubKaart(ds){
   const s = Number(ds && ds.sales)||0, d = Number(ds && ds.definitief)||0;
@@ -2183,7 +2191,7 @@ async function renderOwner(){
     metric("Afspraak %",(f.leads ? (f.appointments/f.leads*100).toFixed(1) : "0")+"%") +
     metric("No-show %",(f.no_show_pct||0)+"%") +
     metric("Closing %",(closing||0)+"%") +
-    metric("Afval %",(f.afval_pct||0)+"%");
+    metric("Afval % "+AFVAL_TIP, afvalWaarde(f.afval_pct));
   $("heroWrap").classList.add("hidden");   // trechter verwijderd op verzoek — alleen de Afspraken/Shows/Sales-tegels
 
   let agents = await rpc("owner_agent_performance", {...r, p_park_id: scopePark}) || [];
@@ -2276,13 +2284,13 @@ async function renderAgent(agentId){
     metricDeal("Mijn sales",s.sales||0,'verkopen',agentId,'',false,null,defSub(dsAgent)+deltaSub(s.sales,sPrev&&sPrev.sales,heeftPrevA)+sparkSlot("sales")) +
     metric("Mijn omzet",eur(s.revenue),deltaSub(s.revenue,sPrev&&sPrev.revenue,heeftPrevA)+sparkSlot("omzet")) + metric("Mijn commissie",eur(s.mijn_commissie)) +
     metric("Omzet per afspraak",eur(s.revenue_per_appt)) +
-    metric("Closing %",(closingA||0)+"%") + metric("Afval %",(s.afval_pct||0)+"%") +
+    metric("Closing %",(closingA||0)+"%") + metric("Afval % "+AFVAL_TIP, afvalWaarde(s.afval_pct)) +
     metric("No-show %",(s.no_show_pct||0)+"%");
   $("heroWrap").classList.add("hidden");   // trechter verwijderd op verzoek — alleen de Afspraken/Shows/Sales-tegels
   $("cardsTeam").innerHTML =
     metricT("Omzet per afspraak",eur(s.team_revenue_per_appt)) +
     metricT("Closing %",(s.team_closing_rate_pct||0)+"%") +
-    metricT("Afval %",(s.team_afval_pct||0)+"%") +
+    metricT("Afval %", afvalWaarde(s.team_afval_pct)) +
     metricT("Afspraken per makelaar",s.team_avg_appointments||0) +
     metricT("Omzet per makelaar",eur(s.team_avg_revenue));
   const cs = (await rpc("call_overview", {p_from:r.p_from, p_to:r.p_to, p_park_id:pp, p_agent_id:agentId}))?.[0] || {};
@@ -2337,7 +2345,7 @@ async function renderPark(parkId){
     metric("Afspraak %",(f.leads ? (f.appointments/f.leads*100).toFixed(1) : "0")+"%") +
     metric("No-show %",(f.no_show_pct||0)+"%") +
     metric("Closing %",closingOpShows(f.sales,showsVan(f.appointments,f.no_show_pct))+"%") +
-    metric("Afval %",(f.afval_pct||0)+"%");
+    metric("Afval % "+AFVAL_TIP, afvalWaarde(f.afval_pct));
   const showsP = showsVan(f.appointments,f.no_show_pct);
   $("heroWrap").classList.add("hidden");   // trechter verwijderd op verzoek — alleen de Afspraken/Shows/Sales-tegels
   const moP = await rpc("monthly_overview", {p_park_id:parkId}) || [];
@@ -2552,11 +2560,11 @@ async function renderResale(){
     $("resaleKpis").innerHTML =
       metricDeal("Mijn leads", s.leads||0,'leads',v.id,'',true) + metricDeal("Mijn afspraken", s.afspraken||0,'afspraken',v.id,'',true) +
       metricDeal("Mijn verkopen", s.verkopen||0,'verkopen',v.id,'',true) + metric("Closing %", (s.closing_pct||0)+"%") +
-      metric("Afval %", (s.afval_pct||0)+"%");
+      metric("Afval % "+AFVAL_TIP, afvalWaarde(s.afval_pct));
     $("resaleTeam").innerHTML =
       metricT("Leads per makelaar", s.team_avg_leads||0) + metricT("Afspraken per makelaar", s.team_avg_afspraken||0) +
       metricT("Verkopen per makelaar", s.team_avg_verkopen||0) + metricT("Closing %", (s.team_closing_pct||0)+"%") +
-      metricT("Afval %", (s.team_afval_pct||0)+"%");
+      metricT("Afval %", afvalWaarde(s.team_afval_pct));
     $("resaleTeamWrap").classList.remove("hidden");
     await resaleDealsToon(v.id, 'leads', '');
     return;
@@ -2565,7 +2573,7 @@ async function renderResale(){
   const f = (await rpc("resale_funnel", r))?.[0] || {};
   $("resaleKpis").innerHTML =
     metric("Leads", f.leads||0) + metric("Afspraken", f.afspraken||0) + metric("Verkopen", f.verkopen||0) +
-    metric("Closing %", (f.closing_pct||0)+"%") + metric("Afval %", (f.afval_pct||0)+"%") +
+    metric("Closing %", (f.closing_pct||0)+"%") + metric("Afval % "+AFVAL_TIP, afvalWaarde(f.afval_pct)) +
     metric("Woningwaarde verkocht", eur(f.woningwaarde)) + metric("Fee-omzet", eur(f.fee_omzet));
 
   const agents = await rpc("resale_agent_performance", r) || [];
@@ -2576,7 +2584,7 @@ async function renderResale(){
        ${dcell(a.leads,'leads',a.agent_id,a.agent,true)}
        ${dcell(a.afspraken,'afspraken',a.agent_id,a.agent,true)}${dcell(a.verkopen,'verkopen',a.agent_id,a.agent,true)}
        <td>${a.afspraken>0?a.closing_pct+"%":"—"}</td>
-       <td>${a.leads>0?a.afval_pct+"%":"—"}</td>
+       <td>${afvalWaarde(a.afval_pct)}</td>
        <td style="font-weight:600">${a.fee_omzet>0?eur(a.fee_omzet):"—"}</td></tr>`).join("")
        || `<tr><td colspan="7" style="color:var(--muted);padding:14px">Nog geen resale-deals met makelaar.</td></tr>`}</tbody>`;
   $("resaleAgentWrap").classList.remove("hidden");
@@ -2813,7 +2821,7 @@ async function genereerRapport(){
   ]});
   secties.push({ titel:"Kwaliteit", regels:[
     `Closing: ${f.closing_rate_pct ?? (f.appointments?Math.round((f.sales||0)/f.appointments*100):0)}%`,
-    `Show: ${showPct}% · Afval: ${f.afval_pct||0}%`,
+    `Show: ${showPct}% · Afval: ${afvalWaarde(f.afval_pct)}`,
   ]});
   const adRegels = [];
   if(adSpend>0) adRegels.push(`Uitgaven: ${eur(adSpend)}${adLeads>0?` · kosten per lead ${eur(adSpend/adLeads)}`:""}`);
