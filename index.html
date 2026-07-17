@@ -2115,8 +2115,8 @@ function renderAppts(rows, showAgent){
     `<thead><tr><th>Datum</th>${showAgent?"<th class=\"tl\">Makelaar</th>":""}<th class="tl">Park</th><th class="tl">Kavel</th><th class="tl">Status</th>
       <th class="tl">Verkocht op</th><th class="tl">Notaris</th><th>Omzet</th><th></th></tr></thead>
      <tbody>${rows.map(x=>{
-       const label = {sale:"Verkocht",lost:"Afgevallen",no_show:"Niet geweest"}[x.outcome] || "Geweest";
-       const cls = {sale:"sale",lost:"lost",no_show:"lost"}[x.outcome] || "held";
+       const label = {sale:"Verkocht",lost:"Afgevallen",no_show:"Niet geweest",gepland:"Gepland"}[x.outcome] || "Geweest";
+       const cls = {sale:"sale",lost:"lost",no_show:"lost",gepland:"warn"}[x.outcome] || "held";
        return `<tr><td>${dt(x.scheduled_at)}</td>
          ${showAgent?`<td style="text-align:left">${esc(x.agent)}</td>`:""}
          <td style="text-align:left">${esc(String(x.park||"").replace("Park ",""))}</td>
