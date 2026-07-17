@@ -35,6 +35,8 @@ architecture and no longer applies to `index.html`. Kept for historical n8n flow
 - `access_grants` — **the real ACL table**: `email`, `is_owner`, `park_id`. `park_members` and
   `profiles` tables exist but are unused legacy — don't reach for them.
 - `call_activities` — bel-activiteiten (Gesprek/GGH/Ongelegen), synced from Pipedrive activities.
+- `deals_verwijderd` — archief van deals die uit Pipedrive zijn verwijderd (zie Gotchas). Niet lezen
+  vanuit RPC's; puur een vangnet zodat archiveren omkeerbaar is.
 - Dead/legacy, unreferenced by any function: `ad_spend_daily` (NOT `ad_stats_daily`, which is live),
   `appointments`, `leads`, `sales`, `units`, `ops_*`. Grep `pg_proc.prosrc` before assuming a table live.
 
@@ -136,6 +138,19 @@ elk niet-API-kanaal:
   changelog. This was the root cause of 4 real French appointments not showing up on the dashboard —
   the backfill's stage-name filter didn't include "Afspraak gepland" (only "Afspraak geweest" onward).
   Now fixed (see Current state), but if appointment counts look short again, check this filter first.
+- **De Pipedrive-sync verwijdert nooit — deals die uit Pipedrive weg zijn bleven meetellen.** Een
+  verwijderde (of samengevoegde) deal blijft in `deals` staan en telde als lead. Zo verschenen Rubens
+  testdeals 633/634/635 als "3 nieuwe leads" bij Wielsche Dreef (2026-07-17). Detectie leunt op één
+  feit: **elke sync zet `updated_at=now()` op ELKE deal die hij in Pipedrive ziet, in één bulk-upsert**
+  — alle rijen van een sync delen exact dezelfde microseconde. Een deal die niet meer wordt aangeraakt,
+  bestaat dus niet meer in Pipedrive. Opgelost met `archiveer_verwijderde_deals()` (pg_cron, elk uur
+  op `:30`, tussen de syncs van `:00`): rijen met `updated_at < max(updated_at) - 3 uur` verhuizen naar
+  `deals_verwijderd`. Bewust **rijen weghalen i.p.v. een filter in ~25 RPC's** — zo klopt elke huidige
+  én nieuwe RPC automatisch (een filter vergeten was juist de oorzaak: `opvolg_leads` had 'm wel, de
+  funnel-RPC's niet). Veiligheidsklep: draait de sync >3 uur niet, dan archiveert de functie **niets**
+  (bij een storing verdwijnt er nooit data). Let op: `deals_verwijderd` is via CTAS gemaakt (niet
+  `LIKE`) omdat `no_show` een GENERATED kolom is; krijgt `deals` er een kolom bij, dan moet
+  `deals_verwijderd` mee — anders faalt de insert in de archiveerfunctie.
 - **`no_show` is a generated column** (`stage_name = 'Klant niet geweest'`), not a synced/backfilled
   flag — it recalculates automatically on every deal upsert. If a deal is manually moved out of that
   stage later (rescheduled), `no_show` flips back to `false` with no extra logic needed. Don't build a
