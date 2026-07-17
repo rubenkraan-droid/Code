@@ -954,7 +954,7 @@ function demoData(fn, args){
   const noShow = Math.round(afspr*0.08), verloren = Math.round(leads*0.19);
   // Afval % = afhakers na mondeling akkoord / iedereen die akkoord gaf (niet: verloren leads)
   const afhakers = Math.max(1, Math.round(sales*0.14)), akkoorden = sales + afhakers;
-  const funnel = { spend, leads, appointments: afspr, sales, revenue: omzet,
+  const funnel = { spend, leads, appointments: afspr, shows: Math.max(0, afspr-noShow), sales, revenue: omzet,
     closing_rate_pct: afspr?Math.round(sales/afspr*100):0, afval_pct: akkoorden?Math.round(afhakers/akkoorden*100):null,
     no_show_pct: afspr?+(noShow/afspr*100).toFixed(1):0, cost_per_lead: leads?Math.round(spend/leads):0,
     revenue_per_appt: afspr?Math.round(omzet/afspr):0, marge: Math.round(omzet*0.045) };
@@ -1009,15 +1009,17 @@ function demoAgentData(fn, args){
   const pm = demoMonths(), TEAM = 4;
   const p_appt = demoSom(pm,'appointments'), p_sales = demoSom(pm,'sales'), p_rev = demoSom(pm,'revenue');
   switch(fn){
-    case "agent_stats": return [{
-      agent: DEMO_AGENT.name, leads: 0, appointments: appt, sales, revenue: rev,
+    case "agent_stats": {
+      const p_shows = Math.max(0, Math.round(p_appt*(100-noShow)/100));
+      return [{
+      agent: DEMO_AGENT.name, leads: 0, appointments: appt, shows, sales, revenue: rev,
       mijn_commissie: sales*3500, revenue_per_appt: appt?Math.round(rev/appt):0,
       closing_rate_pct: shows?Math.round(sales/shows*100):0, afval_pct: afval, no_show_pct: noShow,
       team_revenue_per_appt: p_appt?Math.round(p_rev/p_appt):0,
-      team_closing_rate_pct: p_appt?Math.round(p_sales/p_appt*100):0,
+      team_closing_rate_pct: p_shows?Math.round(p_sales/p_shows*100):0,
       team_avg_appointments: Math.round(p_appt/TEAM),
       team_avg_revenue: Math.round(p_rev/TEAM),
-      team_afval_pct: 15 }];
+      team_afval_pct: 15, team_shows: p_shows }]; }
     case "monthly_overview": return am.map(m=>({ maand:m.maand, spend:null, leads:0, appointments:m.appointments, sales:m.sales, revenue:m.revenue }));
     case "monthly_definitief": return am.map(m=>({ maand:m.maand, definitief:m.definitief }));
     case "definitief_stats": case "definitief_check": return [{ sales, definitief }];
@@ -1145,8 +1147,9 @@ function defSubKaart(ds){
   return `<div class="l" style="margin:5px 0 0;color:${ok?'var(--good)':'var(--warn)'};font-weight:600">van ${s} verkopen`
     + ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">${tip}</span></span></div>`;
 }
-// shows = afspraken die daadwerkelijk plaatsvonden (afspraken - no-shows); closing rekent op shows
-const showsVan = (afspraken, noShowPct) => Math.max(0, Math.round((Number(afspraken)||0) * (100-(Number(noShowPct)||0))/100));
+// shows = afspraken die geweest zijn; komt nu rechtstreeks uit de RPC's (kolom "shows"),
+// niet meer afgeleid van afspraken × (1-no-show%) — die derivatie telde toekomstige
+// geplande afspraken onterecht als show. closing rekent op shows.
 const closingOpShows = (sales, shows) => shows>0 ? Math.round((Number(sales)||0)/shows*100) : 0;
 
 /* klikbare deals-cellen/cards: leads/afspraken/verkopen -> lijst met Pipedrive-links */
@@ -2171,7 +2174,7 @@ async function renderOwner(){
     rpc("definitief_check", { ...r, p_park_id: parkVal==="all"?null:Number(parkVal) }).then(x=>x?.[0]||{}),
   ]);
   const f = fRes || {}, fp = fpRes, heeftPrev = !!fp;
-  const shows = showsVan(f.appointments, f.no_show_pct);
+  const shows = Number(f.shows)||0;                 // alleen afspraken die geweest zijn (uit de RPC)
   const closing = closingOpShows(f.sales, shows);   // closing telt op shows (afspraken die geweest zijn)
   const perAppt = f.appointments ? Math.round(f.revenue/f.appointments) : 0;
   const roasTxt = Number(f.spend)>0 ? (f.revenue/f.spend).toFixed(2) : "—";
@@ -2277,7 +2280,7 @@ async function renderAgent(agentId){
     rPrevA ? rpc("agent_stats", {p_agent_id:agentId, p_park_id:pp, ...rPrevA}).then(x=>x?.[0]) : Promise.resolve(null),
   ]);
   const heeftPrevA = !!sPrev;
-  const showsA = showsVan(s.appointments, s.no_show_pct);
+  const showsA = Number(s.shows)||0;               // alleen afspraken die geweest zijn (uit de RPC)
   const closingA = closingOpShows(s.sales, showsA);
   $("cardsTop").className = "cards";
   $("cardsTop").innerHTML =
@@ -2325,6 +2328,7 @@ async function renderPark(parkId){
     rPrevP ? rpc("client_park_funnel", {p_park_id:parkId, ...rPrevP}).then(x=>x?.[0]) : Promise.resolve(null),
   ]);
   const heeftPrevP = !!fPrev;
+  const showsP = Number(f.shows)||0;               // alleen afspraken die geweest zijn (uit de RPC)
   const perAppt = f.appointments ? Math.round(f.revenue/f.appointments) : 0;
   const roasTxtP = Number(f.spend)>0 ? (f.revenue/f.spend).toFixed(2) : "—";
   $("cardsTop").className = "cards pairs2";
@@ -2337,7 +2341,7 @@ async function renderPark(parkId){
     metric("Omzet",eur(f.revenue),deltaSub(f.revenue,fPrev&&fPrev.revenue,heeftPrevP)+sparkSlot("omzet")) +
     metric("Leads",f.leads||0,deltaSub(f.leads,fPrev&&fPrev.leads,heeftPrevP)+sparkSlot("leads")) +
     metric("Afspraken",f.appointments||0,deltaSub(f.appointments,fPrev&&fPrev.appointments,heeftPrevP)+sparkSlot("afspraken")) +
-    metric("Shows",showsVan(f.appointments,f.no_show_pct),`<div class="l" style="margin:5px 0 0">afspraken die geweest zijn</div>`) +
+    metric("Shows",showsP,`<div class="l" style="margin:5px 0 0">afspraken die geweest zijn</div>`) +
     metric("Sales",f.sales||0,deltaSub(f.sales,fPrev&&fPrev.sales,heeftPrevP)+sparkSlot("sales")) +
     metric("Definitief",defAantP,defSubKaart(dsPark)) +
     // onderste rij: afgeleide KPI's — exact ónder hun bron-KPI
@@ -2346,9 +2350,8 @@ async function renderPark(parkId){
     metric("CPL",eur(f.cost_per_lead)) +
     metric("Afspraak %",(f.leads ? (f.appointments/f.leads*100).toFixed(1) : "0")+"%") +
     metric("No-show %",(f.no_show_pct||0)+"%") +
-    metric("Closing %",closingOpShows(f.sales,showsVan(f.appointments,f.no_show_pct))+"%") +
+    metric("Closing %",closingOpShows(f.sales,showsP)+"%") +
     metric("Afval % "+AFVAL_TIP, afvalWaarde(f.afval_pct));
-  const showsP = showsVan(f.appointments,f.no_show_pct);
   $("heroWrap").classList.add("hidden");   // trechter verwijderd op verzoek — alleen de Afspraken/Shows/Sales-tegels
   const moP = await rpc("monthly_overview", {p_park_id:parkId}) || [];
   renderMonths(moP, {spend:false, leads:true, def: await defMaandMap(null, parkId)});
