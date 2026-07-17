@@ -571,10 +571,12 @@
     </div>
     <div class="panel" style="margin-bottom:26px"><table id="callTable"></table></div>
 
-    <div class="sec">Belactiviteit per uur <span id="belUurPeriode" style="font-weight:400;text-transform:none;color:var(--muted)"></span>
-      <span class="info" tabindex="0">i<span class="tip">Aantal belletjes per makelaar per uur (lokale tijd, 9:00–17:00) in de gekozen periode. Zet de periode op "Vandaag" voor het overzicht van vandaag. Belletjes buiten 9–17 staan onder "overig". Donkerder = meer belletjes.</span></span>
+    <div id="belUurSec" class="hidden">
+      <div class="sec">Belactiviteit per uur <span id="belUurPeriode" style="font-weight:400;text-transform:none;color:var(--muted)"></span>
+        <span class="info" tabindex="0">i<span class="tip">Aantal belletjes per makelaar per uur (lokale tijd, 9:00–17:00) in de gekozen periode. Zet de periode op "Vandaag" voor het overzicht van vandaag. Belletjes buiten 9–17 staan onder "overig". Donkerder = meer belletjes.</span></span>
+      </div>
+      <div class="panel" style="overflow-x:auto;margin-bottom:26px"><table id="belUurTable"></table></div>
     </div>
-    <div class="panel" style="overflow-x:auto;margin-bottom:26px"><table id="belUurTable"></table></div>
 
     <div id="belAnalyseSec" class="hidden">
       <div class="sec">Belcurve · hoe vaak bellen tot je iemand bereikt
@@ -2490,19 +2492,20 @@ async function renderBellen(){
        <td>${c.gesprek_naar_afspraak_pct!=null ? c.gesprek_naar_afspraak_pct+"%" : "—"}</td></tr>`).join("")
        || `<tr><td colspan="6" style="color:var(--muted);padding:14px">Nog geen belactiviteiten gelogd.</td></tr>`}</tbody>`;
 
-  // belactiviteit per uur (heatmap) — respecteert de periode; makelaar ziet alleen zichzelf
-  $("belUurPeriode").textContent = "· " + ($("fPeriod").selectedOptions[0]?.textContent || "");
-  await renderBelUur(r, eigenAgent);
-
-  // belcurve, conversie en cut-off zijn eigenaar-analyses: makelaars zien alleen hun eigen
-  // belcijfers + de opvolglijst.
+  // belactiviteit per uur (heatmap), belcurve, conversie en cut-off zijn eigenaar-analyses:
+  // makelaars zien alleen hun eigen belcijfers + de opvolglijst.
   const isOwner = v.role === "owner";
+  $("belUurSec").classList.toggle("hidden", !isOwner);
   $("belAnalyseSec").classList.toggle("hidden", !isOwner);
   $("belCutoffSec").classList.toggle("hidden", !isOwner);
   if(!isOwner){
     await renderOpvolg(isDemoAgent(eigenAgent) ? DEMO_AGENT_ID : null, null, true);
     return;
   }
+
+  // heatmap per uur — alle makelaars naast elkaar (eigenaar-overzicht)
+  $("belUurPeriode").textContent = "· " + ($("fPeriod").selectedOptions[0]?.textContent || "");
+  await renderBelUur(r, null);
 
   // belcurve (alle beldata, niet periode-gebonden)
   const curve = await rpc("call_reach_curve", { p_park_id:null }) || [];
