@@ -476,8 +476,8 @@
   </div>
 
   <div id="inventorySec" class="hidden">
-    <div class="sec">Uitverkoop van het park
-      <span class="info" tabindex="0">i<span class="tip">Verkocht / beschikbaar uit de kavelvoorraad. De prognose = beschikbaar ÷ het aantal woningen dat in de vórige kalendermaand is verkocht.</span></span>
+    <div class="sec"><span id="inventoryTitel">Uitverkoop van het park</span>
+      <span class="info" tabindex="0">i<span class="tip">Verkocht / beschikbaar uit de kavelvoorraad. De prognose = beschikbaar ÷ het aantal mondelinge akkoorden van de laatste 30 dagen (rollend, ontbonden deals niet meegeteld).</span></span>
     </div>
     <div class="cards" id="inventoryKpis"></div>
   </div>
@@ -2240,7 +2240,7 @@ async function renderOwner(){
   const ownIns = ownerInsightsBouw(dc, agents, calls, opvolgStale);
   $("ownerInsightsSec").classList.toggle("hidden", !ownIns.length);
   $("ownerInsights").innerHTML = ownIns.join("");
-  if(parkVal==="all") $("inventorySec").classList.add("hidden"); else renderInventory(Number(parkVal));
+  renderInventory(parkVal==="all" ? null : Number(parkVal));   // Master: alle parken samen
 
   const [mo, defMap2] = await Promise.all([
     rpc("monthly_overview", {
@@ -2664,10 +2664,11 @@ async function renderOpvolg(agentId, parkId, toonAgent){
 
 /* ---------- uitverkoopprognose van het park ---------- */
 async function renderInventory(parkId){
-  const s = (await rpc("park_sellthrough", { p_park_id: Number(parkId) }))?.[0];
+  const s = (await rpc("park_sellthrough", { p_park_id: parkId==null ? null : Number(parkId) }))?.[0];
   const heeft = s && Number(s.totaal)>0;
   $("inventorySec").classList.toggle("hidden", !heeft);
   if(!heeft) return;
+  $("inventoryTitel").textContent = parkId==null ? "Uitverkoop (alle parken)" : "Uitverkoop van het park";
   const prog = s.maanden_tot_uitverkocht;
   const progTxt = prog==null ? "onvoldoende verkoopdata"
     : (Number(prog)>=24 ? Math.round(prog/12)+" jaar" : Math.round(prog)+" mnd");
