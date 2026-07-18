@@ -2676,7 +2676,7 @@ async function renderInventory(parkId){
   $("inventoryKpis").innerHTML =
     metric("Verkocht", s.verkocht) +
     metric("Beschikbaar", beschikbaar) + metric("% verkocht", (s.verkocht_pct||0)+"%") +
-    metric("Vorige maand verkocht", (Number(s.verkoop_per_maand)||0)) +
+    metric(`Laatste 30 dagen verkocht <span class="info" tabindex="0">i<span class="tip">Aantal mondelinge akkoorden (vanaf stage &lsquo;Informeel akkoord ontvangen&rsquo;) in de afgelopen 30 dagen, rollend. Ontbonden deals tellen niet mee. De prognose rekent met dit tempo.</span></span>`, (Number(s.verkoop_per_maand)||0)) +
     metric("Prognose uitverkocht", progTxt);
 }
 
