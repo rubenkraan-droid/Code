@@ -1746,8 +1746,12 @@ async function renderAdDetail(adId, naam){
   const rij = ADROWS.find(a => Number(a.ad_id)===Number(adId) || a.advertentie===naam);
   const thumb = $("adDetailThumb"), url = rij && rij.thumbnail_url;
   if(url){
-    thumb.href = safeUrl(url);   // weert javascript:-scheme in de klikbare link
-    thumb.innerHTML = `<img src="${escAttr(url)}" alt="${escAttr(naam)}" onerror="this.closest('.addetail-thumb').classList.add('hidden')"><span class="zoomhint">Klik voor groot ↗</span>`;
+    // Klik opent de STABIELE preview-link (fb.me). De rauwe fbcdn-afbeelding heeft een
+    // verlopende handtekening -> direct openen geeft "Bad URL hash". Alleen als er geen
+    // preview-link is, valt de klik terug op de afbeelding zelf.
+    const klik = (rij && rij.preview_link) || url;
+    thumb.href = safeUrl(klik);   // weert javascript:-scheme in de klikbare link
+    thumb.innerHTML = `<img src="${escAttr(url)}" alt="${escAttr(naam)}" onerror="this.closest('.addetail-thumb').classList.add('hidden')"><span class="zoomhint">${rij && rij.preview_link ? "Bekijk advertentie ↗" : "Klik voor groot ↗"}</span>`;
     thumb.classList.remove("hidden");
   } else {
     thumb.classList.add("hidden"); thumb.innerHTML = "";
