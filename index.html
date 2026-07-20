@@ -2384,17 +2384,21 @@ async function renderReasons(r){
   const markt = parkVal==="all" ? null : (Number(parkVal)===3 ? "Wielsche Dreef" : "France");
   LOST_CTX = { r, markt };
   $("lostDealsSec").classList.add("hidden");
-  const rows = await rpc("lost_reasons", { ...r, p_market: markt }) || [];
+  const alleRows = await rpc("lost_reasons", { ...r, p_market: markt }) || [];
+  // noemer = alle leads (meta-rij), zodat het aandeel t.o.v. álle leads is
+  const totaalLeads = Number((alleRows.find(x=>x.fase==="__meta__")||{}).aantal) || 0;
+  const rows = alleRows.filter(x=>x.fase!=="__meta__");
   const tabel = (fase) => {
     const alle = rows.filter(x=>x.fase===fase);
-    const tot = alle.reduce((s,x)=>s+Number(x.aantal),0);
-    if(!tot) return `<tbody><tr><td style="color:var(--muted);padding:14px">Nog geen verloren deals in deze periode</td></tr></tbody>`;
-    // redenen met minder dan 1% aandeel weglaten, daarna op aantal top 5 tonen
-    const rs = alle.filter(x=>x.aantal/tot >= 0.01).sort((a,b)=>b.aantal-a.aantal).slice(0,5);
+    if(!alle.length || !totaalLeads) return `<tbody><tr><td style="color:var(--muted);padding:14px">Nog geen verloren deals in deze periode</td></tr></tbody>`;
+    // redenen met minder dan 1% van alle leads weglaten, daarna op aantal top 6 tonen
+    const rs = alle.filter(x=>x.aantal/totaalLeads >= 0.01).sort((a,b)=>b.aantal-a.aantal).slice(0,6);
     return `<thead><tr><th>Reden</th><th>Aantal</th><th>Aandeel</th></tr></thead><tbody>`
-      + rs.map(x=>`<tr data-fase="${encodeURIComponent(fase)}" data-reden="${encodeURIComponent(x.reden)}" style="cursor:pointer">
-          <td style="text-align:left;color:var(--accent);font-weight:600">${esc(x.reden)}</td><td>${x.aantal}</td>
-          <td>${Math.round(x.aantal/tot*100)}%</td></tr>`).join("") + `</tbody>`;
+      + rs.map(x=>{
+          const open = x.reden==="Openstaand / geen gehoor";   // geen verloren deals -> niet klikbaar
+          return `<tr ${open?"":`data-fase="${encodeURIComponent(fase)}" data-reden="${encodeURIComponent(x.reden)}" style="cursor:pointer"`}>
+          <td style="text-align:left;${open?"color:var(--muted)":"color:var(--accent);font-weight:600"}">${esc(x.reden)}</td><td>${x.aantal}</td>
+          <td>${Math.round(x.aantal/totaalLeads*100)}%</td></tr>`;}).join("") + `</tbody>`;
   };
   $("reasonsBefore").innerHTML = tabel("Voor afspraak (wilde niet komen)");
   $("reasonsAfter").innerHTML  = tabel("Na afspraak (wilde niet kopen)");
