@@ -420,9 +420,10 @@
     <input type="date" id="fTo" class="hidden" />
     <select id="fPark"></select>
     <select id="fAgent"></select>
-    <button id="impactBtn" class="btn impact" title="Toon alleen resultaten vanaf 17 juli, jouw eigen impact. Alles daarvóór (door de vorige marketingpartij) wordt buiten beschouwing gelaten.">Alleen mijn impact <small>vanaf 17 juli</small></button>
+    <button id="recravasBtn" class="btn impact" title="Toon alleen resultaten vanaf 17 juli: het werk van RecraVas.">RecraVas <small>vanaf 17 juli</small></button>
+    <button id="supermindsBtn" class="btn impact" title="Toon alleen resultaten tot 17 juli: het werk van de vorige marketingpartij Superminds.">Superminds <small>tot 17 juli</small></button>
   </div>
-  <div id="impactBanner" class="impactbanner"><span>◉</span><span>Alleen jouw impact · resultaten vanaf 17 juli. Alles daarvóór is buiten beschouwing gelaten.</span></div>
+  <div id="impactBanner" class="impactbanner"><span>◉</span><span id="impactBannerTxt"></span></div>
 
   <div id="tabResultaten">
   <div id="liveSec" class="hidden">
@@ -1055,11 +1056,22 @@ function demoAgentData(fn, args){
 }
 /* ============================================================================ */
 
-const IMPACT_DATUM = '2026-07-17';                 // vanaf hier telt Rubens eigen impact
-let IMPACT17 = localStorage.getItem("impact17") === "1";   // default uit = alles tonen
+const IMPACT_DATUM = '2026-07-17';        // RecraVas: vanaf deze dag
+const IMPACT_DATUM_VOOR = '2026-07-16';  // Superminds: t/m deze dag (dag vóór de overname)
+// periode-bron: 'alles' (standaard) | 'recravas' (vanaf 17 juli) | 'superminds' (tot 17 juli)
+let PERIODE_BRON = localStorage.getItem("periode_bron") || "alles";
 function pasImpactToggleToe(){
-  $("impactBtn").classList.toggle("aan", IMPACT17);
-  $("impactBanner").classList.toggle("aan", IMPACT17);
+  $("recravasBtn").classList.toggle("aan", PERIODE_BRON==="recravas");
+  $("supermindsBtn").classList.toggle("aan", PERIODE_BRON==="superminds");
+  $("impactBanner").classList.toggle("aan", PERIODE_BRON!=="alles");
+  if(PERIODE_BRON==="recravas") $("impactBannerTxt").textContent = "RecraVas · resultaten vanaf 17 juli. Alles daarvóór is buiten beschouwing gelaten.";
+  else if(PERIODE_BRON==="superminds") $("impactBannerTxt").textContent = "Superminds · resultaten tot 17 juli (vorige marketingpartij). Alles daarna is buiten beschouwing gelaten.";
+}
+function kiesBron(bron){
+  PERIODE_BRON = (PERIODE_BRON===bron) ? "alles" : bron;   // nogmaals klikken zet 'm weer uit
+  localStorage.setItem("periode_bron", PERIODE_BRON);
+  pasImpactToggleToe();
+  refresh(); renderActieveTab();
 }
 function periodRange(){
   const v = $("fPeriod").value, today = new Date();
@@ -1085,10 +1097,11 @@ function periodRange(){
     from = new Date($("fFrom").value || Date.now()-2592e6);
     to   = new Date($("fTo").value || Date.now());
   } else { from = new Date(); from.setDate(from.getDate()-parseInt(v,10)); }
-  let p_from = iso(from);
-  // "Alleen mijn impact": alles vóór 17 juli 2026 buiten beschouwing (werk vorige marketingpartij)
-  if(IMPACT17 && p_from < IMPACT_DATUM) p_from = IMPACT_DATUM;
-  return { p_from, p_to: iso(to) };
+  let p_from = iso(from), p_to = iso(to);
+  // RecraVas: alleen vanaf 17 juli. Superminds: alleen t/m 16 juli.
+  if(PERIODE_BRON==="recravas"  && p_from < IMPACT_DATUM)      p_from = IMPACT_DATUM;
+  if(PERIODE_BRON==="superminds" && p_to   > IMPACT_DATUM_VOOR) p_to   = IMPACT_DATUM_VOOR;
+  return { p_from, p_to };
 }
 const metric  = (l,v,sub) => {
   const s = String(v).trim(), m = /^(-?\d+(?:[.,]\d+)?)\s*%$/.exec(s);
@@ -1408,14 +1421,10 @@ $("fPeriod").addEventListener("change", e=>{
 });
 let refresh = ()=>{};
 ["fFrom","fTo","fPark","fAgent"].forEach(id=>$(id).addEventListener("change", ()=>{ refresh(); renderActieveTab(); }));
-// "Alleen mijn impact": klem alle periodes op >= 17 juli (of niet). Onthouden per browser.
+// Periode-bron: RecraVas (vanaf 17 juli) / Superminds (tot 17 juli) / alles. Onthouden per browser.
 pasImpactToggleToe();
-$("impactBtn").addEventListener("click", ()=>{
-  IMPACT17 = !IMPACT17;
-  localStorage.setItem("impact17", IMPACT17 ? "1" : "0");
-  pasImpactToggleToe();
-  refresh(); renderActieveTab();
-});
+$("recravasBtn").addEventListener("click", ()=>kiesBron("recravas"));
+$("supermindsBtn").addEventListener("click", ()=>kiesBron("superminds"));
 // Vernieuwen: forceer een verse Pipedrive-sync (server-side), wacht tot die klaar is, en
 // herteken dan de huidige weergave met de nieuwe data. Geen paginaherlaad.
 $("refreshBtn").addEventListener("click", async ()=>{
