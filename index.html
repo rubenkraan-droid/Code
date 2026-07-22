@@ -82,6 +82,15 @@
   .top{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:18px}
   .sub{font-size:13px;color:var(--muted);margin:4px 0 0}
   .filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px}
+  /* impact-toggle: alleen resultaten vanaf 17 juli (eigen impact) */
+  .btn.impact{display:inline-flex;flex-direction:column;align-items:flex-start;line-height:1.15;cursor:pointer;
+    border:1px solid var(--line-strong);background:var(--card);color:var(--muted);border-radius:10px;padding:6px 13px;font-size:13px;font-weight:600}
+  .btn.impact small{font-size:10.5px;font-weight:500;opacity:.8}
+  .btn.impact.aan{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.impact.aan small{opacity:.9}
+  .impactbanner{display:none;align-items:center;gap:8px;background:var(--accent-soft);color:var(--accent-ink);
+    border:1px solid var(--accent);border-radius:10px;padding:8px 14px;margin-bottom:16px;font-size:13px;font-weight:600}
+  .impactbanner.aan{display:flex}
   #adParkTabs.tabs{flex-direction:row;gap:6px;flex:none;border-bottom:1px solid var(--line);padding-bottom:0;overflow:visible}
   #adParkTabs.tabs .tab{border-radius:10px 10px 0 0;border-bottom:2px solid transparent;padding:8px 15px;background:none;color:var(--muted);box-shadow:none}
   #adParkTabs.tabs .tab.active{background:none;color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
@@ -411,7 +420,9 @@
     <input type="date" id="fTo" class="hidden" />
     <select id="fPark"></select>
     <select id="fAgent"></select>
+    <button id="impactBtn" class="btn impact" title="Toon alleen resultaten vanaf 17 juli, jouw eigen impact. Alles daarvóór (door de vorige marketingpartij) wordt buiten beschouwing gelaten.">Alleen mijn impact <small>vanaf 17 juli</small></button>
   </div>
+  <div id="impactBanner" class="impactbanner"><span>◉</span><span>Alleen jouw impact · resultaten vanaf 17 juli. Alles daarvóór is buiten beschouwing gelaten.</span></div>
 
   <div id="tabResultaten">
   <div id="liveSec" class="hidden">
@@ -1044,6 +1055,12 @@ function demoAgentData(fn, args){
 }
 /* ============================================================================ */
 
+const IMPACT_DATUM = '2026-07-17';                 // vanaf hier telt Rubens eigen impact
+let IMPACT17 = localStorage.getItem("impact17") === "1";   // default uit = alles tonen
+function pasImpactToggleToe(){
+  $("impactBtn").classList.toggle("aan", IMPACT17);
+  $("impactBanner").classList.toggle("aan", IMPACT17);
+}
 function periodRange(){
   const v = $("fPeriod").value, today = new Date();
   // lokale datum (niet toISOString → geen UTC-verschuiving die 'vandaag' een dag terugzet)
@@ -1068,7 +1085,10 @@ function periodRange(){
     from = new Date($("fFrom").value || Date.now()-2592e6);
     to   = new Date($("fTo").value || Date.now());
   } else { from = new Date(); from.setDate(from.getDate()-parseInt(v,10)); }
-  return { p_from: iso(from), p_to: iso(to) };
+  let p_from = iso(from);
+  // "Alleen mijn impact": alles vóór 17 juli 2026 buiten beschouwing (werk vorige marketingpartij)
+  if(IMPACT17 && p_from < IMPACT_DATUM) p_from = IMPACT_DATUM;
+  return { p_from, p_to: iso(to) };
 }
 const metric  = (l,v,sub) => {
   const s = String(v).trim(), m = /^(-?\d+(?:[.,]\d+)?)\s*%$/.exec(s);
@@ -1388,6 +1408,14 @@ $("fPeriod").addEventListener("change", e=>{
 });
 let refresh = ()=>{};
 ["fFrom","fTo","fPark","fAgent"].forEach(id=>$(id).addEventListener("change", ()=>{ refresh(); renderActieveTab(); }));
+// "Alleen mijn impact": klem alle periodes op >= 17 juli (of niet). Onthouden per browser.
+pasImpactToggleToe();
+$("impactBtn").addEventListener("click", ()=>{
+  IMPACT17 = !IMPACT17;
+  localStorage.setItem("impact17", IMPACT17 ? "1" : "0");
+  pasImpactToggleToe();
+  refresh(); renderActieveTab();
+});
 // Vernieuwen: forceer een verse Pipedrive-sync (server-side), wacht tot die klaar is, en
 // herteken dan de huidige weergave met de nieuwe data. Geen paginaherlaad.
 $("refreshBtn").addEventListener("click", async ()=>{
