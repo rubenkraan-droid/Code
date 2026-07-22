@@ -1596,7 +1596,7 @@ async function renderFinanceAgent(agentId){
 
 /* ---------- ADVERTENTIES ---------- */
 let adChart;
-let ADROWS = [], ADSORT = { key:"spend", dir:-1 }, ADPARK = null;
+let ADROWS = [], ADSORT = { key:"spend", dir:-1 }, ADPARK = null, ADUNLINKED = null;
 const parkAccent = id => { const p = PARKS.find(x=>x.id===id); return (p && p.accent_color) || accent(); };
 const STATUSNL = { active:["Actief","sale"], paused:["Gepauzeerd","held"], killed:["Gestopt","held"], draft:["Concept","held"], unknown:["Onbekend","held"], demo:["Demo","held"] };
 
@@ -1654,11 +1654,12 @@ async function renderAds(){
   ADROASCAP = Infinity;   // ROAS wordt nergens meer gecapt (ook demopark rekent op echte cijfers)
   const r = periodRange();
   const rPrevAd = vorigePeriode(r);
-  const [k, daily, ov, mnd, dsAds, kPrev] = await Promise.all([
+  const [k, daily, ov, mnd, unlinked, dsAds, kPrev] = await Promise.all([
     rpc("ad_kpis",  { ...r, p_park_id: pp }).then(x=>x?.[0]||{}),
     rpc("ad_daily", { ...r, p_park_id: pp }),
     rpc("ad_overview", { ...r, p_park_id: pp }),
     rpc("ad_monthly", { p_park_id: pp, p_from: r.p_from, p_to: r.p_to }),
+    rpc("ad_unlinked_overview", { ...r, p_park_id: pp }).then(x=>x?.[0]||null),
     rpc("definitief_stats", { ...r, p_agent_id:null, p_park_id: pp, p_anchor:'lead' }).then(x=>x?.[0]||{}),
     rPrevAd ? rpc("ad_kpis", { ...rPrevAd, p_park_id: pp }).then(x=>x?.[0]) : Promise.resolve(null),
   ]);
@@ -1692,6 +1693,7 @@ async function renderAds(){
   });
 
   ADROWS = ov || [];
+  ADUNLINKED = (unlinked && Number(unlinked.leads)>0) ? unlinked : null;   // regel 'Niet gekoppeld' in de kanalen-tabel
   // status-filter vullen met wat er in dit park voorkomt ("Actief" eerst, dan de rest)
   const adStatussen = [...new Set(ADROWS.map(a=>a.status).filter(Boolean))]
     .sort((a,b)=>(a==="active"?-1:b==="active"?1:0));
@@ -1963,11 +1965,22 @@ function drawKanaalTable(){
   const groepen = {};
   ADROWS.forEach(a => { const k = String(a.kanaal||"overig").toLowerCase(); (groepen[k]=groepen[k]||[]).push(a); });
   const aanwezig = Object.keys(groepen);
-  // pas tonen als er meer dan één kanaal is (anders zegt het niets)
-  $("adKanaalSec").classList.toggle("hidden", aanwezig.length < 2);
-  if(aanwezig.length < 2) return;
+  const heeftOngekoppeld = !!ADUNLINKED;
+  // pas tonen als er meer dan één regel te zien is (kanalen + eventueel 'Niet gekoppeld')
+  $("adKanaalSec").classList.toggle("hidden", aanwezig.length + (heeftOngekoppeld?1:0) < 2);
+  if(aanwezig.length + (heeftOngekoppeld?1:0) < 2) return;
   const volgorde = KANALEN.map(k=>k.key).filter(k=>groepen[k]).concat(aanwezig.filter(k=>!KANALEN.some(x=>x.key===k)));
   const som = (ads,k) => ads.reduce((t,a)=>t+(Number(a[k])||0),0);
+  // losse regel voor leads zonder advertentiekoppeling: geen uitgaven/ads, niet klikbaar
+  const u = ADUNLINKED;
+  const ongekoppeldRij = heeftOngekoppeld ? `<tr title="Leads zonder advertentiekoppeling — geen kanaal bekend">
+    <td class="tl" style="font-weight:600;color:var(--muted)">Niet gekoppeld</td>
+    <td>—</td><td>—</td>
+    <td>${u.leads}</td><td>—</td>
+    <td>${u.afspraken}</td><td>—</td>
+    <td>${u.sales}</td><td>—</td>
+    <td>${Number(u.omzet)>0?eur(u.omzet):"—"}</td>
+    <td>—</td></tr>` : "";
   $("adKanaalTable").innerHTML =
     `<thead><tr><th class="tl">Kanaal</th><th>Advertenties</th><th>Uitgaven</th><th>Leads</th><th>CPL</th>
       <th>Afspraken</th><th>CPA</th><th>Sales</th><th>Kost/sale</th><th>Omzet</th><th>ROAS</th></tr></thead>
@@ -1982,7 +1995,7 @@ function drawKanaalTable(){
          <td>${sales}</td><td>${sales>0?eur(spend/sales):"—"}</td>
          <td>${omzet>0?eur(omzet):"—"}</td>
          <td>${spend>0&&omzet>0?Math.min(ADROASCAP,omzet/spend).toFixed(2):"—"}</td></tr>`;
-     }).join("")}</tbody>`;
+     }).join("") + ongekoppeldRij}</tbody>`;
   document.querySelectorAll("#adKanaalTable tbody tr").forEach(tr => tr.addEventListener("click", ()=>{
     ADKANAAL = tr.dataset.kanaal;
     $("adKanaalFilter").value = ADKANAAL;
