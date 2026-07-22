@@ -2005,36 +2005,43 @@ function drawKanaalTable(){
 }
 
 /* ---------- best presterende advertenties (met thumbnail) ----------
-   Rangschikking: als er verkopen zijn -> kosten per verkoop (laagste eerst);
-   anders als er afspraken zijn -> kosten per afspraak; anders -> meeste leads.
+   Gecombineerde top 5, in deze volgorde opgevuld (zonder dubbelen):
+   1) advertenties met een verkoop (laagste kosten per verkoop eerst),
+   2) daarna de beste kosten per afspraak,
+   3) daarna de meeste leads.
    thumbnail_url en kost_per_sale komen uit ad_overview (ADROWS). */
 function renderBestAds(){
   const rows = ADROWS || [];
   // Kosten-per-X is alleen zinnig met echte uitgaven; advertenties zonder spend
   // (bijv. handmatig getagde niet-Meta-bronnen) horen niet bovenaan met €0.
-  const salesKand = rows.filter(a => Number(a.sales) > 0 && Number(a.spend) > 0)
-    .map(a => ({ a, waarde: Number(a.kost_per_sale) || (Number(a.spend) / Number(a.sales)) })).sort((x,y) => x.waarde - y.waarde);
-  const afsprKand = rows.filter(a => Number(a.afspraken) > 0 && Number(a.spend) > 0)
-    .map(a => ({ a, waarde: Number(a.cpa) })).sort((x,y) => x.waarde - y.waarde);
-  const leadKand = rows.filter(a => Number(a.leads) > 0)
-    .map(a => ({ a, waarde: Number(a.leads) })).sort((x,y) => y.waarde - x.waarde);
-  let metric, kandidaten, subtitel, tip;
-  if(salesKand.length){
-    metric = "sale"; kandidaten = salesKand; subtitel = "op kosten per verkoop";
-    tip = "Gesorteerd op kosten per verkoop (uitgaven ÷ verkopen), laagste eerst.";
-  } else if(afsprKand.length){
-    metric = "afspraak"; kandidaten = afsprKand; subtitel = "op kosten per afspraak";
-    tip = "Nog geen verkopen gekoppeld, dus gesorteerd op kosten per afspraak (laagste eerst).";
-  } else {
-    metric = "leads"; kandidaten = leadKand; subtitel = "op aantal leads";
-    tip = "Nog geen verkopen of afspraken gekoppeld, dus gesorteerd op aantal leads (meeste eerst).";
-  }
-  const top = kandidaten.slice(0, 5);
-  $("adBestSec").classList.toggle("hidden", !top.length);
-  if(!top.length) return;
-  $("adBestTitle").textContent = `Best presterende advertenties · ${subtitel}`;
-  $("adBestTip").textContent = tip;
-  $("adBestGrid").innerHTML = top.map(({ a, waarde }, i) => {
+  const gekozen = new Set();
+  const lijst = [];
+  const voegToe = (kandidaten, metric) => {
+    for(const it of kandidaten){
+      if(lijst.length >= 5) break;
+      if(gekozen.has(it.a.ad_id)) continue;
+      gekozen.add(it.a.ad_id);
+      lijst.push({ ...it, metric });
+    }
+  };
+  // 1) verkopen: laagste kosten per verkoop eerst
+  voegToe(rows.filter(a => Number(a.sales) > 0 && Number(a.spend) > 0)
+    .map(a => ({ a, waarde: Number(a.kost_per_sale) || (Number(a.spend) / Number(a.sales)) }))
+    .sort((x,y) => x.waarde - y.waarde), "sale");
+  // 2) afspraken: laagste kosten per afspraak eerst
+  voegToe(rows.filter(a => Number(a.afspraken) > 0 && Number(a.spend) > 0)
+    .map(a => ({ a, waarde: Number(a.cpa) }))
+    .sort((x,y) => x.waarde - y.waarde), "afspraak");
+  // 3) leads: meeste eerst
+  voegToe(rows.filter(a => Number(a.leads) > 0)
+    .map(a => ({ a, waarde: Number(a.leads) }))
+    .sort((x,y) => y.waarde - x.waarde), "leads");
+
+  $("adBestSec").classList.toggle("hidden", !lijst.length);
+  if(!lijst.length) return;
+  $("adBestTitle").textContent = "Best presterende advertenties";
+  $("adBestTip").textContent = "Eerst advertenties met een verkoop (laagste kosten per verkoop), dan de beste kosten per afspraak, dan de meeste leads.";
+  $("adBestGrid").innerHTML = lijst.map(({ a, waarde, metric }, i) => {
     const url = a.thumbnail_url;
     let hoofd, sub;
     if(metric === "sale"){ hoofd = `${eur(waarde)} <span style="font-size:12px;color:var(--muted)">/ verkoop</span>`;
