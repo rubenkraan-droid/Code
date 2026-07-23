@@ -1729,7 +1729,9 @@ async function renderAds(){
     options: adChartOptions(dd)
   });
 
-  ADROWS = ov || [];
+  // De generieke Meta-verzamelbak (€0 spend, alle facebook-leads zonder specifieke advertentie)
+  // hoort niet in de advertentietabellen; die leads staan onder "Niet gekoppeld" in de kanalen-tabel.
+  ADROWS = (ov || []).filter(a => String(a.advertentie||"").trim().toLowerCase() !== "meta (facebook/instagram)");
   ADUNLINKED = (unlinked && Number(unlinked.leads)>0) ? unlinked : null;   // regel 'Niet gekoppeld' in de kanalen-tabel
   // status-filter vullen met wat er in dit park voorkomt ("Actief" eerst, dan de rest)
   const adStatussen = [...new Set(ADROWS.map(a=>a.status).filter(Boolean))]
@@ -3008,7 +3010,8 @@ async function renderArchief(){
     }));
   }
   setBranding(pp);
-  ARCHROWS = await rpc("ad_archive", { p_park_id: pp }) || [];
+  ARCHROWS = (await rpc("ad_archive", { p_park_id: pp }) || [])
+    .filter(a => String(a.advertentie||"").trim().toLowerCase() !== "meta (facebook/instagram)");
   // status-filter vullen met de statussen die in dit park voorkomen
   const statuses = [...new Set(ARCHROWS.map(a=>a.status).filter(Boolean))];
   if(ARCHSTATUS!=="all" && !statuses.includes(ARCHSTATUS)) ARCHSTATUS = "all";
