@@ -590,7 +590,7 @@
 
   <div id="tabBellen" class="hidden">
     <div class="sec">Gebeld · gesprek · afspraken
-      <span class="info" tabindex="0">i<span class="tip">Gebeld = alle bel-activiteiten (gesprek, geen gehoor, ongelegen). Gesprek = daadwerkelijke gesprekken. Unieke leads = het aantal verschillende leads waarmee gesproken is (dezelfde lead die 2× gebeld is telt hier één keer). Afspraken = van die unieke leads hoeveel er een afspraak kregen. Gesprek &#8594; afspraak % = Afspraken &#247; Unieke leads (dus per lead, niet per gesprek). Gesprekken per afspraak = hoeveel gesprekken er gemiddeld nodig zijn voor één afspraak.</span></span>
+      <span class="info" tabindex="0">i<span class="tip">Gebeld = alle bel-activiteiten (gesprek, geen gehoor, ongelegen). Gesprek = daadwerkelijke gesprekken. Unieke leads = het aantal verschillende leads waarmee gesproken is (dezelfde lead die 2× gebeld is telt hier één keer). Afspraken = van die unieke leads hoeveel er een afspraak kregen. Gesprek &#8594; afspraak % = Afspraken &#247; Unieke leads (dus per lead, niet per gesprek).</span></span>
     </div>
     <div class="panel" style="margin-bottom:26px"><table id="callTable"></table></div>
 
@@ -2577,16 +2577,14 @@ async function renderBellen(){
   // belcijfers (respecteert de periode); park wordt voor Carl backend gescoopt
   const calls = await rpc("call_overview", { p_from:r.p_from, p_to:r.p_to, p_park_id:null, p_agent_id:eigenAgent }) || [];
   $("callTable").innerHTML =
-    `<thead><tr><th>Makelaar</th><th>Gebeld</th><th>Gesprek</th><th>Unieke leads</th><th>Afspraken</th><th>% gesprek van gebeld</th><th>Gesprek &#8594; afspraak %</th><th>Gesprekken per afspraak</th></tr></thead>
+    `<thead><tr><th>Makelaar</th><th>Gebeld</th><th>Gesprek</th><th>Unieke leads</th><th>Afspraken</th><th>% gesprek van gebeld</th><th>Gesprek &#8594; afspraak %</th></tr></thead>
      <tbody>${calls.map(c=>{
        const conv = Number(c.unieke_leads)>0 ? Math.round(Number(c.afspraken)/Number(c.unieke_leads)*100) : null;
-       const gpa = Number(c.afspraken)>0 ? (Number(c.gesprek)/Number(c.afspraken)) : null;
        return `<tr><td style="text-align:left">${esc(c.agent)}</td><td>${c.gebeld}</td><td>${c.gesprek}</td>
          <td>${c.unieke_leads}</td><td>${c.afspraken}</td>
          <td>${c.gebeld>0 ? Math.round(c.gesprek/c.gebeld*100)+"%" : "—"}</td>
-         <td>${conv!=null ? conv+"%" : "—"}</td>
-         <td>${gpa!=null ? gpa.toFixed(1).replace(".",",") : "—"}</td></tr>`; }).join("")
-       || `<tr><td colspan="8" style="color:var(--muted);padding:14px">Nog geen belactiviteiten gelogd.</td></tr>`}</tbody>`;
+         <td>${conv!=null ? conv+"%" : "—"}</td></tr>`; }).join("")
+       || `<tr><td colspan="7" style="color:var(--muted);padding:14px">Nog geen belactiviteiten gelogd.</td></tr>`}</tbody>`;
 
   // belactiviteit per uur (heatmap), belcurve, conversie en cut-off zijn eigenaar-analyses:
   // makelaars zien alleen hun eigen belcijfers + de opvolglijst.
