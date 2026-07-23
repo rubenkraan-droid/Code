@@ -376,6 +376,7 @@
     <nav id="tabs" class="tabs">
       <button class="tab active" data-tab="resultaten" title="Resultaten"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19h16M7 15v4M12 10v9M17 6v13"/></svg><span class="lbl">Resultaten</span></button>
       <button class="tab" data-tab="advertenties" title="Advertenties"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M7 13h4M7 16h7"/></svg><span class="lbl">Advertenties</span></button>
+      <button class="tab" data-tab="bellen" title="Bellen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3h3l2 5-2.5 1.5a11 11 0 0 0 5 5L16 13l5 2v3a2 2 0 0 1-2.2 2A16 16 0 0 1 3 5.2 2 2 0 0 1 5 3z"/></svg><span class="lbl">Bellen</span></button>
       <button class="tab" data-tab="archief" title="Archief · creative-library"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></svg><span class="lbl">Archief</span></button>
       <button class="tab" data-tab="financien" title="Financiën"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5c0-1.4 1.2-2 2.5-2s2.5.7 2.5 1.8c0 2.4-5 1.3-5 3.7 0 1.1 1.2 1.8 2.5 1.8s2.5-.6 2.5-2"/></svg><span class="lbl">Financiën</span></button>
       <button class="tab" data-tab="resale" title="Resale"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-7 9 7M5 10v9h5v-6h4v6h5v-9"/></svg><span class="lbl">Resale</span></button>
@@ -1349,6 +1350,9 @@ async function applyRole(){
   document.querySelector('.tab[data-tab="advertenties"]').classList.toggle("hidden", agentV);
   document.querySelector('.tab[data-tab="archief"]').classList.toggle("hidden", agentV);
   document.querySelector('.tab[data-tab="financien"]').classList.toggle("hidden", parkV);
+  // Bellen: makelaars + master-eigenaar, niet de parkeigenaar en niet de park-gebonden eigenaar (Karl/Carl)
+  const parkGebondenEig = owner && (SCOPED_PARK != null || v.park != null);
+  document.querySelector('.tab[data-tab="bellen"]').classList.toggle("hidden", parkV || parkGebondenEig);
   // Resale (cross-park pijplijn) niet voor parkgebruiker of park-gebonden eigenaar (Carl/Karl)
   document.querySelector('.tab[data-tab="resale"]').classList.toggle("hidden", parkV || SCOPED_PARK != null || v.park != null);
   $("tabs").classList.remove("hidden");
@@ -1670,26 +1674,24 @@ function adChartOptions(dd){
 
 async function renderAds(){
   const v = currentView();
+  const lockPark = (v.role==="owner") ? (v.park ?? SCOPED_PARK ?? null) : null;   // Karl/Carl: park-gebonden eigenaar → vast park, geen keuze
   let pp;
   if(v.role==="park"){
     pp = v.id;
     $("adParkTabs").classList.add("hidden");
+  } else if(lockPark != null){
+    pp = lockPark;
+    $("adParkTabs").classList.add("hidden");
   } else {
     // eigenaar: altijd één park tegelijk, via sub-tabbladen (gemengd totaal zegt niets)
-    // Frankrijk (park 1) wordt hier niet getoond — RecraVas-advertenties gaan over Wielsche Dreef
-    const adParken = PARKS.filter(p=>p.id!==1);
-    if(!ADPARK || !adParken.find(p=>p.id===ADPARK)) ADPARK = (adParken[0]||{}).id;
+    if(!ADPARK || !PARKS.find(p=>p.id===ADPARK)) ADPARK = (PARKS[0]||{}).id;
     pp = ADPARK;
-    if(adParken.length>1){
-      $("adParkTabs").innerHTML = adParken.map(p=>
-        `<button class="tab ${p.id===ADPARK?"active":""}" data-park="${p.id}">${p.name}</button>`).join("");
-      $("adParkTabs").classList.remove("hidden");
-      document.querySelectorAll("#adParkTabs .tab").forEach(b=>b.addEventListener("click", ()=>{
-        ADPARK = Number(b.dataset.park); renderAds();
-      }));
-    } else {
-      $("adParkTabs").classList.add("hidden");
-    }
+    $("adParkTabs").innerHTML = PARKS.map(p=>
+      `<button class="tab ${p.id===ADPARK?"active":""}" data-park="${p.id}">${p.name}</button>`).join("");
+    $("adParkTabs").classList.remove("hidden");
+    document.querySelectorAll("#adParkTabs .tab").forEach(b=>b.addEventListener("click", ()=>{
+      ADPARK = Number(b.dataset.park); renderAds();
+    }));
   }
   setBranding(pp);
   ADROASCAP = Infinity;   // ROAS wordt nergens meer gecapt (ook demopark rekent op echte cijfers)
@@ -3002,22 +3004,18 @@ let ARCHROWS = [], ARCHPARK = null, ARCHFASE = "all", ARCHSTATUS = "all";
 async function renderArchief(){
   const v = currentView();
   let pp;
+  const lockPark = (v.role==="owner") ? (v.park ?? SCOPED_PARK ?? null) : null;   // Karl/Carl: park-gebonden eigenaar → vast park, geen keuze
   if(v.role==="park"){ pp = v.id; $("archParkTabs").classList.add("hidden"); }
+  else if(lockPark != null){ pp = lockPark; $("archParkTabs").classList.add("hidden"); }
   else {
-    // Frankrijk (park 1) wordt hier niet getoond — creative library gaat over Wielsche Dreef
-    const archParken = PARKS.filter(p=>p.id!==1);
-    if(!ARCHPARK || !archParken.find(p=>p.id===ARCHPARK)) ARCHPARK = (archParken[0]||{}).id;
+    if(!ARCHPARK || !PARKS.find(p=>p.id===ARCHPARK)) ARCHPARK = (PARKS[0]||{}).id;
     pp = ARCHPARK;
-    if(archParken.length>1){
-      $("archParkTabs").innerHTML = archParken.map(p=>
-        `<button class="tab ${p.id===ARCHPARK?"active":""}" data-park="${p.id}">${p.name}</button>`).join("");
-      $("archParkTabs").classList.remove("hidden");
-      document.querySelectorAll("#archParkTabs .tab").forEach(b=>b.addEventListener("click", ()=>{
-        ARCHPARK = Number(b.dataset.park); renderArchief();
-      }));
-    } else {
-      $("archParkTabs").classList.add("hidden");
-    }
+    $("archParkTabs").innerHTML = PARKS.map(p=>
+      `<button class="tab ${p.id===ARCHPARK?"active":""}" data-park="${p.id}">${p.name}</button>`).join("");
+    $("archParkTabs").classList.remove("hidden");
+    document.querySelectorAll("#archParkTabs .tab").forEach(b=>b.addEventListener("click", ()=>{
+      ARCHPARK = Number(b.dataset.park); renderArchief();
+    }));
   }
   setBranding(pp);
   ARCHROWS = (await rpc("ad_archive", { p_park_id: pp }) || [])
