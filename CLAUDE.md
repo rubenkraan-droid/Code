@@ -104,7 +104,7 @@ in this repo. `list_migrations` on the project is the source of truth, not git l
 - Stage-name string arrays (which Pipedrive stages count as "an appointment happened", "a sale
   happened") are duplicated in **three places** that must be kept in sync: the edge function's
   `AFSPRAAK_NAMEN`/`VERKOOP_NAMEN` sets, `internal_deals_needing_appointment_backfill`'s `stage_name in
-  (...)` filter, and `call_overview`'s `ingepland` filter. No single source of truth — changing the
+  (...)` filter, and `call_overview`'s `afspraken`-numerator stage filter. No single source of truth — changing the
   appointment/sale definition means editing all three.
 
 ## Handmatig kanaal zonder API (bv. LinkedIn) — patroon

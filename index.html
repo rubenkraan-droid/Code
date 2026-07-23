@@ -589,8 +589,8 @@
   </div>
 
   <div id="tabBellen" class="hidden">
-    <div class="sec">Gebeld · gesprek · ingepland
-      <span class="info" tabindex="0">i<span class="tip">Gesprek &#8594; afspraak % = van de deals waar deze makelaar een gesprek (activiteit) mee had, hoeveel procent ook daadwerkelijk als afspraak is ingepland.</span></span>
+    <div class="sec">Gebeld · gesprek · afspraken
+      <span class="info" tabindex="0">i<span class="tip">Gebeld = alle bel-activiteiten (gesprek, geen gehoor, ongelegen). Gesprek = daadwerkelijke gesprekken. Unieke leads = het aantal verschillende leads waarmee gesproken is (dezelfde lead die 2× gebeld is telt hier één keer). Afspraken = van die unieke leads hoeveel er een afspraak kregen. Gesprek &#8594; afspraak % = Afspraken &#247; Unieke leads (dus per lead, niet per gesprek). Gesprekken per afspraak = hoeveel gesprekken er gemiddeld nodig zijn voor één afspraak.</span></span>
     </div>
     <div class="panel" style="margin-bottom:26px"><table id="callTable"></table></div>
 
@@ -1047,8 +1047,9 @@ function demoAgentData(fn, args){
     case "monthly_definitief": return am.map(m=>({ maand:m.maand, definitief:m.definitief }));
     case "definitief_stats": case "definitief_check": return [{ sales, definitief }];
     case "call_overview": {
-      const rc = demoRng(6); const gebeld = 55 + Math.round(rc()*45), gesprek = Math.round(gebeld*0.75), ingepland = Math.round(gesprek*(0.10+rc()*0.08));
-      return [{ agent: DEMO_AGENT.name, gebeld, gesprek, ingepland, gesprek_naar_afspraak_pct: gesprek?+(ingepland/gesprek*100).toFixed(1):0 }]; }
+      const rc = demoRng(6); const gebeld = 55 + Math.round(rc()*45), gesprek = Math.round(gebeld*0.75),
+        unieke_leads = Math.round(gesprek*0.65), afspraken = Math.round(unieke_leads*(0.08+rc()*0.10));
+      return [{ agent: DEMO_AGENT.name, gebeld, gesprek, unieke_leads, afspraken, gesprek_naar_afspraak_pct: unieke_leads?+(afspraken/unieke_leads*100).toFixed(1):0 }]; }
     case "agent_deals": return demoDeals(args.p_kind);
     case "opvolg_leads": return [];
     default: return undefined;
@@ -2383,7 +2384,7 @@ async function renderAgent(agentId){
     metricT("Omzet per makelaar",eur(s.team_avg_revenue));
   const cs = (await rpc("call_overview", {p_from:r.p_from, p_to:r.p_to, p_park_id:pp, p_agent_id:agentId}))?.[0] || {};
   $("cardsCallMe").innerHTML =
-    metric("Gebeld",cs.gebeld||0) + metric("Gesprek",cs.gesprek||0) + metric("Ingepland",cs.ingepland||0) +
+    metric("Gebeld",cs.gebeld||0) + metric("Gesprek",cs.gesprek||0) + metric("Afspraken",cs.afspraken||0) +
     metric("% gesprek van gebeld", cs.gebeld>0 ? Math.round(cs.gesprek/cs.gebeld*100)+"%" : "—");
   const moA = await rpc("monthly_overview", {p_agent_id:agentId, p_park_id:pp}) || [];
   renderMonths(moA, {spend:false, leads:false, def: await defMaandMap(agentId, pp)});
@@ -2576,11 +2577,16 @@ async function renderBellen(){
   // belcijfers (respecteert de periode); park wordt voor Carl backend gescoopt
   const calls = await rpc("call_overview", { p_from:r.p_from, p_to:r.p_to, p_park_id:null, p_agent_id:eigenAgent }) || [];
   $("callTable").innerHTML =
-    `<thead><tr><th>Makelaar</th><th>Gebeld</th><th>Gesprek</th><th>Ingepland</th><th>% gesprek van gebeld</th><th>Gesprek &#8594; afspraak %</th></tr></thead>
-     <tbody>${calls.map(c=>`<tr><td style="text-align:left">${esc(c.agent)}</td><td>${c.gebeld}</td><td>${c.gesprek}</td>
-       <td>${c.ingepland}</td><td>${c.gebeld>0 ? Math.round(c.gesprek/c.gebeld*100)+"%" : "—"}</td>
-       <td>${c.gesprek_naar_afspraak_pct!=null ? c.gesprek_naar_afspraak_pct+"%" : "—"}</td></tr>`).join("")
-       || `<tr><td colspan="6" style="color:var(--muted);padding:14px">Nog geen belactiviteiten gelogd.</td></tr>`}</tbody>`;
+    `<thead><tr><th>Makelaar</th><th>Gebeld</th><th>Gesprek</th><th>Unieke leads</th><th>Afspraken</th><th>% gesprek van gebeld</th><th>Gesprek &#8594; afspraak %</th><th>Gesprekken per afspraak</th></tr></thead>
+     <tbody>${calls.map(c=>{
+       const conv = Number(c.unieke_leads)>0 ? Math.round(Number(c.afspraken)/Number(c.unieke_leads)*100) : null;
+       const gpa = Number(c.afspraken)>0 ? (Number(c.gesprek)/Number(c.afspraken)) : null;
+       return `<tr><td style="text-align:left">${esc(c.agent)}</td><td>${c.gebeld}</td><td>${c.gesprek}</td>
+         <td>${c.unieke_leads}</td><td>${c.afspraken}</td>
+         <td>${c.gebeld>0 ? Math.round(c.gesprek/c.gebeld*100)+"%" : "—"}</td>
+         <td>${conv!=null ? conv+"%" : "—"}</td>
+         <td>${gpa!=null ? gpa.toFixed(1).replace(".",",") : "—"}</td></tr>`; }).join("")
+       || `<tr><td colspan="8" style="color:var(--muted);padding:14px">Nog geen belactiviteiten gelogd.</td></tr>`}</tbody>`;
 
   // belactiviteit per uur (heatmap), belcurve, conversie en cut-off zijn eigenaar-analyses:
   // makelaars zien alleen hun eigen belcijfers + de opvolglijst.
