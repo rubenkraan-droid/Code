@@ -596,7 +596,7 @@
 
     <div id="belUurSec" class="hidden">
       <div class="sec">Belactiviteit per uur <span id="belUurPeriode" style="font-weight:400;text-transform:none;color:var(--muted)"></span>
-        <span class="info" tabindex="0">i<span class="tip">Aantal belletjes per makelaar per uur (lokale tijd, 9:00–17:00) in de gekozen periode. Zet de periode op "Vandaag" voor het overzicht van vandaag. Belletjes buiten 9–17 staan onder "overig". Donkerder = meer belletjes.</span></span>
+        <span class="info" tabindex="0">i<span class="tip">Aantal belletjes per makelaar per uur (lokale tijd, 9:00–21:00) in de gekozen periode. Zet de periode op "Vandaag" voor het overzicht van vandaag. Belletjes buiten 9–21 staan onder "overig". Donkerder = meer belletjes.</span></span>
       </div>
       <div class="panel" style="overflow-x:auto;margin-bottom:26px"><table id="belUurTable"></table></div>
     </div>
@@ -2550,10 +2550,10 @@ function berekenCutoff(){
        || `<tr><td colspan="4" style="color:var(--muted);padding:14px">Geen conversiedata.</td></tr>`}</tbody>`;
 }
 ["coClosing","coMarge","coKost","coBelUur","coUurtarief"].forEach(id=>$(id).addEventListener("input", berekenCutoff));
-// heatmap: aantal belletjes per makelaar per uur (9-17) in de gekozen periode
+// heatmap: aantal belletjes per makelaar per uur (9-21) in de gekozen periode
 async function renderBelUur(r, agentId){
   const rows = await rpc("call_hours_by_agent", { p_from:r.p_from, p_to:r.p_to, p_park_id:null, p_agent_id:agentId }) || [];
-  const uren = [9,10,11,12,13,14,15,16];
+  const uren = [9,10,11,12,13,14,15,16,17,18,19,20];
   const perAgent = {};
   rows.forEach(x=>{ const nm=x.agent; if(!perAgent[nm]) perAgent[nm]={u:{},overig:0,tot:0};
     const u=Number(x.uur), n=Number(x.aantal);
