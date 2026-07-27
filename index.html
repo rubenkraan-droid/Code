@@ -91,9 +91,9 @@
   .impactbanner{display:none;align-items:center;gap:8px;background:var(--accent-soft);color:var(--accent-ink);
     border:1px solid var(--accent);border-radius:10px;padding:8px 14px;margin-bottom:16px;font-size:13px;font-weight:600}
   .impactbanner.aan{display:flex}
-  #adParkTabs.tabs{flex-direction:row;gap:6px;flex:none;border-bottom:1px solid var(--line);padding-bottom:0;overflow:visible}
-  #adParkTabs.tabs .tab{border-radius:10px 10px 0 0;border-bottom:2px solid transparent;padding:8px 15px;background:none;color:var(--muted);box-shadow:none}
-  #adParkTabs.tabs .tab.active{background:none;color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+  #adParkTabs.tabs,#belParkTabs.tabs{flex-direction:row;gap:6px;flex:none;border-bottom:1px solid var(--line);padding-bottom:0;overflow:visible}
+  #adParkTabs.tabs .tab,#belParkTabs.tabs .tab{border-radius:10px 10px 0 0;border-bottom:2px solid transparent;padding:8px 15px;background:none;color:var(--muted);box-shadow:none}
+  #adParkTabs.tabs .tab.active,#belParkTabs.tabs .tab.active{background:none;color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
   .info{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--line);color:var(--muted);font-size:11px;font-style:normal;margin-left:6px;cursor:help;position:relative;vertical-align:middle}
   .info .tip{display:none;position:absolute;left:0;bottom:22px;width:250px;background:var(--ink);color:#fff;font-size:12px;font-weight:400;line-height:1.45;padding:10px 12px;border-radius:10px;z-index:20;text-align:left;text-transform:none;box-shadow:var(--shadow-hover);font-variant-numeric:normal}
   /* in tabelkoppen opent de tooltip naar beneden-links, anders kapt de panel-rand ('overflow:hidden') hem af */
@@ -590,8 +590,9 @@
 
   <div id="tabBellen" class="hidden">
     <div class="sec">Gebeld · gesprek · afspraken
-      <span class="info" tabindex="0">i<span class="tip">Gebeld = alle bel-activiteiten (gesprek, geen gehoor, ongelegen). Gesprek = daadwerkelijke gesprekken. Unieke leads = het aantal verschillende leads waarmee gesproken is (dezelfde lead die 2× gebeld is telt hier één keer). Afspraken = van die unieke leads hoeveel er een afspraak kregen. Gesprek &#8594; afspraak % = Afspraken &#247; Unieke leads (dus per lead, niet per gesprek).</span></span>
+      <span class="info" tabindex="0">i<span class="tip">Gebeld = alle bel-activiteiten (gesprek, geen gehoor, ongelegen). Gesprek = daadwerkelijke gesprekken. Unieke leads = het aantal verschillende leads waarmee gesproken is (dezelfde lead die 2× gebeld is telt hier één keer). Afspraken = van die unieke leads hoeveel er een afspraak kregen. Gesprek &#8594; afspraak % = Afspraken &#247; Unieke leads (dus per lead, niet per gesprek). Kies hierboven een park om alle belcijfers en analyses op dat park te scopen.</span></span>
     </div>
+    <div id="belParkTabs" class="tabs hidden" style="margin-bottom:14px"></div>
     <div class="panel" style="margin-bottom:26px"><table id="callTable"></table></div>
 
     <div id="belUurSec" class="hidden">
@@ -1637,6 +1638,7 @@ async function renderFinanceAgent(agentId){
 /* ---------- ADVERTENTIES ---------- */
 let adChart;
 let ADROWS = [], ADSORT = { key:"spend", dir:-1 }, ADPARK = null, ADUNLINKED = null;
+let BELPARK = null;   // Bellen-tabblad: gekozen park (null = alle parken)
 const parkAccent = id => { const p = PARKS.find(x=>x.id===id); return (p && p.accent_color) || accent(); };
 const STATUSNL = { active:["Actief","sale"], paused:["Gepauzeerd","held"], killed:["Gestopt","held"], draft:["Concept","held"], unknown:["Onbekend","held"], demo:["Demo","held"] };
 
@@ -2552,7 +2554,7 @@ function berekenCutoff(){
 ["coClosing","coMarge","coKost","coBelUur","coUurtarief"].forEach(id=>$(id).addEventListener("input", berekenCutoff));
 // heatmap: aantal belletjes per makelaar per uur (9-21) in de gekozen periode
 async function renderBelUur(r, agentId){
-  const rows = await rpc("call_hours_by_agent", { p_from:r.p_from, p_to:r.p_to, p_park_id:null, p_agent_id:agentId }) || [];
+  const rows = await rpc("call_hours_by_agent", { p_from:r.p_from, p_to:r.p_to, p_park_id:BELPARK, p_agent_id:agentId }) || [];
   const uren = [9,10,11,12,13,14,15,16,17,18,19,20];
   const perAgent = {};
   rows.forEach(x=>{ const nm=x.agent; if(!perAgent[nm]) perAgent[nm]={u:{},overig:0,tot:0};
@@ -2574,8 +2576,20 @@ async function renderBellen(){
   const r = periodRange();
   const v = currentView();
   const eigenAgent = v.role==="agent" ? v.id : null;   // makelaar: alleen eigen rij, geen collega's
-  // belcijfers (respecteert de periode); park wordt voor Carl backend gescoopt
-  const calls = await rpc("call_overview", { p_from:r.p_from, p_to:r.p_to, p_park_id:null, p_agent_id:eigenAgent }) || [];
+  // park-subtabbladen (Alle parken + per park); ook makelaars zien zo hun eigen cijfers per park
+  const belParken = PARKS.filter(p=>!isDemo(p.id));
+  if(BELPARK!=null && !belParken.find(p=>p.id===BELPARK)) BELPARK = null;
+  if(belParken.length>1){
+    $("belParkTabs").innerHTML =
+      `<button class="tab ${BELPARK==null?"active":""}" data-park="">Alle parken</button>`
+      + belParken.map(p=>`<button class="tab ${p.id===BELPARK?"active":""}" data-park="${p.id}">${esc(p.name)}</button>`).join("");
+    $("belParkTabs").classList.remove("hidden");
+    document.querySelectorAll("#belParkTabs .tab").forEach(b=>b.addEventListener("click", ()=>{
+      BELPARK = b.dataset.park==="" ? null : Number(b.dataset.park); renderBellen();
+    }));
+  } else { $("belParkTabs").classList.add("hidden"); }
+  // belcijfers (respecteert de periode + gekozen park; park wordt voor Carl backend gescoopt)
+  const calls = await rpc("call_overview", { p_from:r.p_from, p_to:r.p_to, p_park_id:BELPARK, p_agent_id:eigenAgent }) || [];
   $("callTable").innerHTML =
     `<thead><tr><th>Makelaar</th><th>Gebeld</th><th>Gesprek</th><th>Unieke leads</th><th>Afspraken</th><th>% gesprek van gebeld</th><th>Gesprek &#8594; afspraak %</th></tr></thead>
      <tbody>${calls.map(c=>{
@@ -2593,7 +2607,7 @@ async function renderBellen(){
   $("belAnalyseSec").classList.toggle("hidden", !isOwner);
   $("belCutoffSec").classList.toggle("hidden", !isOwner);
   if(!isOwner){
-    await renderOpvolg(isDemoAgent(eigenAgent) ? DEMO_AGENT_ID : null, null, true);
+    await renderOpvolg(isDemoAgent(eigenAgent) ? DEMO_AGENT_ID : null, BELPARK, true);
     return;
   }
 
@@ -2602,7 +2616,7 @@ async function renderBellen(){
   await renderBelUur(r, null);
 
   // belcurve (alle beldata, niet periode-gebonden)
-  const curve = await rpc("call_reach_curve", { p_park_id:null }) || [];
+  const curve = await rpc("call_reach_curve", { p_park_id:BELPARK }) || [];
   const gebeld = curve[0] ? Number(curve[0].nog_niet_bereikt) : 0;   // alle gebelde leads
   const bereiktTot = curve.reduce((s,x)=>s+Number(x.bereikt),0);
   let cum = 0;
@@ -2632,7 +2646,7 @@ async function renderBellen(){
   });
 
   // conversie naar afspraak per aantal keer gebeld
-  const conv = await rpc("call_conversion_by_attempts", { p_park_id:null }) || [];
+  const conv = await rpc("call_conversion_by_attempts", { p_park_id:BELPARK }) || [];
   BEL_CONV = conv;
   $("belConvTable").innerHTML =
     `<thead><tr><th>Keer gebeld</th><th>Leads</th><th>Met afspraak</th><th>Afspraak %</th></tr></thead>
@@ -2642,7 +2656,7 @@ async function renderBellen(){
   berekenCutoff();   // cut-off-rekenmodel (zichtbaarheid is hierboven al op eigenaar gezet)
 
   // opvolglijst (volledige werk-wachtrij, verhuisd vanuit Resultaten); demo-makelaar krijgt de demo (leeg)
-  await renderOpvolg(isDemoAgent(eigenAgent) ? DEMO_AGENT_ID : null, null, true);
+  await renderOpvolg(isDemoAgent(eigenAgent) ? DEMO_AGENT_ID : null, BELPARK, true);
 }
 
 /* ---------- RESALE (rolbewust: eigenaar = totaal + per makelaar; makelaar = eigen + teamgemiddelde) ---------- */
