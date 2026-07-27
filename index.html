@@ -595,6 +595,15 @@
     <div id="belParkTabs" class="tabs hidden" style="margin-bottom:14px"></div>
     <div class="panel" style="margin-bottom:26px"><table id="callTable"></table></div>
 
+    <div id="belBacklogSec" class="hidden" style="margin-bottom:26px">
+      <div class="sec">Belachterstand &amp; benodigd tempo <span id="belBacklogScope" style="font-weight:400;text-transform:none;color:var(--muted)"></span>
+        <span class="info" tabindex="0">i<span class="tip">Achterstand = het aantal belletjes dat nog nodig is om elke open lead tot 4 belpogingen te brengen: de leads die we nog niet bereikt hebben (Nieuwe aanvraag / Geen gehoor) plus de "In contact"-leads die al meer dan 3 dagen niet meer gebeld zijn. Keep-up = de belletjes per beldag die de nieuwe instroom vraagt (nieuwe leads per dag &#215; 7/5 omdat we 5 dagen bellen &#215; gemiddeld aantal pogingen per lead). De tabel toont hoeveel belletjes per beldag nodig zijn om de achterstand in 2, 4 of 6 weken weg te werken, keep-up inbegrepen. De grafiek is een prognose van de resterende achterstand per beldag bij die tempo's en bij jullie huidige tempo.</span></span>
+      </div>
+      <div id="belBacklogCards" class="cards"></div>
+      <div class="panel" style="margin-top:14px;overflow-x:auto"><table id="belBacklogTable"></table></div>
+      <div class="chartbox" style="margin-top:14px"><canvas id="belBacklogChart" height="220"></canvas></div>
+    </div>
+
     <div id="belUurSec" class="hidden">
       <div class="sec">Belactiviteit per uur <span id="belUurPeriode" style="font-weight:400;text-transform:none;color:var(--muted)"></span>
         <span class="info" tabindex="0">i<span class="tip">Aantal belletjes per makelaar per uur (lokale tijd, 9:00–21:00) in de gekozen periode. Zet de periode op "Vandaag" voor het overzicht van vandaag. Belletjes buiten 9–21 staan onder "overig". Donkerder = meer belletjes.</span></span>
@@ -2524,7 +2533,7 @@ async function toonAgentDeals(agentId, kind, naam, parkId){
 }
 
 /* ---------- BELLEN: belcijfers + belcurve (reachability) + conversie per aantal keer gebeld ---------- */
-let belCurveChart, BEL_CONV = [];
+let belCurveChart, belBacklogChart, BEL_CONV = [];
 // cut-off-rekenmodel (alleen eigenaar): waarde per afspraak = closing% × marge; loont zolang
 // de conversie boven de break-even (kost ÷ waarde per afspraak) ligt.
 function berekenCutoff(){
@@ -2572,6 +2581,53 @@ async function renderBelUur(r, agentId){
         return `<tr><td style="text-align:left">${esc(nm)}</td>${uren.map(u=>cel(a.u[u]||0)).join("")}<td>${a.overig||"·"}</td><td style="font-weight:700">${a.tot}</td></tr>`; }).join("")}</tbody>`
     : kop + `<tbody><tr><td colspan="${uren.length+3}" style="color:var(--muted);padding:14px">Geen belactiviteiten in deze periode.</td></tr></tbody>`;
 }
+// belachterstand + benodigd tempo + burn-down-prognose (eigenaar-only)
+async function renderBelBacklog(parkId){
+  const b = (await rpc("call_backlog", { p_park_id: parkId }) || [])[0] || {};
+  const backlog = Number(b.backlog)||0, inflow = Number(b.inflow_dag)||0,
+        gemPog = Number(b.gem_pogingen)||0, pace = Math.round(Number(b.pace_werkdag)||0),
+        nooit = Number(b.nooit_gebeld)||0, leads = Number(b.werkset_leads)||0;
+  // keep-up per beldag: leads komen 7 dagen binnen, we bellen 5 dagen
+  const keepUp = Math.round(inflow * 7/5 * gemPog);
+  const parkNaam = parkId==null ? "alle parken" : ((PARKS.find(p=>p.id===parkId)||{}).name || "");
+  $("belBacklogScope").textContent = "· " + parkNaam;
+  const sub = t => `<div class="l" style="margin:5px 0 0">${t}</div>`;
+  $("belBacklogCards").innerHTML =
+    metric("Achterstand", backlog + " belletjes", sub(leads + " leads")) +
+    metric("Keep-up / beldag", keepUp, sub("nieuwe instroom bijhouden")) +
+    metric("Huidig tempo", pace + " / beldag", sub(pace-keepUp>0 ? (pace-keepUp)+" naar achterstand" : "onder keep-up")) +
+    metric("Nog nooit gebeld", nooit + " leads");
+
+  const scenarios = [{w:2,d:10},{w:4,d:20},{w:6,d:30}];
+  $("belBacklogTable").innerHTML =
+    `<thead><tr><th>Achterstand weg in</th><th>Achterstand / beldag</th><th>+ keep-up</th><th>Totaal / beldag</th><th>vs nu (${pace})</th></tr></thead>
+     <tbody>${scenarios.map(s=>{
+       const perDag = Math.ceil(backlog/s.d), totaal = perDag + keepUp, diff = totaal - pace;
+       return `<tr><td style="text-align:left">${s.w} weken</td><td>${perDag}</td><td>${keepUp}</td>
+         <td style="font-weight:700">${totaal}</td>
+         <td class="${diff<=0?'good':'bad'}">${diff<=0 ? 'nu al haalbaar' : '+'+diff+'/dag'}</td></tr>`; }).join("")}</tbody>`;
+
+  // burn-down-prognose: resterende achterstand per beldag (0..30)
+  const dagen = Array.from({length:31}, (_,i)=>i);
+  const netto = pace - keepUp;   // wat er per beldag van de achterstand af gaat bij huidig tempo
+  const lijnHuidig = dagen.map(d => Math.max(0, backlog - netto*d));
+  const doellijn = nd => dagen.map(d => d>=nd ? 0 : Math.round(backlog*(1 - d/nd)));
+  if(belBacklogChart) belBacklogChart.destroy();
+  belBacklogChart = new Chart($("belBacklogChart"), {
+    type:"line",
+    data:{ labels: dagen, datasets:[
+      { label:"Huidig tempo", data: lijnHuidig, borderColor:"#B5432E", backgroundColor:"#B5432E", borderWidth:2.5, tension:.2, pointRadius:0 },
+      { label:"2 weken", data: doellijn(10), borderColor:"#B8862E", borderWidth:1.5, borderDash:[5,4], tension:0, pointRadius:0 },
+      { label:"4 weken", data: doellijn(20), borderColor:"#2C5F52", borderWidth:1.5, borderDash:[5,4], tension:0, pointRadius:0 },
+      { label:"6 weken", data: doellijn(30), borderColor:"#4B7A3E", borderWidth:1.5, borderDash:[2,3], tension:0, pointRadius:0 },
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{position:"bottom",labels:{boxWidth:10,font:{size:11}}},
+        tooltip:{callbacks:{title:i=>`Beldag ${i[0].label}`, label:c=>`${c.dataset.label}: ${Math.round(c.parsed.y)} belletjes achterstand`}} },
+      scales:{ x:{title:{display:true,text:"beldagen vanaf nu"},grid:{display:false}},
+               y:{beginAtZero:true,title:{display:true,text:"resterende achterstand"},grid:{display:false}} } }
+  });
+}
 async function renderBellen(){
   const r = periodRange();
   const v = currentView();
@@ -2603,6 +2659,7 @@ async function renderBellen(){
   // belactiviteit per uur (heatmap), belcurve, conversie en cut-off zijn eigenaar-analyses:
   // makelaars zien alleen hun eigen belcijfers + de opvolglijst.
   const isOwner = v.role === "owner";
+  $("belBacklogSec").classList.toggle("hidden", !isOwner);   // achterstand-blok: alleen eigenaar
   $("belUurSec").classList.toggle("hidden", !isOwner);
   $("belAnalyseSec").classList.toggle("hidden", !isOwner);
   $("belCutoffSec").classList.toggle("hidden", !isOwner);
@@ -2610,6 +2667,7 @@ async function renderBellen(){
     await renderOpvolg(isDemoAgent(eigenAgent) ? DEMO_AGENT_ID : null, BELPARK, true);
     return;
   }
+  await renderBelBacklog(BELPARK);
 
   // heatmap per uur — alle makelaars naast elkaar (eigenaar-overzicht)
   $("belUurPeriode").textContent = "· " + ($("fPeriod").selectedOptions[0]?.textContent || "");
