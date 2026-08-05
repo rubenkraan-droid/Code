@@ -1838,7 +1838,7 @@ async function renderAdDetail(adId, naam){
 }
 
 const ADCOLS = [
-  ["advertentie","Advertentie"], ["status","Status"], ["awareness_stage","Fase"], ["spend","Uitgaven"], ["clicks","Clicks"],
+  ["advertentie","Advertentie"], ["gelanceerd","Gelanceerd"], ["status","Status"], ["awareness_stage","Fase"], ["spend","Uitgaven"], ["clicks","Clicks"],
   ["cpc","CPC"], ["leads","Leads"], ["cpl","CPL"], ["afspraken","Afspraken"], ["cpa","CPA"], ["conv_pct","Conv. %"], ["clos_pct","Closing %"],
   ["ongekwalificeerd_pct","Ongekwalificeerd %"], ["sales","Sales"], ["omzet","Omzet"], ["roas","ROAS"], ["kanaal","Kanaal"],
 ];
@@ -1898,6 +1898,9 @@ function ongekFlag(a, ctx){
   return { level:0, pct, lb, base:ctx.basePct };
 }
 const faseSortVal = a => a.awareness_stage ? FASE_ORDER[a.awareness_stage] : 99;
+// lanceerdatum kort weergeven ("20 apr '26"); date-only string, dus geen tijdzone-gedoe
+const MAANDEN_KORT = ["jan","feb","mrt","apr","mei","jun","jul","aug","sep","okt","nov","dec"];
+const fmtLaunch = s => { if(!s) return "—"; const [y,m,d]=String(s).split("-"); return `${+d} ${MAANDEN_KORT[+m-1]} '${y.slice(2)}`; };
 function drawAdTable(){
   const s = ADSORT;
   const rows = ADROWS
@@ -1920,7 +1923,7 @@ function drawAdTable(){
         ? ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">Conversie van lead naar afspraak (afspraken ÷ leads). Dé kwaliteitsmaat naast de prijs per lead: een goedkope lead die nooit een afspraak wordt, is alsnog duur.</span></span>`
         : key==='clos_pct'
         ? ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">Closing van afspraak naar sale (sales ÷ afspraken). Laat zien hoe goed de afspraken uit deze advertentie ook echt tot een verkoop leiden.</span></span>` : "";
-      const tl = (key==='advertentie'||key==='status'||key==='awareness_stage'||key==='kanaal') ? 'tl' : '';
+      const tl = (key==='advertentie'||key==='gelanceerd'||key==='status'||key==='awareness_stage'||key==='kanaal') ? 'tl' : '';
       return `<th data-key="${key}" class="${tl}" style="cursor:pointer;user-select:none">${label}${arrow}${info}</th>`;
     }).join("")}</tr></thead>
      <tbody>${(()=>{ const ctx = ongekStats(); return rows.map(a=>{
@@ -1946,6 +1949,7 @@ function drawAdTable(){
            <span class="ad-naam-txt">${esc(a.advertentie)}</span>${icon}${kill}
            ${a.preview_link?`<a class="ad-prev-link" href="${escAttr(a.preview_link)}" target="_blank" rel="noopener" title="Advertentie bekijken op Facebook" onclick="event.stopPropagation()">↗</a>`:""}
          </div></td>
+         <td class="tl" style="white-space:nowrap;color:var(--muted)">${fmtLaunch(a.gelanceerd)}</td>
          <td style="text-align:left"><span class="badge ${st[1]}">${st[0]}</span></td>
          <td class="tl fase-cell" data-code="${escAttr(a.code)}" style="cursor:pointer" title="Klik om de fase/notities te wijzigen">${fasePill(a.awareness_stage)}</td>
          <td style="font-weight:600">${eur(a.spend)}</td><td>${a.clicks}</td>
