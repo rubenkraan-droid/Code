@@ -1838,7 +1838,7 @@ async function renderAdDetail(adId, naam){
 }
 
 const ADCOLS = [
-  ["advertentie","Advertentie"], ["gelanceerd","Gelanceerd"], ["status","Status"], ["awareness_stage","Fase"], ["spend","Uitgaven"], ["clicks","Clicks"],
+  ["advertentie","Advertentie"], ["kwaliteit","Kwaliteit"], ["gelanceerd","Gelanceerd"], ["status","Status"], ["awareness_stage","Fase"], ["spend","Uitgaven"], ["clicks","Clicks"],
   ["cpc","CPC"], ["leads","Leads"], ["cpl","CPL"], ["afspraken","Afspraken"], ["cpa","CPA"], ["conv_pct","Conv. %"], ["clos_pct","Closing %"],
   ["ongekwalificeerd_pct","Ongekwalificeerd %"], ["sales","Sales"], ["omzet","Omzet"], ["roas","ROAS"], ["kanaal","Kanaal"],
 ];
@@ -1901,14 +1901,54 @@ const faseSortVal = a => a.awareness_stage ? FASE_ORDER[a.awareness_stage] : 99;
 // lanceerdatum kort weergeven ("20 apr '26"); date-only string, dus geen tijdzone-gedoe
 const MAANDEN_KORT = ["jan","feb","mrt","apr","mei","jun","jul","aug","sep","okt","nov","dec"];
 const fmtLaunch = s => { if(!s) return "—"; const [y,m,d]=String(s).split("-"); return `${+d} ${MAANDEN_KORT[+m-1]} '${y.slice(2)}`; };
+
+// ---- automatisch kwaliteitsoordeel per advertentie (relatief binnen het park) ----
+const KWAL_MIN_LEADS = 5, KWAL_FULL_LEADS = 15;   // <5 = geen oordeel; onder 15 voorzichtiger
+const _mediaan = arr => { if(!arr.length) return null; const s=[...arr].sort((a,b)=>a-b); const m=Math.floor(s.length/2); return s.length%2 ? s[m] : (s[m-1]+s[m])/2; };
+function kwalBenchmarks(rows){
+  const cpa=[], conv=[], cps=[];
+  for(const a of rows){ const leads=+a.leads||0, afspr=+a.afspraken||0, sales=+a.sales||0, spend=+a.spend||0;
+    if(leads>=KWAL_MIN_LEADS){ if(afspr>0) cpa.push(spend/afspr); conv.push(afspr/leads*100); }
+    if(sales>0 && spend>0) cps.push(spend/sales);
+  }
+  return { cpa:_mediaan(cpa), conv:_mediaan(conv), cps:_mediaan(cps) };
+}
+// lager-is-beter t.o.v. parkmediaan → 50 op de mediaan, hoger = beter
+const _relLaag = (v, med) => (v==null||med==null||v<=0) ? null : 100*med/(med+v);
+function kwaliteitVanAd(a, bm){
+  const leads=+a.leads||0, afspr=+a.afspraken||0, sales=+a.sales||0, spend=+a.spend||0;
+  if(leads < KWAL_MIN_LEADS) return { label:"—", kleur:"", score:null, uitleg:`Te weinig data (${leads} lead${leads===1?"":"s"}) voor een oordeel.` };
+  const conv = afspr/leads*100, cpa = afspr>0 ? spend/afspr : null, cps = sales>0 ? spend/sales : null;
+  const junk = wilsonLower(ongekN(a), leads);
+  // kostenefficiëntie: liefst per sale, anders per afspraak
+  let eff, effTxt;
+  if(cps!=null && bm.cps!=null){ eff=_relLaag(cps,bm.cps); effTxt=`€${Math.round(cps)}/sale (park €${Math.round(bm.cps)})`; }
+  else if(cps!=null){ eff=78; effTxt=`€${Math.round(cps)}/sale`; }
+  else if(cpa!=null && bm.cpa!=null){ eff=_relLaag(cpa,bm.cpa); effTxt=`€${Math.round(cpa)}/afspraak (park €${Math.round(bm.cpa)})`; }
+  else if(cpa!=null){ eff=55; effTxt=`€${Math.round(cpa)}/afspraak`; }
+  else { eff=15; effTxt=`geen afspraak uit ${leads} leads`; }
+  const convS = (bm.conv!=null && bm.conv>0) ? 100*conv/(conv+bm.conv) : (conv>0?60:20);
+  const qualS = Math.max(0, 100-junk);
+  let score = 0.55*eff + 0.30*convS + 0.15*qualS;
+  score = 50 + (score-50)*Math.min(1, leads/KWAL_FULL_LEADS);   // kleine steekproef → naar neutraal
+  if(sales>0) score = Math.max(score, 55);                       // een echte verkoop is nooit "zwak"
+  score = Math.round(score);
+  const [label,kleur] = score>=65 ? ["Sterk","#2C5F52"] : score>=48 ? ["Goed","#4B7A3E"] : score>=33 ? ["Matig","#B8862E"] : ["Zwak","#B5432E"];
+  const uitleg = `${label} (score ${score}/100). Kosten: ${effTxt}. Conversie lead→afspraak ${Math.round(conv)}%`
+    + (bm.conv!=null?` (park ${Math.round(bm.conv)}%)`:"") + `. Ongekwalificeerd ${Math.round(+a.ongekwalificeerd_pct||0)}%.`;
+  return { label, kleur, score, uitleg };
+}
 function drawAdTable(){
   const s = ADSORT;
+  const _kwBm = kwalBenchmarks(ADROWS);              // parkbenchmarks over álle ads (niet de gefilterde)
+  ADROWS.forEach(a => a._kwal = kwaliteitVanAd(a, _kwBm));
   const rows = ADROWS
     .filter(a => ADFASE==="all" || (ADFASE==="none" ? !a.awareness_stage : a.awareness_stage===ADFASE))
     .filter(a => ADSTATUS==="all" || a.status===ADSTATUS)
     .filter(a => ADKANAAL==="all" || String(a.kanaal||"").toLowerCase()===ADKANAAL)
     .sort((a,b)=>{
       if(s.key==="awareness_stage") return (faseSortVal(a)-faseSortVal(b)) * s.dir;
+      if(s.key==="kwaliteit") return (((a._kwal&&a._kwal.score)??-1)-((b._kwal&&b._kwal.score)??-1)) * s.dir;
       if(s.key==="conv_pct") return ((convPct(a)||0)-(convPct(b)||0)) * s.dir;
       if(s.key==="clos_pct") return ((closPct(a)||0)-(closPct(b)||0)) * s.dir;
       const av=a[s.key], bv=b[s.key];
@@ -1922,8 +1962,10 @@ function drawAdTable(){
         : key==='conv_pct'
         ? ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">Conversie van lead naar afspraak (afspraken ÷ leads). Dé kwaliteitsmaat naast de prijs per lead: een goedkope lead die nooit een afspraak wordt, is alsnog duur.</span></span>`
         : key==='clos_pct'
-        ? ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">Closing van afspraak naar sale (sales ÷ afspraken). Laat zien hoe goed de afspraken uit deze advertentie ook echt tot een verkoop leiden.</span></span>` : "";
-      const tl = (key==='advertentie'||key==='gelanceerd'||key==='status'||key==='awareness_stage'||key==='kanaal') ? 'tl' : '';
+        ? ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">Closing van afspraak naar sale (sales ÷ afspraken). Laat zien hoe goed de afspraken uit deze advertentie ook echt tot een verkoop leiden.</span></span>`
+        : key==='kwaliteit'
+        ? ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">Automatisch kwaliteitsoordeel per advertentie, relatief binnen dit park. Zwaarst weegt de kostenefficiëntie (liefst kost per sale, anders kost per afspraak), daarna de leadkwaliteit: conversie lead→afspraak plus het aandeel ongekwalificeerde leads (Wilson-ondergrens tegen kleine aantallen). Onder 5 leads geen oordeel. Beweeg over een label voor de onderbouwing.</span></span>` : "";
+      const tl = (key==='advertentie'||key==='kwaliteit'||key==='gelanceerd'||key==='status'||key==='awareness_stage'||key==='kanaal') ? 'tl' : '';
       return `<th data-key="${key}" class="${tl}" style="cursor:pointer;user-select:none">${label}${arrow}${info}</th>`;
     }).join("")}</tr></thead>
      <tbody>${(()=>{ const ctx = ongekStats(); return rows.map(a=>{
@@ -1949,6 +1991,9 @@ function drawAdTable(){
            <span class="ad-naam-txt">${esc(a.advertentie)}</span>${icon}${kill}
            ${a.preview_link?`<a class="ad-prev-link" href="${escAttr(a.preview_link)}" target="_blank" rel="noopener" title="Advertentie bekijken op Facebook" onclick="event.stopPropagation()">↗</a>`:""}
          </div></td>
+         <td class="tl">${a._kwal && a._kwal.score!=null
+             ? `<span title="${escAttr(a._kwal.uitleg)}" style="display:inline-block;padding:2px 10px;border-radius:999px;font-weight:600;font-size:12px;color:#fff;background:${a._kwal.kleur};white-space:nowrap">${a._kwal.label}</span>`
+             : `<span style="color:var(--faint)" title="${escAttr(a._kwal ? a._kwal.uitleg : '')}">—</span>`}</td>
          <td class="tl" style="white-space:nowrap;color:var(--muted)">${fmtLaunch(a.gelanceerd)}</td>
          <td style="text-align:left"><span class="badge ${st[1]}">${st[0]}</span></td>
          <td class="tl fase-cell" data-code="${escAttr(a.code)}" style="cursor:pointer" title="Klik om de fase/notities te wijzigen">${fasePill(a.awareness_stage)}</td>
