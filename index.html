@@ -1722,10 +1722,13 @@ async function renderAds(){
 
   const spend=Number(k.spend)||0, leads=Number(k.leads)||0, afspr=Number(k.afspraken)||0,
         sales=Number(k.sales)||0, omzet=Number(k.omzet)||0, clicks=Number(k.clicks)||0,
-        salesBet=Number(k.sales_betaald ?? k.sales)||0, omzetBet=Number(k.omzet_betaald ?? k.omzet)||0;
-  const netwSales = Math.max(0, sales - salesBet);   // netwerk/referral: wel prestatie, niet in ROAS
+        salesBet=Number(k.sales_betaald ?? k.sales)||0, omzetBet=Number(k.omzet_betaald ?? k.omzet)||0,
+        afsprBet=Number(k.afspraken_betaald ?? k.afspraken)||0;
+  const netwSales = Math.max(0, sales - salesBet);     // netwerk/referral: wel prestatie, niet in ROAS
+  const netwAfspr = Math.max(0, afspr - afsprBet);     // idem voor de afspraak achter een netwerk-sale
   const roasTip = ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">ROAS = omzet uit betaalde advertenties &#247; advertentie-uitgaven. Netwerk-/referral-sales (zonder advertentiebudget) tellen hier bewust NIET mee, zodat het advertentierendement niet vertekend raakt.</span></span>`;
   const kpsTip = ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">Advertentie-uitgaven &#247; het aantal sales uit betaalde advertenties (netwerk/referral niet meegerekend).</span></span>`;
+  const kpaTip = ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">Advertentie-uitgaven &#247; het aantal afspraken uit betaalde advertenties (afspraken uit eigen netwerk niet meegerekend).</span></span>`;
   const prevCpl = kPrev && Number(kPrev.leads)>0 ? Number(kPrev.spend)/Number(kPrev.leads) : null;
   const sMnd = (mnd||[]).slice(-8);
   $("adKpis").innerHTML =
@@ -1733,9 +1736,9 @@ async function renderAds(){
     metric("Clicks", clicks.toLocaleString("nl-NL")) +
     metric("Leads", leads, deltaSub(leads,kPrev&&kPrev.leads,heeftPrevAd)+sparkline(sMnd.map(x=>x.leads),"#5B8DEF")) +
     metric("Kosten per lead", leads ? eur(spend/leads) : "—", leads&&prevCpl!=null ? deltaSub(spend/leads,prevCpl,true,true) : "") +
-    metric("Afspraken", afspr) +
-    metric("Kosten per afspraak", afspr ? eur(spend/afspr) : "—") +
-    metric("Sales", sales, defSub(dsAds) + (netwSales>0 ? `<div class="l" style="margin:5px 0 0">waarvan ${netwSales} via netwerk (buiten ROAS)</div>` : "")) +
+    metric("Afspraken", afspr, netwAfspr>0 ? `<div class="l" style="margin:5px 0 0">waarvan ${netwAfspr} uit eigen netwerk <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">${netwAfspr===1?"Deze afspraak komt":"Deze afspraken komen"} uit het eigen netwerk, niet uit een advertentie. ${netwAfspr===1?"Hij telt":"Ze tellen"} wel mee als afspraak, maar niet in de kosten-per-afspraak.</span></span></div>` : "") +
+    metric("Kosten per afspraak"+kpaTip, afsprBet ? eur(spend/afsprBet) : "—") +
+    metric("Sales", sales, defSub(dsAds) + (netwSales>0 ? `<div class="l" style="margin:5px 0 0">waarvan ${netwSales} uit eigen netwerk <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">${netwSales===1?"Deze sale komt":"Deze sales komen"} uit het eigen netwerk, niet uit een advertentie. ${netwSales===1?"Hij telt":"Ze tellen"} wel mee als omzet en sale (prestatie), maar bewust NIET in de ROAS en de kosten-per-sale, zodat het advertentierendement zuiver blijft.</span></span></div>` : "")) +
     metric("Kosten per sale"+kpsTip, salesBet ? eur(spend/salesBet) : "—") +
     metric("Omzet", eur(omzet)) +
     metric("ROAS"+roasTip, spend ? Math.min(ADROASCAP, omzetBet/spend).toFixed(2) : "—");
