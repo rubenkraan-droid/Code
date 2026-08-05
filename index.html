@@ -1721,7 +1721,11 @@ async function renderAds(){
   const heeftPrevAd = !!kPrev;
 
   const spend=Number(k.spend)||0, leads=Number(k.leads)||0, afspr=Number(k.afspraken)||0,
-        sales=Number(k.sales)||0, omzet=Number(k.omzet)||0, clicks=Number(k.clicks)||0;
+        sales=Number(k.sales)||0, omzet=Number(k.omzet)||0, clicks=Number(k.clicks)||0,
+        salesBet=Number(k.sales_betaald ?? k.sales)||0, omzetBet=Number(k.omzet_betaald ?? k.omzet)||0;
+  const netwSales = Math.max(0, sales - salesBet);   // netwerk/referral: wel prestatie, niet in ROAS
+  const roasTip = ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">ROAS = omzet uit betaalde advertenties &#247; advertentie-uitgaven. Netwerk-/referral-sales (zonder advertentiebudget) tellen hier bewust NIET mee, zodat het advertentierendement niet vertekend raakt.</span></span>`;
+  const kpsTip = ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">Advertentie-uitgaven &#247; het aantal sales uit betaalde advertenties (netwerk/referral niet meegerekend).</span></span>`;
   const prevCpl = kPrev && Number(kPrev.leads)>0 ? Number(kPrev.spend)/Number(kPrev.leads) : null;
   const sMnd = (mnd||[]).slice(-8);
   $("adKpis").innerHTML =
@@ -1731,10 +1735,10 @@ async function renderAds(){
     metric("Kosten per lead", leads ? eur(spend/leads) : "—", leads&&prevCpl!=null ? deltaSub(spend/leads,prevCpl,true,true) : "") +
     metric("Afspraken", afspr) +
     metric("Kosten per afspraak", afspr ? eur(spend/afspr) : "—") +
-    metric("Sales", sales, defSub(dsAds)) +
-    metric("Kosten per sale", sales ? eur(spend/sales) : "—") +
+    metric("Sales", sales, defSub(dsAds) + (netwSales>0 ? `<div class="l" style="margin:5px 0 0">waarvan ${netwSales} via netwerk (buiten ROAS)</div>` : "")) +
+    metric("Kosten per sale"+kpsTip, salesBet ? eur(spend/salesBet) : "—") +
     metric("Omzet", eur(omzet)) +
-    metric("ROAS", spend ? Math.min(ADROASCAP, omzet/spend).toFixed(2) : "—");
+    metric("ROAS"+roasTip, spend ? Math.min(ADROASCAP, omzetBet/spend).toFixed(2) : "—");
 
   const dd = daily || [];
   const dt2 = d => new Date(d).toLocaleDateString("nl-NL",{day:"numeric",month:"short"});
