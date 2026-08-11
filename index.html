@@ -377,6 +377,7 @@
       <button class="tab active" data-tab="resultaten" title="Resultaten"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19h16M7 15v4M12 10v9M17 6v13"/></svg><span class="lbl">Resultaten</span></button>
       <button class="tab" data-tab="advertenties" title="Advertenties"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M7 13h4M7 16h7"/></svg><span class="lbl">Advertenties</span></button>
       <button class="tab" data-tab="bellen" title="Bellen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3h3l2 5-2.5 1.5a11 11 0 0 0 5 5L16 13l5 2v3a2 2 0 0 1-2.2 2A16 16 0 0 1 3 5.2 2 2 0 0 1 5 3z"/></svg><span class="lbl">Bellen</span></button>
+      <button class="tab" data-tab="mailflow" title="Mailflow · mailattributie"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg><span class="lbl">Mailflow</span></button>
       <button class="tab" data-tab="archief" title="Archief · creative-library"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></svg><span class="lbl">Archief</span></button>
       <button class="tab" data-tab="financien" title="Financiën"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5c0-1.4 1.2-2 2.5-2s2.5.7 2.5 1.8c0 2.4-5 1.3-5 3.7 0 1.1 1.2 1.8 2.5 1.8s2.5-.6 2.5-2"/></svg><span class="lbl">Financiën</span></button>
       <button class="tab" data-tab="resale" title="Resale"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-7 9 7M5 10v9h5v-6h4v6h5v-9"/></svg><span class="lbl">Resale</span></button>
@@ -648,6 +649,36 @@
         <span class="info" tabindex="0">i<span class="tip">Alleen leads in de stage "In contact". Leads met een toekomstig agendapunt vallen eruit (die staan al gepland). Gesorteerd op het laatste contactmoment — de nieuwste van notitie óf e-mail: leads zonder contact bovenaan, daarna de langst geleden. "Type" en "Door" tonen wat het laatste contact was en van wie. Rood = 30+ dagen (of nooit).</span></span>
       </div>
       <div class="panel"><div class="scroll"><table id="opvolgTable"></table></div></div>
+    </div>
+  </div>
+
+  <div id="tabMailflow" class="hidden">
+    <div id="mailParkTabs" class="tabs hidden" style="margin-bottom:16px"></div>
+    <div class="sec">Mailflow · welke mail levert aanvragen en verkopen
+      <span class="info" tabindex="0">i<span class="tip">Attributie van de 15-mails-flow via het Pipedrive-veld "Triggermail" (de utm_content van de mail die de aanvraag opleverde, eerste-bron-wint). Per mail: hoeveel gespreksaanvragen, hoeveel daarvan een afspraak kregen, een contract tekenden en verkochten. Frankrijk gebruikt <code>mail-XXy</code>, Wielsche Dreef <code>wd-mail-XXy</code>. Een verkoop = status "won"; contract getekend is een aparte tussenstap (getekend o.v.v. financiering / definitief). "Zonder Triggermail" is een datakwaliteitscontrole: loopt dat op, dan schrijft n8n het veld niet weg.</span></span>
+    </div>
+    <div id="mailEmpty" class="panel hidden" style="padding:26px 22px;text-align:center;color:var(--muted);line-height:1.6"></div>
+    <div id="mailBody" class="hidden">
+      <div id="mailKpis" class="cards"></div>
+      <div id="mailQualSec" class="hidden" style="margin-top:14px">
+        <div id="mailQual" class="panel" style="padding:12px 16px;font-size:13px"></div>
+      </div>
+      <div style="margin-top:22px">
+        <div class="sec">Per fase van de flow
+          <span class="info" tabindex="0">i<span class="tip">Mail 1-3 = dagelijks (beste bewijs), 4-8 = bezwaren (om de dag), 9-15 = verhaal en inzicht (2× per week). Zo zie je of de lange staart nog iets oplevert.</span></span>
+        </div>
+        <div class="panel" style="overflow-x:auto"><table id="mailFaseTable"></table></div>
+      </div>
+      <div style="margin-top:22px">
+        <div class="sec">Per mail
+          <span class="info" tabindex="0">i<span class="tip">Klik op een rij om de A/B-varianten uit te klappen. Sorteerbaar op elke kolom (standaard op gespreksaanvragen, aflopend). Bij minder dan 30 aanvragen per variant is een A/B-verschil ruis — daar staat een waarschuwing bij. Winnaar bepalen we op aanvragen en verkopen, nooit op opens.</span></span>
+        </div>
+        <div class="panel"><div class="scroll"><table id="mailTable"></table></div></div>
+      </div>
+      <div id="mailVerkopenSec" class="hidden" style="margin-top:22px">
+        <div class="sec">Verkopen uit de flow · tijdlijn</div>
+        <div class="panel" style="overflow-x:auto"><table id="mailVerkopenTable"></table></div>
+      </div>
     </div>
   </div>
 
@@ -1364,6 +1395,8 @@ async function applyRole(){
   // Bellen: makelaars + master-eigenaar, niet de parkeigenaar en niet de park-gebonden eigenaar (Karl/Carl)
   const parkGebondenEig = owner && (SCOPED_PARK != null || v.park != null);
   document.querySelector('.tab[data-tab="bellen"]').classList.toggle("hidden", parkV || parkGebondenEig);
+  // Mailflow: alleen de master-eigenaar (Ruben), niet makelaars/parkgebruiker en niet de park-gebonden eigenaar (Karl/Carl)
+  document.querySelector('.tab[data-tab="mailflow"]').classList.toggle("hidden", !owner || parkGebondenEig);
   // Resale (cross-park pijplijn) niet voor parkgebruiker of park-gebonden eigenaar (Carl/Karl)
   document.querySelector('.tab[data-tab="resale"]').classList.toggle("hidden", parkV || SCOPED_PARK != null || v.park != null);
   $("tabs").classList.remove("hidden");
@@ -1424,6 +1457,7 @@ function renderActieveTab(){
   else if(activeTab==="archief") renderArchief();
   else if(activeTab==="financien"){ const cv=currentView(); if(cv.role==="agent") renderFinanceAgent(cv.id); else renderFinance(); }
   else if(activeTab==="bellen") renderBellen();
+  else if(activeTab==="mailflow") renderMailflow();
   else if(activeTab==="resale") renderResale();
 }
 $("fPeriod").addEventListener("change", e=>{
@@ -1477,14 +1511,16 @@ function toonTab(tab, opts){
   $("tabArchief").classList.toggle("hidden", tab!=="archief");
   $("tabFinance").classList.toggle("hidden", tab!=="financien");
   $("tabBellen").classList.toggle("hidden", tab!=="bellen");
+  $("tabMailflow").classList.toggle("hidden", tab!=="mailflow");
   $("tabResale").classList.toggle("hidden", tab!=="resale");
   $("fAgent").classList.toggle("hidden", tab!=="resultaten" || !currentView || currentView().role!=="owner");
-  $("fPark").classList.toggle("hidden", (currentView && currentView().role==="park") || tab==="advertenties" || tab==="archief" || tab==="financien" || tab==="bellen" || tab==="resale");
+  $("fPark").classList.toggle("hidden", (currentView && currentView().role==="park") || tab==="advertenties" || tab==="archief" || tab==="financien" || tab==="bellen" || tab==="mailflow" || tab==="resale");
   if(!opts.silent) localStorage.setItem("activeTab", tab);
   if(tab==="advertenties") renderAds();
   if(tab==="archief") renderArchief();
   if(tab==="financien"){ const cv=currentView(); if(cv.role==="agent") renderFinanceAgent(cv.id); else renderFinance(); }
   if(tab==="bellen") renderBellen();
+  if(tab==="mailflow") renderMailflow();
   if(tab==="resale") renderResale();
 }
 // een verborgen tab (niet beschikbaar voor deze rol) is geen geldige bestemming
@@ -1648,6 +1684,9 @@ async function renderFinanceAgent(agentId){
 let adChart;
 let ADROWS = [], ADSORT = { key:"spend", dir:-1 }, ADPARK = null, ADUNLINKED = null;
 let BELPARK = null;   // Bellen-tabblad: gekozen park (null = alle parken)
+let MAILPARK = null;  // Mailflow-tabblad: gekozen park (default = eerste zichtbare park)
+let MAILSORT = { key:"gespreksaanvragen", dir:-1 };   // standaard: aanvragen aflopend
+let MAIL_OPEN = {};   // welke mailnummers uitgeklapt zijn (A/B-subrijen)
 const parkAccent = id => { const p = PARKS.find(x=>x.id===id); return (p && p.accent_color) || accent(); };
 const STATUSNL = { active:["Actief","sale"], paused:["Gepauzeerd","held"], killed:["Gestopt","held"], draft:["Concept","held"], unknown:["Onbekend","held"], demo:["Demo","held"] };
 
@@ -2771,6 +2810,131 @@ async function renderBellen(){
 
   // opvolglijst (volledige werk-wachtrij, verhuisd vanuit Resultaten); demo-makelaar krijgt de demo (leeg)
   await renderOpvolg(isDemoAgent(eigenAgent) ? DEMO_AGENT_ID : null, BELPARK, true);
+}
+
+/* ---------- MAILFLOW (owner-only): mailattributie van de 15-mails-flow ---------- */
+const MAIL_FASES = [
+  { key:"1-3",  label:"Dagelijks (mail 1-3)",         min:1,  max:3 },
+  { key:"4-8",  label:"Bezwaren (mail 4-8)",          min:4,  max:8 },
+  { key:"9-15", label:"Verhaal & inzicht (mail 9-15)",min:9,  max:15 },
+];
+const MAIL_AB_MIN = 30;   // onder dit aantal aanvragen per variant is een A/B-verschil ruis
+const MAILCOLS = [["nr","Mail"],["gespreksaanvragen","Aanvragen"],["afspraak_geweest","Afspraak geweest"],["contract_getekend","Contract"],["verkocht","Verkocht"],["waarde","Waarde"],["conv","Conv. &#8594;verkoop"]];
+function parseMail(code){
+  const m = /^(?:wd-)?mail-(\d{1,2})([ab])$/.exec(String(code||"").trim().toLowerCase());
+  return m ? { nr:Number(m[1]), variant:m[2] } : null;
+}
+const mailConv = r => Number(r.gespreksaanvragen)>0 ? Math.round((Number(r.verkocht)||0)/Number(r.gespreksaanvragen)*100) : null;
+
+async function renderMailflow(){
+  // park-subtabbladen (Frankrijk / Wielsche Dreef) — WD 'wd-mail-XXy', FR 'mail-XXy'
+  const mailParken = PARKS.filter(p=>!isDemo(p.id));
+  if(MAILPARK==null || !mailParken.find(p=>p.id===MAILPARK)) MAILPARK = (mailParken.find(p=>p.id===3)||mailParken[0]||{}).id;
+  if(mailParken.length>1){
+    $("mailParkTabs").innerHTML = mailParken.map(p=>`<button class="tab ${p.id===MAILPARK?"active":""}" data-park="${p.id}">${esc(p.name)}</button>`).join("");
+    $("mailParkTabs").classList.remove("hidden");
+    document.querySelectorAll("#mailParkTabs .tab").forEach(b=>b.addEventListener("click", ()=>{ MAILPARK=Number(b.dataset.park); renderMailflow(); }));
+  } else { $("mailParkTabs").classList.add("hidden"); }
+  setBranding(MAILPARK);
+  const isWD = MAILPARK===3;
+  const intakeWoord = isWD ? "aanmelding(en)" : "aanvra(a)g(en)";
+
+  const [rows, zonderRaw] = await Promise.all([
+    rpc("mail_attributie", { p_park_id: MAILPARK }).then(x=>x||[]),
+    rpc("mail_zonder_triggermail", { p_park_id: MAILPARK }),
+  ]);
+  const zonder = Number(zonderRaw)||0;
+
+  if(!rows.length){
+    $("mailBody").classList.add("hidden");
+    $("mailEmpty").classList.remove("hidden");
+    $("mailEmpty").innerHTML =
+      `<div style="font-weight:600;color:var(--ink);margin-bottom:6px">Nog geen mailattributie</div>`
+      + `Er zijn nog geen deals met een ingevuld Triggermail-veld voor dit park. Controleer of de n8n-flow de <code>utm_content</code> naar het Triggermail-veld schrijft (die gaat nu naar een notitie).`
+      + (zonder>0 ? `<div style="margin-top:10px;color:var(--warn)">${zonder} recente ${intakeWoord} zonder mailbron — dit is de controle die je verwacht zolang n8n het veld niet vult.</div>` : "");
+    return;
+  }
+  $("mailEmpty").classList.add("hidden");
+  $("mailBody").classList.remove("hidden");
+
+  // groepeer per mailnummer (A/B); niet-herkende codes apart
+  const perNr = {}; const onbekend = [];
+  for(const r of rows){
+    const p = parseMail(r.mailcode);
+    if(!p){ onbekend.push(r); continue; }
+    const g = perNr[p.nr] || (perNr[p.nr] = { nr:p.nr, a:null, b:null, gespreksaanvragen:0, afspraak_geweest:0, contract_getekend:0, verkocht:0, waarde:0 });
+    g[p.variant] = r;
+    ["gespreksaanvragen","afspraak_geweest","contract_getekend","verkocht"].forEach(k=>g[k]+=Number(r[k])||0);
+    g.waarde += Number(r.waarde)||0;
+  }
+  const groepen = Object.values(perNr);
+
+  // totaalregel (incl. onbekend)
+  const tot = groepen.concat(onbekend).reduce((s,g)=>({
+    a:s.a+Number(g.gespreksaanvragen||0), ag:s.ag+Number(g.afspraak_geweest||0),
+    c:s.c+Number(g.contract_getekend||0), v:s.v+Number(g.verkocht||0), w:s.w+Number(g.waarde||0)}),{a:0,ag:0,c:0,v:0,w:0});
+  $("mailKpis").innerHTML =
+    metric("Gespreksaanvragen", tot.a) +
+    metric("Afspraak geweest", tot.ag) +
+    metric("Contract getekend", tot.c) +
+    metric("Verkocht", tot.v, `<div class="l" style="margin:5px 0 0">${tot.w>0?eur(tot.w)+" omzet":"nog geen omzet"}</div>`);
+
+  // datakwaliteit
+  $("mailQualSec").classList.remove("hidden");
+  $("mailQual").innerHTML = zonder>0
+    ? `<span style="color:var(--warn);font-weight:600">&#9888; ${zonder} ${intakeWoord} zonder Triggermail</span> · loopt dit op, dan schrijft n8n het veld niet weg.`
+    : `<span style="color:var(--good)">&#10003; Alle recente ${isWD?"aanmeldingen":"aanvragen"} hebben een mailbron.</span>`;
+
+  // fase-subtotalen
+  $("mailFaseTable").innerHTML =
+    `<thead><tr><th style="text-align:left">Fase</th><th>Aanvragen</th><th>Afspraak geweest</th><th>Contract</th><th>Verkocht</th><th>Waarde</th><th>Conv. &#8594;verkoop</th></tr></thead>`
+    + `<tbody>${MAIL_FASES.map(f=>{
+        const s = groepen.filter(g=>g.nr>=f.min&&g.nr<=f.max).reduce((s,g)=>({a:s.a+g.gespreksaanvragen,ag:s.ag+g.afspraak_geweest,c:s.c+g.contract_getekend,v:s.v+g.verkocht,w:s.w+g.waarde}),{a:0,ag:0,c:0,v:0,w:0});
+        return `<tr><td style="text-align:left">${f.label}</td><td>${s.a}</td><td>${s.ag}</td><td>${s.c}</td><td>${s.v}</td><td>${s.w>0?eur(s.w):"—"}</td><td>${s.a>0?Math.round(s.v/s.a*100)+"%":"—"}</td></tr>`;
+      }).join("")}</tbody>`;
+
+  drawMailTable(groepen, onbekend);
+
+  const verk = await rpc("mail_verkopen", { p_park_id: MAILPARK }).then(x=>x||[]);
+  $("mailVerkopenSec").classList.toggle("hidden", !verk.length);
+  if(verk.length){
+    $("mailVerkopenTable").innerHTML =
+      `<thead><tr><th style="text-align:left">Datum</th><th style="text-align:left">Mail</th><th>Waarde</th><th>Deal</th></tr></thead>`
+      + `<tbody>${verk.map(x=>`<tr><td style="text-align:left">${x.sale_dat?fmtLaunch(x.sale_dat):"—"}</td><td style="text-align:left">${esc(x.mailcode)}</td><td>${eur(x.waarde)}</td><td><a href="https://recravas.pipedrive.com/deal/${x.deal_id}" target="_blank" rel="noopener">#${x.deal_id} &#8599;</a></td></tr>`).join("")}</tbody>`;
+  }
+}
+
+function drawMailTable(groepen, onbekend){
+  const s = MAILSORT;
+  const sorted = [...groepen].sort((a,b)=>{
+    if(s.key==="conv") return ((mailConv(a)||0)-(mailConv(b)||0))*s.dir;
+    return ((Number(a[s.key])||0)-(Number(b[s.key])||0))*s.dir;
+  });
+  const cel = r => `<td>${Number(r.gespreksaanvragen)||0}</td><td>${Number(r.afspraak_geweest)||0}</td><td>${Number(r.contract_getekend)||0}</td><td>${Number(r.verkocht)||0}</td><td>${Number(r.waarde)>0?eur(r.waarde):"—"}</td><td>${mailConv(r)!=null?mailConv(r)+"%":"—"}</td>`;
+  const abNote = g => {
+    if(!g.a||!g.b) return "Alleen één variant gemeten.";
+    const aA=Number(g.a.gespreksaanvragen)||0, aB=Number(g.b.gespreksaanvragen)||0, vA=Number(g.a.verkocht)||0, vB=Number(g.b.verkocht)||0;
+    if(Math.min(aA,aB)<MAIL_AB_MIN) return `<span style="color:var(--muted)">Te weinig data (A ${aA} vs B ${aB} aanvragen) — een verschil is nog ruis, geen winnaar aanwijzen.</span>`;
+    const win = vA!==vB ? (vA>vB?"A":"B") : (aA>=aB?"A":"B");
+    return `<span style="color:var(--good);font-weight:600">Variant ${win} voor</span> — op ${vA+vB>0?"verkopen":"aanvragen"}.`;
+  };
+  const subrij = (label,r) => r ? `<tr class="mail-sub" style="background:color-mix(in srgb, var(--accent) 5%, transparent)"><td style="text-align:left;padding-left:26px">${label}</td>${cel(r)}</tr>` : "";
+  $("mailTable").innerHTML =
+    `<thead><tr>${MAILCOLS.map(([k,l])=>`<th data-key="${k}" style="cursor:pointer;user-select:none${k==="nr"?";text-align:left":""}">${l}${s.key===k?(s.dir<0?" ↓":" ↑"):""}</th>`).join("")}</tr></thead>`
+    + `<tbody>${sorted.map(g=>{
+        const open = !!MAIL_OPEN[g.nr], heeftAb = g.a && g.b;
+        return `<tr class="mail-parent" data-nr="${g.nr}" style="cursor:${heeftAb?"pointer":"default"}"><td style="text-align:left">${heeftAb?(open?"▾ ":"▸ "):"&nbsp;&nbsp;"}mail ${String(g.nr).padStart(2,"0")}${heeftAb?` <span style="font-size:11px;color:var(--muted)">A+B</span>`:(g.a?" <span style=\"font-size:11px;color:var(--muted)\">A</span>":g.b?" <span style=\"font-size:11px;color:var(--muted)\">B</span>":"")}</td>${cel(g)}</tr>`
+          + (open ? subrij("variant A",g.a)+subrij("variant B",g.b)+`<tr class="mail-sub"><td colspan="7" style="text-align:left;padding-left:26px;font-size:12px">${abNote(g)}</td></tr>` : "");
+      }).join("")
+      + (onbekend.length ? `<tr><td style="text-align:left;color:var(--muted)">onbekende code (${onbekend.length})</td><td colspan="6" style="color:var(--muted)">Triggermail matcht niet op mail-XXy / wd-mail-XXy</td></tr>` : "")
+    }</tbody>`;
+  document.querySelectorAll("#mailTable th").forEach(th=>th.addEventListener("click",()=>{
+    const k=th.dataset.key; if(k===MAILSORT.key) MAILSORT.dir=-MAILSORT.dir; else MAILSORT={key:k,dir:k==="nr"?1:-1};
+    drawMailTable(groepen,onbekend);
+  }));
+  document.querySelectorAll("#mailTable .mail-parent").forEach(tr=>tr.addEventListener("click",()=>{
+    const nr=Number(tr.dataset.nr); MAIL_OPEN[nr]=!MAIL_OPEN[nr]; drawMailTable(groepen,onbekend);
+  }));
 }
 
 /* ---------- RESALE (rolbewust: eigenaar = totaal + per makelaar; makelaar = eigen + teamgemiddelde) ---------- */
