@@ -603,6 +603,13 @@
     <div id="belParkTabs" class="tabs hidden" style="margin-bottom:14px"></div>
     <div class="panel" style="margin-bottom:26px"><table id="callTable"></table></div>
 
+    <div id="belAfsprSec" class="hidden" style="margin-bottom:26px">
+      <div class="sec"><span id="belAfsprTitle">Geplande afspraken</span>
+        <span style="font-weight:400;text-transform:none;color:var(--muted);cursor:pointer;margin-left:8px" onclick="document.getElementById('belAfsprSec').classList.add('hidden')">sluiten ✕</span>
+      </div>
+      <div class="panel" style="overflow-x:auto"><table id="belAfsprTable"></table></div>
+    </div>
+
     <div id="belBacklogSec" class="hidden" style="margin-bottom:26px">
       <div class="sec">Belachterstand &amp; benodigd tempo <span id="belBacklogScope" style="font-weight:400;text-transform:none;color:var(--muted)"></span>
         <span class="info" tabindex="0">i<span class="tip">Achterstand = het aantal belletjes dat nog nodig is om elke open lead tot 4 belpogingen te brengen: de leads die we nog niet bereikt hebben (Nieuwe aanvraag / Geen gehoor) plus de "In contact"-leads die al meer dan 3 dagen niet meer gebeld zijn. Keep-up = de belletjes per beldag die de nieuwe instroom vraagt (nieuwe leads per dag &#215; 7/5 omdat we 5 dagen bellen &#215; gemiddeld aantal pogingen per lead). De tabel toont hoeveel belletjes per beldag nodig zijn om de achterstand in 2, 4 of 6 weken weg te werken, keep-up inbegrepen. De grafiek is een prognose van de resterende achterstand per beldag bij die tempo's en bij jullie huidige tempo.</span></span>
@@ -654,6 +661,9 @@
     <div id="opvolgSec" class="hidden" style="margin-top:26px">
       <div class="sec"><span id="opvolgTitle">Opvolgen</span>
         <span class="info" tabindex="0">i<span class="tip">Alleen leads in de stage "In contact". Leads met een toekomstig agendapunt vallen eruit (die staan al gepland). Gesorteerd op het laatste contactmoment — de nieuwste van notitie óf e-mail: leads zonder contact bovenaan, daarna de langst geleden. "Type" en "Door" tonen wat het laatste contact was en van wie. Rood = 30+ dagen (of nooit).</span></span>
+        <span id="opvolgFilter" class="hidden" style="float:right;font-weight:400;text-transform:none">
+          <button class="opvolg-scope-btn" data-scope="eigen" style="border:1px solid var(--line);background:var(--accent);color:#fff;border-radius:8px 0 0 8px;padding:4px 12px;font-size:12px;cursor:pointer">Mijn contacten</button><button class="opvolg-scope-btn" data-scope="alle" style="border:1px solid var(--line);border-left:none;background:var(--card);color:var(--muted);border-radius:0 8px 8px 0;padding:4px 12px;font-size:12px;cursor:pointer">Alle contacten</button>
+        </span>
       </div>
       <div class="panel"><div class="scroll"><table id="opvolgTable"></table></div></div>
     </div>
@@ -1694,6 +1704,8 @@ let BELPARK = null;   // Bellen-tabblad: gekozen park (null = alle parken)
 let MAILPARK = null;  // Mailflow-tabblad: gekozen park (default = eerste zichtbare park)
 let MAILSORT = { key:"gespreksaanvragen", dir:-1 };   // standaard: aanvragen aflopend
 let MAIL_OPEN = {};   // welke mailnummers uitgeklapt zijn (A/B-subrijen)
+let OPVOLG_SCOPE = "eigen";              // makelaar: 'eigen' (standaard) of 'alle'
+let OPVOLG_CTX = { agent:null, park:null };   // makelaar-id + park voor de opvolg-filter
 const parkAccent = id => { const p = PARKS.find(x=>x.id===id); return (p && p.accent_color) || accent(); };
 const STATUSNL = { active:["Actief","sale"], paused:["Gepauzeerd","held"], killed:["Gestopt","held"], draft:["Concept","held"], unknown:["Onbekend","held"], demo:["Demo","held"] };
 
@@ -2754,12 +2766,17 @@ async function renderBellen(){
   } else { $("belParkTabs").classList.add("hidden"); }
   // belcijfers (respecteert de periode + gekozen park; park wordt voor Carl backend gescoopt)
   const calls = await rpc("call_overview", { p_from:r.p_from, p_to:r.p_to, p_park_id:BELPARK, p_agent_id:eigenAgent }) || [];
+  const agentIdOpNaam = n => (AGENTS.find(a=>a.name===n)||{}).id;
   $("callTable").innerHTML =
     `<thead><tr><th>Makelaar</th><th>Gebeld</th><th>Gesprek</th><th>Unieke leads</th><th>Afspraken</th><th>% gesprek van gebeld</th><th>Gesprek &#8594; afspraak %</th></tr></thead>
      <tbody>${calls.map(c=>{
        const conv = Number(c.unieke_leads)>0 ? Math.round(Number(c.afspraken)/Number(c.unieke_leads)*100) : null;
+       const aid = agentIdOpNaam(c.agent);
+       const afsprCel = Number(c.afspraken)>0 && aid!=null
+         ? `<span class="bel-afsp-link" data-agent="${aid}" data-naam="${escAttr(c.agent)}" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px" title="Bekijk de geplande afspraken van deze makelaar">${c.afspraken}</span>`
+         : c.afspraken;
        return `<tr><td style="text-align:left">${esc(c.agent)}</td><td>${c.gebeld}</td><td>${c.gesprek}</td>
-         <td>${c.unieke_leads}</td><td>${c.afspraken}</td>
+         <td>${c.unieke_leads}</td><td>${afsprCel}</td>
          <td>${c.gebeld>0 ? Math.round(c.gesprek/c.gebeld*100)+"%" : "—"}</td>
          <td>${conv!=null ? conv+"%" : "—"}</td></tr>`; }).join("")
        || `<tr><td colspan="7" style="color:var(--muted);padding:14px">Nog geen belactiviteiten gelogd.</td></tr>`}</tbody>`;
@@ -2772,7 +2789,10 @@ async function renderBellen(){
   $("belAnalyseSec").classList.toggle("hidden", !isOwner);
   $("belCutoffSec").classList.toggle("hidden", !isOwner);
   if(!isOwner){
-    await renderOpvolg(isDemoAgent(eigenAgent) ? DEMO_AGENT_ID : null, BELPARK, true);
+    // makelaar: standaard eigen opvolgcontacten, met filter naar alle
+    $("opvolgFilter").classList.remove("hidden");
+    OPVOLG_CTX = { agent: isDemoAgent(eigenAgent) ? DEMO_AGENT_ID : eigenAgent, park: BELPARK };
+    await renderOpvolgScoped();
     return;
   }
   await renderBelBacklog(BELPARK);
@@ -2821,7 +2841,8 @@ async function renderBellen(){
        || `<tr><td colspan="4" style="color:var(--muted);padding:14px">Geen data.</td></tr>`}</tbody>`;
   berekenCutoff();   // cut-off-rekenmodel (zichtbaarheid is hierboven al op eigenaar gezet)
 
-  // opvolglijst (volledige werk-wachtrij, verhuisd vanuit Resultaten); demo-makelaar krijgt de demo (leeg)
+  // opvolglijst (volledige werk-wachtrij, verhuisd vanuit Resultaten); eigenaar ziet alle contacten, geen filter
+  $("opvolgFilter").classList.add("hidden");
   await renderOpvolg(isDemoAgent(eigenAgent) ? DEMO_AGENT_ID : null, BELPARK, true);
 }
 
@@ -3057,6 +3078,21 @@ async function renderOpvolg(agentId, parkId, toonAgent){
        <td><a href="${safeUrl(x.pipedrive_url)}" target="_blank" rel="noopener">Pipedrive ↗</a></td></tr>`;}).join("")}</tbody>`;
   return rows.filter(x => x.dagen_sinds_contact==null || x.dagen_sinds_contact>=30).length;
 }
+// makelaar-opvolg met filter: 'eigen' (standaard) toont eigen contacten, 'alle' alle
+async function renderOpvolgScoped(){
+  document.querySelectorAll(".opvolg-scope-btn").forEach(b=>{
+    const act = b.dataset.scope===OPVOLG_SCOPE;
+    b.style.background = act ? "var(--accent)" : "var(--card)";
+    b.style.color = act ? "#fff" : "var(--muted)";
+  });
+  if(OPVOLG_SCOPE==="alle") return renderOpvolg(null, OPVOLG_CTX.park, true);
+  return renderOpvolg(OPVOLG_CTX.agent, OPVOLG_CTX.park, false);
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest(".opvolg-scope-btn");
+  if(!b) return;
+  OPVOLG_SCOPE = b.dataset.scope; renderOpvolgScoped();
+});
 
 /* ---------- uitverkoopprognose van het park ---------- */
 async function renderInventory(parkId){
@@ -3088,6 +3124,28 @@ document.addEventListener("click", (e) => {
   if(el.dataset.resale === "1") resaleDealsToon(agentId, kind, naam);
   else toonAgentDeals(agentId, kind, naam, parkId);
 });
+
+/* klikbare belcijfers-"Afspraken": toon welke afspraken/deals die makelaar plande (→ Pipedrive) */
+document.addEventListener("click", (e) => {
+  const el = e.target.closest(".bel-afsp-link");
+  if(!el) return;
+  toonBelAfspraken(el.dataset.agent ? Number(el.dataset.agent) : null, el.dataset.naam || "");
+});
+async function toonBelAfspraken(agentId, naam){
+  const r = periodRange();
+  const rows = await rpc("call_afspraak_deals", { p_from:r.p_from, p_to:r.p_to, p_park_id:BELPARK, p_agent_id:agentId }) || [];
+  $("belAfsprTitle").textContent = `Geplande afspraken · ${naam} (${rows.length})`;
+  $("belAfsprTable").innerHTML =
+    `<thead><tr><th class="tl">Deal</th><th class="tl">Fase</th><th class="tl">Afspraak</th><th></th></tr></thead>
+     <tbody>${rows.map(x=>`<tr>
+       <td style="text-align:left">#${x.deal_id}${x.titel?` · ${esc(x.titel)}`:""}</td>
+       <td style="text-align:left">${x.stage_name?esc(x.stage_name):"—"}</td>
+       <td style="text-align:left">${x.appointment_date?dt(x.appointment_date):"gepland"}</td>
+       <td><a href="${safeUrl(x.pipedrive_url)}" target="_blank" rel="noopener">Pipedrive ↗</a></td></tr>`).join("")
+       || `<tr><td colspan="4" style="color:var(--muted);padding:14px">Geen afspraken gevonden.</td></tr>`}</tbody>`;
+  $("belAfsprSec").classList.remove("hidden");
+  $("belAfsprSec").scrollIntoView({ behavior:"smooth", block:"nearest" });
+}
 
 /* ---------- hero-donut (funnel) bovenaan Resultaten ---------- */
 let funnelChart;
