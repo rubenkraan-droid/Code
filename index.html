@@ -604,7 +604,7 @@
     <div class="panel" style="margin-bottom:26px"><table id="callTable"></table></div>
 
     <div id="belAfsprSec" class="hidden" style="margin-bottom:26px">
-      <div class="sec"><span id="belAfsprTitle">Geplande afspraken</span>
+      <div class="sec"><span id="belAfsprTitle">Gebelde leads die een afspraak werden</span>
         <span style="font-weight:400;text-transform:none;color:var(--muted);cursor:pointer;margin-left:8px" onclick="document.getElementById('belAfsprSec').classList.add('hidden')">sluiten ✕</span>
       </div>
       <div class="panel" style="overflow-x:auto"><table id="belAfsprTable"></table></div>
@@ -2773,7 +2773,7 @@ async function renderBellen(){
        const conv = Number(c.unieke_leads)>0 ? Math.round(Number(c.afspraken)/Number(c.unieke_leads)*100) : null;
        const aid = agentIdOpNaam(c.agent);
        const afsprCel = Number(c.afspraken)>0 && aid!=null
-         ? `<span class="bel-afsp-link" data-agent="${aid}" data-naam="${escAttr(c.agent)}" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px" title="Bekijk de geplande afspraken van deze makelaar">${c.afspraken}</span>`
+         ? `<span class="bel-afsp-link" data-agent="${aid}" data-naam="${escAttr(c.agent)}" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px" title="Bekijk de gebelde leads die een afspraak werden">${c.afspraken}</span>`
          : c.afspraken;
        return `<tr><td style="text-align:left">${esc(c.agent)}</td><td>${c.gebeld}</td><td>${c.gesprek}</td>
          <td>${c.unieke_leads}</td><td>${afsprCel}</td>
@@ -3134,7 +3134,7 @@ document.addEventListener("click", (e) => {
 async function toonBelAfspraken(agentId, naam){
   const r = periodRange();
   const rows = await rpc("call_afspraak_deals", { p_from:r.p_from, p_to:r.p_to, p_park_id:BELPARK, p_agent_id:agentId }) || [];
-  $("belAfsprTitle").textContent = `Geplande afspraken · ${naam} (${rows.length})`;
+  $("belAfsprTitle").textContent = `Gebelde leads die een afspraak werden · ${naam} (${rows.length})`;
   $("belAfsprTable").innerHTML =
     `<thead><tr><th class="tl">Deal</th><th class="tl">Fase</th><th class="tl">Afspraak</th><th></th></tr></thead>
      <tbody>${rows.map(x=>`<tr>
