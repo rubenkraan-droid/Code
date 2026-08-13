@@ -493,6 +493,13 @@
     <p id="monthDefNote" class="foot" style="margin:0 0 26px"></p>
   </div>
 
+  <div id="ownerCohortSec" class="hidden">
+    <div class="sec">Cohort-rendement · per lead-maand
+      <span class="info" tabindex="0">i<span class="tip">Elke rij is het cohort van leads dat in die maand binnenkwam, met de advertentie-uitgaven van die maand en het uiteindelijke resultaat van dat cohort (afspraken, sales, omzet), ongeacht wanneer het omsloeg. ROAS = omzet ÷ uitgaven. Recente maanden moeten nog omslaan, dus lage cijfers daar zijn normaal.</span></span>
+    </div>
+    <div class="panel" style="margin-bottom:26px"><div class="scroll"><table id="ownerCohortTable"></table></div></div>
+  </div>
+
   <div id="apptSec" class="hidden">
     <div class="sec" id="apptTitle">Afspraken</div>
     <div class="panel"><div class="scroll"><table id="apptTable"></table></div></div>
@@ -2217,12 +2224,13 @@ function renderBestAds(){
 }
 
 /* ---------- advertentiebudget per maand (lead-geankerd) ---------- */
-function renderAdMonths(rows){
+function renderAdMonths(rows, tableId, secId){
+  tableId = tableId || "adMonthTable"; secId = secId || "adMonthSec";
   const mfmt = d => { const s = new Date(d).toLocaleDateString("nl-NL",{month:"long",year:"numeric"});
     return s.charAt(0).toUpperCase()+s.slice(1); };
-  $("adMonthSec").classList.toggle("hidden", !rows.length);
+  $(secId).classList.toggle("hidden", !rows.length);
   if(!rows.length) return;
-  $("adMonthTable").innerHTML =
+  $(tableId).innerHTML =
     `<thead><tr><th style="text-align:left">Maand</th><th>Uitgaven</th><th>Leads</th><th>CPL</th>
        <th>Afspraken</th><th>CPA</th><th>Sales</th><th>Omzet</th><th>Kost/sale</th><th>ROAS</th></tr></thead>
      <tbody>${rows.map(m=>`<tr>
@@ -2439,6 +2447,9 @@ async function renderOwner(){
     defMaandMap(agentVal==="all"?null:Number(agentVal), parkVal==="all"?null:Number(parkVal)),
   ]);
   renderMonths(mo, {spend:agentVal==="all", leads:true, def:defMap2});
+  // cohort-rendement per lead-maand (advertentie-uitgaven vs resultaat van dat cohort) — owner-only, park-gescoopt
+  const cohortMo = await rpc("ad_monthly", { p_park_id: parkVal==="all"?null:Number(parkVal), p_from:r.p_from, p_to:r.p_to }) || [];
+  renderAdMonths(cohortMo, "ownerCohortTable", "ownerCohortSec");
   const sMo = mo.slice(-8);
   vulSparks("cardsTop", {
     uitgaven:  { values: sMo.map(x=>x.spend),        kleur:"#94A1B5" },
@@ -2457,6 +2468,7 @@ async function renderOwner(){
 
 /* ---------- MAKELAAR: eigen cijfers + teamgemiddelde, geen collega's ---------- */
 async function renderAgent(agentId){
+  $("ownerCohortSec").classList.add("hidden");   // cohort-rendement is owner-only
   const r = periodRange();
   const parkVal = $("fPark").value;
   const pp = parkVal==="all" ? null : Number(parkVal);
@@ -2509,6 +2521,7 @@ async function renderAgent(agentId){
 
 /* ---------- RECREATIEONTWIKKELAAR: alleen parkgemiddelden ---------- */
 async function renderPark(parkId){
+  $("ownerCohortSec").classList.add("hidden");   // cohort-rendement is owner-only
   const r = periodRange();
   setBranding(parkId);
   const rPrevP = vorigePeriode(r);
