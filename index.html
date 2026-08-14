@@ -1302,6 +1302,7 @@ async function afschermGeenToegang(email){
   $("logoutNA").addEventListener("click", async ()=>{ await sb.auth.signOut(); location.href = location.pathname + "?login"; });
 }
 let LOGIN_NO_FINANCE = false;   // eigenaar zonder financiën-toegang (login-modus)
+let LOGIN_NO_CALLS = false;     // eigenaar zonder beldata-toegang (bv. Toine: wel advertenties, geen Bellen-tab)
 let SCOPED_PARK = null;         // park-gebonden eigenaar (bv. Carl = alleen Wielsche Dreef); null = alle parken
 let LOGIN_EMAIL = "";           // ingelogde gebruiker (voor knoppen die maar voor 1 persoon zijn)
 const MAG_SYNCEN = () => LOGIN_EMAIL.toLowerCase() === "ruben.kraan@gmail.com";
@@ -1312,6 +1313,7 @@ async function startAsUser(email){
   const row = acc[0];
   if(!row || !row.role) return afschermGeenToegang(email);   // ingelogd maar geen rol
   LOGIN_NO_FINANCE = !!row.no_finance;
+  LOGIN_NO_CALLS = !!row.no_calls;
   $("gate").classList.add("hidden");
   $("app").classList.remove("hidden");
   $("logout").classList.remove("hidden");
@@ -1334,7 +1336,8 @@ async function startAsUser(email){
         `<option value="owner">Master (alles)</option>`
         + `<optgroup label="Makelaar">${AGENTS.map(a=>`<option value="agent:${a.id}">${esc(a.name)}</option>`).join("")}</optgroup>`
         + `<optgroup label="Recreatieontwikkelaar">${PARKS.map(p=>`<option value="park:${p.id}">${esc(p.name)}</option>`).join("")}</optgroup>`
-        + `<optgroup label="Test"><option value="nofinance">Karl · Wielsche Dreef, zonder financiën</option></optgroup>`;
+        + `<optgroup label="Test"><option value="nofinance">Karl · Wielsche Dreef, zonder financiën</option>`
+        + `<option value="toine">Toine · advertenties, geen beldata/financiën</option></optgroup>`;
       $("viewAs").value = "owner";
       $("viewAs").classList.remove("hidden");          // eigenaar mag view-as gebruiken
       $("viewAs").addEventListener("change", applyRole);
@@ -1388,6 +1391,7 @@ function currentView(){
   const v = $("viewAs").value;
   if(v==="owner") return { role:"owner" };
   if(v==="nofinance") return { role:"owner", nofinance:true, park:3 };   // testweergave Karl/Carl: eigenaar Wielsche Dreef, zonder financiën
+  if(v==="toine") return { role:"owner", nofinance:true, nocalls:true }; // Toine: alle parken/advertenties, geen beldata, geen financiën
   const [role,id] = v.split(":");
   return { role, id:Number(id) };
 }
@@ -1409,9 +1413,11 @@ async function applyRole(){
   document.querySelector('.tab[data-tab="advertenties"]').classList.toggle("hidden", agentV);
   document.querySelector('.tab[data-tab="archief"]').classList.toggle("hidden", agentV);
   document.querySelector('.tab[data-tab="financien"]').classList.toggle("hidden", parkV);
-  // Bellen: makelaars + master-eigenaar, niet de parkeigenaar en niet de park-gebonden eigenaar (Karl/Carl)
+  // Bellen: makelaars + master-eigenaar, niet de parkeigenaar/park-gebonden eigenaar (Karl/Carl)
+  // en niet een eigenaar zonder beldata-toegang (bv. Toine, echt óf testweergave)
   const parkGebondenEig = owner && (SCOPED_PARK != null || v.park != null);
-  document.querySelector('.tab[data-tab="bellen"]').classList.toggle("hidden", parkV || parkGebondenEig);
+  const geenBeldata = LOGIN_NO_CALLS || v.nocalls;
+  document.querySelector('.tab[data-tab="bellen"]').classList.toggle("hidden", parkV || parkGebondenEig || geenBeldata);
   // Mailflow: alleen de master-eigenaar (Ruben), niet makelaars/parkgebruiker en niet de park-gebonden eigenaar (Karl/Carl)
   document.querySelector('.tab[data-tab="mailflow"]').classList.toggle("hidden", !owner || parkGebondenEig);
   // Resale (cross-park pijplijn) niet voor parkgebruiker of park-gebonden eigenaar (Carl/Karl)
@@ -1457,6 +1463,9 @@ async function applyRole(){
   if(LOGIN_NO_FINANCE || v.nofinance){   // eigenaar zonder financiën (echt óf testweergave Karl): tab verborgen
     document.querySelector('.tab[data-tab="financien"]').classList.add("hidden");
     if(activeTab==="financien"){ activeTab="resultaten"; }
+  }
+  if(LOGIN_NO_CALLS || v.nocalls){       // eigenaar zonder beldata (bv. Toine): Bellen-tab verborgen
+    if(activeTab==="bellen"){ activeTab="resultaten"; }
   }
   await refresh();
   herstelTab();
