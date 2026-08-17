@@ -1314,6 +1314,7 @@ async function startAsUser(email){
   if(!row || !row.role) return afschermGeenToegang(email);   // ingelogd maar geen rol
   LOGIN_NO_FINANCE = !!row.no_finance;
   LOGIN_NO_CALLS = !!row.no_calls;
+  AD_PARKS = await rpc("my_ad_parks") || [];   // Carl: WD + Frankrijk op de ad-tabs; leeg voor volledige eigenaar/makelaar/park
   $("gate").classList.add("hidden");
   $("app").classList.remove("hidden");
   $("logout").classList.remove("hidden");
@@ -1709,6 +1710,7 @@ async function renderFinanceAgent(agentId){
 /* ---------- ADVERTENTIES ---------- */
 let adChart;
 let ADROWS = [], ADSORT = { key:"spend", dir:-1 }, ADPARK = null, ADUNLINKED = null;
+let AD_PARKS = [];   // park-gebonden eigenaar (Carl): parken die op de ad-tabs kiesbaar zijn (eigen park + extra ad-parken); leeg = geen extra keuze
 let BELPARK = null;   // Bellen-tabblad: gekozen park (null = alle parken)
 let MAILPARK = null;  // Mailflow-tabblad: gekozen park (default = eerste zichtbare park)
 let MAILSORT = { key:"gespreksaanvragen", dir:-1 };   // standaard: aanvragen aflopend
@@ -1758,6 +1760,16 @@ async function renderAds(){
   if(v.role==="park"){
     pp = v.id;
     $("adParkTabs").classList.add("hidden");
+  } else if(lockPark != null && AD_PARKS.length > 1){
+    // park-gebonden eigenaar mét extra ad-parken (Carl: WD + Frankrijk): kiesbare sub-tabs, alleen hier op de ad-tab
+    if(!ADPARK || !AD_PARKS.find(p=>p.id===ADPARK)) ADPARK = lockPark;   // standaard eigen park
+    pp = ADPARK;
+    $("adParkTabs").innerHTML = AD_PARKS.map(p=>
+      `<button class="tab ${p.id===ADPARK?"active":""}" data-park="${p.id}">${p.name}</button>`).join("");
+    $("adParkTabs").classList.remove("hidden");
+    document.querySelectorAll("#adParkTabs .tab").forEach(b=>b.addEventListener("click", ()=>{
+      ADPARK = Number(b.dataset.park); renderAds();
+    }));
   } else if(lockPark != null){
     pp = lockPark;
     $("adParkTabs").classList.add("hidden");
@@ -3382,6 +3394,17 @@ async function renderArchief(){
   let pp;
   const lockPark = (v.role==="owner") ? (v.park ?? SCOPED_PARK ?? null) : null;   // Karl/Carl: park-gebonden eigenaar → vast park, geen keuze
   if(v.role==="park"){ pp = v.id; $("archParkTabs").classList.add("hidden"); }
+  else if(lockPark != null && AD_PARKS.length > 1){
+    // Carl: WD + Frankrijk kiesbaar, alleen op de archief-tab
+    if(!ARCHPARK || !AD_PARKS.find(p=>p.id===ARCHPARK)) ARCHPARK = lockPark;
+    pp = ARCHPARK;
+    $("archParkTabs").innerHTML = AD_PARKS.map(p=>
+      `<button class="tab ${p.id===ARCHPARK?"active":""}" data-park="${p.id}">${p.name}</button>`).join("");
+    $("archParkTabs").classList.remove("hidden");
+    document.querySelectorAll("#archParkTabs .tab").forEach(b=>b.addEventListener("click", ()=>{
+      ARCHPARK = Number(b.dataset.park); renderArchief();
+    }));
+  }
   else if(lockPark != null){ pp = lockPark; $("archParkTabs").classList.add("hidden"); }
   else {
     if(!ARCHPARK || !PARKS.find(p=>p.id===ARCHPARK)) ARCHPARK = (PARKS[0]||{}).id;
