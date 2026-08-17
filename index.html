@@ -1393,10 +1393,19 @@ async function boot(){
 function currentView(){
   const v = $("viewAs").value;
   if(v==="owner") return { role:"owner" };
-  if(v==="nofinance") return { role:"owner", nofinance:true, park:3 };   // testweergave Karl/Carl: eigenaar Wielsche Dreef, zonder financiën
+  if(v==="nofinance") return { role:"owner", nofinance:true, park:3,   // testweergave Carl: eigen park WD + Frankrijk-advertenties/resultaten, zonder financiën
+    adParks:[{id:3,name:"Wielsche Dreef"},{id:1,name:"Frankrijk"}] };
   if(v==="toine") return { role:"owner", nofinance:true, nocalls:true }; // Toine: alle parken/advertenties, geen beldata, geen financiën
   const [role,id] = v.split(":");
   return { role, id:Number(id) };
+}
+// Parken waaruit een park-gebonden eigenaar (Carl) of z'n testweergave mag kiezen op de ad-/resultaten-tabs.
+// null = geen speciale parkkeuze (gewone makelaar/park/volledige eigenaar/1-park-eigenaar).
+function carlAdParks(){
+  const v = currentView();
+  if(v.adParks && v.adParks.length > 1) return v.adParks;            // testweergave
+  if(SCOPED_PARK != null && AD_PARKS.length > 1) return AD_PARKS;    // echte Carl-login
+  return null;
 }
 
 async function applyRole(){
@@ -1760,15 +1769,16 @@ function adChartOptions(dd){
 async function renderAds(){
   const v = currentView();
   const lockPark = (v.role==="owner") ? (v.park ?? SCOPED_PARK ?? null) : null;   // Karl/Carl: park-gebonden eigenaar → vast park, geen keuze
+  const adKeuze = carlAdParks();   // Carl (echt of preview): WD + Frankrijk kiesbaar
   let pp;
   if(v.role==="park"){
     pp = v.id;
     $("adParkTabs").classList.add("hidden");
-  } else if(lockPark != null && AD_PARKS.length > 1){
+  } else if(adKeuze){
     // park-gebonden eigenaar mét extra ad-parken (Carl: WD + Frankrijk): kiesbare sub-tabs, alleen hier op de ad-tab
-    if(!ADPARK || !AD_PARKS.find(p=>p.id===ADPARK)) ADPARK = lockPark;   // standaard eigen park
+    if(!ADPARK || !adKeuze.find(p=>p.id===ADPARK)) ADPARK = (lockPark ?? adKeuze[0].id);   // standaard eigen park
     pp = ADPARK;
-    $("adParkTabs").innerHTML = AD_PARKS.map(p=>
+    $("adParkTabs").innerHTML = adKeuze.map(p=>
       `<button class="tab ${p.id===ADPARK?"active":""}" data-park="${p.id}">${p.name}</button>`).join("");
     $("adParkTabs").classList.remove("hidden");
     document.querySelectorAll("#adParkTabs .tab").forEach(b=>b.addEventListener("click", ()=>{
@@ -2396,12 +2406,14 @@ async function renderOwner(){
   // gescoopte eigenaar (Carl-login) of Karl-preview: park vastzetten en het parkfilter vergrendelen.
   // Carl mét extra ad-parken mag wél kiezen tussen zijn toegestane parken (standaard eigen park).
   const cvO = currentView();
-  const carlKiest = (cvO.role==="owner" && cvO.park==null && SCOPED_PARK!=null && AD_PARKS.length>1);
-  let scopePark = cvO.park ?? SCOPED_PARK ?? null;
+  const adKeuze = carlAdParks();                    // WD + Frankrijk kiesbaar (Carl-login óf testweergave); anders null
+  const home = cvO.park ?? SCOPED_PARK ?? null;      // eigen park
+  let scopePark = home;
   let parkVal = $("fPark").value;
-  if(carlKiest){
-    if(!AD_PARKS.find(p=>String(p.id)===parkVal)) parkVal = String(SCOPED_PARK);
-    $("fPark").value = parkVal; $("fPark").disabled = false;
+  if(adKeuze){
+    fillSelect($("fPark"), adKeuze.map(p=>({value:p.id,label:p.name})), null);
+    if(!adKeuze.find(p=>String(p.id)===parkVal)) parkVal = String(home ?? adKeuze[0].id);   // standaard eigen park
+    $("fPark").value = parkVal; $("fPark").disabled = false; $("fPark").classList.remove("hidden");
     scopePark = Number(parkVal);
   } else if(scopePark != null){ parkVal = String(scopePark); $("fPark").value = parkVal; $("fPark").disabled = true; }
   else { $("fPark").disabled = false; }
@@ -3410,12 +3422,13 @@ async function renderArchief(){
   const v = currentView();
   let pp;
   const lockPark = (v.role==="owner") ? (v.park ?? SCOPED_PARK ?? null) : null;   // Karl/Carl: park-gebonden eigenaar → vast park, geen keuze
+  const adKeuze = carlAdParks();   // Carl (echt of preview): WD + Frankrijk kiesbaar
   if(v.role==="park"){ pp = v.id; $("archParkTabs").classList.add("hidden"); }
-  else if(lockPark != null && AD_PARKS.length > 1){
+  else if(adKeuze){
     // Carl: WD + Frankrijk kiesbaar, alleen op de archief-tab
-    if(!ARCHPARK || !AD_PARKS.find(p=>p.id===ARCHPARK)) ARCHPARK = lockPark;
+    if(!ARCHPARK || !adKeuze.find(p=>p.id===ARCHPARK)) ARCHPARK = (lockPark ?? adKeuze[0].id);
     pp = ARCHPARK;
-    $("archParkTabs").innerHTML = AD_PARKS.map(p=>
+    $("archParkTabs").innerHTML = adKeuze.map(p=>
       `<button class="tab ${p.id===ARCHPARK?"active":""}" data-park="${p.id}">${p.name}</button>`).join("");
     $("archParkTabs").classList.remove("hidden");
     document.querySelectorAll("#archParkTabs .tab").forEach(b=>b.addEventListener("click", ()=>{
