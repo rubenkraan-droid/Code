@@ -1416,8 +1416,8 @@ async function applyRole(){
   // Bellen: makelaars + master-eigenaar, niet de parkeigenaar/park-gebonden eigenaar (Karl/Carl)
   // en niet een eigenaar zonder beldata-toegang (bv. Toine, echt óf testweergave)
   const parkGebondenEig = owner && (SCOPED_PARK != null || v.park != null);
-  const geenBeldata = LOGIN_NO_CALLS || v.nocalls;
-  document.querySelector('.tab[data-tab="bellen"]').classList.toggle("hidden", parkV || parkGebondenEig || geenBeldata);
+  const geenBeldata = !!(LOGIN_NO_CALLS || v.nocalls);   // echte boolean: anders wordt toggle("hidden", undefined) een flip (tab knippert aan/uit)
+  document.querySelector('.tab[data-tab="bellen"]').classList.toggle("hidden", !!(parkV || parkGebondenEig || geenBeldata));
   // Mailflow: alleen de master-eigenaar (Ruben), niet makelaars/parkgebruiker en niet de park-gebonden eigenaar (Karl/Carl)
   document.querySelector('.tab[data-tab="mailflow"]').classList.toggle("hidden", !owner || parkGebondenEig);
   // Resale (cross-park pijplijn) niet voor parkgebruiker of park-gebonden eigenaar (Carl/Karl)
