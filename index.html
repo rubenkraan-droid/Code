@@ -462,8 +462,10 @@
     <div class="sec">Per makelaar</div>
     <div class="panel"><table id="agentTable"></table></div>
     <p id="definitiefNote" class="foot" style="margin-top:6px"></p>
-    <div class="sec" style="margin-top:24px">Omzet per park</div>
-    <div class="chartbox" style="margin-bottom:26px"><canvas id="parkChart" height="200"></canvas></div>
+    <div id="omzetParkSec">
+      <div class="sec" style="margin-top:24px">Omzet per park</div>
+      <div class="chartbox" style="margin-bottom:26px"><canvas id="parkChart" height="200"></canvas></div>
+    </div>
     <div class="sec">Waarom leads afvallen · verloren redenen uit Pipedrive · klik op een reden voor de deals</div>
     <div class="grid2">
       <div>
@@ -1431,13 +1433,15 @@ async function applyRole(){
   $("tabArchief").classList.add("hidden");
   $("tabResale").classList.add("hidden");
   if(owner && SCOPED_PARK != null){
-    // park-gebonden eigenaar (Carl): eigen-park-weergave, géén master-benaming of parkkeuze
+    // park-gebonden eigenaar (Carl): eigen-park-weergave. Mét extra ad-parken (AD_PARKS) mag hij op
+    // Resultaten/Advertenties/Archief tussen zijn parken schakelen; anders alleen het eigen park.
+    const carlKiest = AD_PARKS.length > 1;
     const pnaam = (PARKS.find(p=>p.id===SCOPED_PARK)||{}).name || "Dashboard";
     $("title").textContent = pnaam;
     $("subtitle").textContent = "Eigenaar · " + pnaam;
     $("liveSec").classList.add("hidden");              // geen multi-park master-overzicht
-    $("fPark").classList.add("hidden");                // enkel eigen park, geen parkfilter
-    fillSelect($("fPark"), PARKS.filter(p=>!isDemo(p.id)).map(p=>({value:p.id,label:p.name})), null);
+    $("fPark").classList.toggle("hidden", !carlKiest); // parkkeuze alleen bij extra parken (Carl)
+    fillSelect($("fPark"), (carlKiest ? AD_PARKS : PARKS.filter(p=>!isDemo(p.id))).map(p=>({value:p.id,label:p.name})), null);
     fillSelect($("fAgent"), AGENTS.filter(a=>!isDemoAgent(a.id)).map(a=>({value:a.id,label:a.name})), "Alle makelaars");
     $("fPark").value = String(SCOPED_PARK); $("fAgent").value = "all";
     setBranding(SCOPED_PARK);
@@ -2259,19 +2263,20 @@ function renderBestAds(){
 /* ---------- advertentiebudget per maand (lead-geankerd) ---------- */
 function renderAdMonths(rows, tableId, secId){
   tableId = tableId || "adMonthTable"; secId = secId || "adMonthSec";
+  const geenOmzet = LOGIN_NO_FINANCE || (typeof currentView==="function" && currentView().nofinance);   // no_finance (Carl): omzetkolom weg
   const mfmt = d => { const s = new Date(d).toLocaleDateString("nl-NL",{month:"long",year:"numeric"});
     return s.charAt(0).toUpperCase()+s.slice(1); };
   $(secId).classList.toggle("hidden", !rows.length);
   if(!rows.length) return;
   $(tableId).innerHTML =
     `<thead><tr><th style="text-align:left">Maand</th><th>Uitgaven</th><th>Leads</th><th>CPL</th>
-       <th>Afspraken</th><th>CPA</th><th>Sales</th><th>Omzet</th><th>Kost/sale</th><th>ROAS</th></tr></thead>
+       <th>Afspraken</th><th>CPA</th><th>Sales</th>${geenOmzet?"":"<th>Omzet</th>"}<th>Kost/sale</th><th>ROAS</th></tr></thead>
      <tbody>${rows.map(m=>`<tr>
        <td style="text-align:left">${mfmt(m.maand)}</td>
        <td style="font-weight:600">${eur(m.spend)}</td>
        <td>${m.leads}</td><td>${m.leads>0?eur(m.cpl):"—"}</td>
        <td>${m.afspraken}</td><td>${m.afspraken>0?eur(m.cpa):"—"}</td>
-       <td>${m.sales}</td><td style="font-weight:600">${Number(m.omzet)>0?eur(m.omzet):"—"}</td>
+       <td>${m.sales}</td>${geenOmzet?"":`<td style="font-weight:600">${Number(m.omzet)>0?eur(m.omzet):"—"}</td>`}
        <td>${m.sales>0?eur(m.kost_per_sale):"—"}</td><td>${Number(m.roas)>0?Math.min(ADROASCAP,Number(m.roas)).toFixed(2):"—"}</td></tr>`).join("")}</tbody>`;
 }
 
@@ -2282,9 +2287,10 @@ function renderMonths(rows, opts){
     return s.charAt(0).toUpperCase()+s.slice(1); };
   const mkey = d => String(d).slice(0,7);
   const heeftDef = opts.def != null;
+  const geenOmzet = LOGIN_NO_FINANCE || (typeof currentView==="function" && currentView().nofinance);   // no_finance (Carl): omzetkolommen weg
   $("monthTable").innerHTML =
     `<thead><tr><th>Maand</th>${opts.spend?"<th>Uitgaven</th>":""}${opts.leads?"<th>Leads</th>":""}
-      <th>Afspraken</th><th>Sales</th>${heeftDef?`<th>Definitief <span class="info" tabindex="0">i<span class="tip">Aantal verkopen van die maand waarvan de koopovereenkomst definitief is (koopcontract definitief, naar de notaris of gepasseerd).</span></span></th>`:""}<th>Omzet</th><th>Omzet per afspraak</th><th>Closing %</th></tr></thead>
+      <th>Afspraken</th><th>Sales</th>${heeftDef?`<th>Definitief <span class="info" tabindex="0">i<span class="tip">Aantal verkopen van die maand waarvan de koopovereenkomst definitief is (koopcontract definitief, naar de notaris of gepasseerd).</span></span></th>`:""}${geenOmzet?"":"<th>Omzet</th><th>Omzet per afspraak</th>"}<th>Closing %</th></tr></thead>
      <tbody>${rows.map(x=>{
        const per = x.appointments ? Math.round(x.revenue/x.appointments) : 0;
        const cl  = x.appointments ? Math.round(x.sales/x.appointments*100) : 0;
@@ -2298,7 +2304,7 @@ function renderMonths(rows, opts){
          ${opts.spend?`<td>${x.spend==null?"—":eur(x.spend)}</td>`:""}
          ${opts.leads?`<td>${x.leads}</td>`:""}
          <td>${x.appointments}</td><td>${x.sales}</td>${defCell}
-         <td style="font-weight:600">${eur(x.revenue)}</td><td>${eur(per)}</td><td>${cl}%</td></tr>`;
+         ${geenOmzet?"":`<td style="font-weight:600">${eur(x.revenue)}</td><td>${eur(per)}</td>`}<td>${cl}%</td></tr>`;
      }).join("")}</tbody>`;
   // infoblokje: over de meest recente maand mét verkopen
   const note = $("monthDefNote");
@@ -2387,11 +2393,19 @@ async function renderLive(r, pp){
 /* ---------- EIGENAAR ---------- */
 async function renderOwner(){
   const r = periodRange();
-  // gescoopte eigenaar (Carl-login) of Karl-preview: park vastzetten en het parkfilter vergrendelen
-  const scopePark = currentView().park ?? SCOPED_PARK ?? null;
+  // gescoopte eigenaar (Carl-login) of Karl-preview: park vastzetten en het parkfilter vergrendelen.
+  // Carl mét extra ad-parken mag wél kiezen tussen zijn toegestane parken (standaard eigen park).
+  const cvO = currentView();
+  const carlKiest = (cvO.role==="owner" && cvO.park==null && SCOPED_PARK!=null && AD_PARKS.length>1);
+  let scopePark = cvO.park ?? SCOPED_PARK ?? null;
   let parkVal = $("fPark").value;
-  if(scopePark != null){ parkVal = String(scopePark); $("fPark").value = parkVal; $("fPark").disabled = true; }
+  if(carlKiest){
+    if(!AD_PARKS.find(p=>String(p.id)===parkVal)) parkVal = String(SCOPED_PARK);
+    $("fPark").value = parkVal; $("fPark").disabled = false;
+    scopePark = Number(parkVal);
+  } else if(scopePark != null){ parkVal = String(scopePark); $("fPark").value = parkVal; $("fPark").disabled = true; }
   else { $("fPark").disabled = false; }
+  const geenOmzet = LOGIN_NO_FINANCE || cvO.nofinance;   // no_finance (Carl): courtage/omzet-euro's verbergen op Resultaten
   const agentVal = $("fAgent").value;
   const parkNum = parkVal==="all" ? null : Number(parkVal);
   renderLive(r, parkNum);
@@ -2414,7 +2428,7 @@ async function renderOwner(){
   $("cardsTop").innerHTML =
     // bovenste rij: bron-KPI's (de trechter van uitgaven tot definitief)
     metric("Uitgaven",eur(f.spend),deltaSub(f.spend,fp&&fp.spend,heeftPrev,true)+sparkSlot("uitgaven")) +
-    metric("Omzet",eur(f.revenue),deltaSub(f.revenue,fp&&fp.revenue,heeftPrev)+sparkSlot("omzet")) +
+    (geenOmzet ? "" : metric("Omzet",eur(f.revenue),deltaSub(f.revenue,fp&&fp.revenue,heeftPrev)+sparkSlot("omzet"))) +
     metricDeal("Leads",f.leads||0,'leads',null,'',false,parkVal==="all"?null:Number(parkVal),deltaSub(f.leads,fp&&fp.leads,heeftPrev)+sparkSlot("leads")) +
     metricDeal("Afspraken",f.appointments||0,'afspraken',null,'',false,parkVal==="all"?null:Number(parkVal),deltaSub(f.appointments,fp&&fp.appointments,heeftPrev)+sparkSlot("afspraken")) +
     metric("Shows",shows,`<div class="l" style="margin:5px 0 0">afspraken die geweest zijn</div>`) +
@@ -2422,7 +2436,7 @@ async function renderOwner(){
     metric("Definitief",defAant,defSubKaart(dc)) +
     // onderste rij: afgeleide KPI's — exact ónder hun bron-KPI
     metric(`ROAS <span class="info" tabindex="0">i<span class="tip">Omzet (verkoopsom) &divide; advertentiekosten van deze periode. Let op: dit zet de totale omzet af tegen de advertentie-uitgaven — ook omzet uit leads die niet via een advertentie binnenkwamen telt mee. Een lead van nu leidt bovendien vaak pas later tot omzet.</span></span>`, roasTxt) +
-    metric("Omzet per afspraak",eur(perAppt)) +
+    (geenOmzet ? "" : metric("Omzet per afspraak",eur(perAppt))) +
     metric("CPL",eur(f.cost_per_lead)) +
     metric("Afspraak %",(f.leads ? (f.appointments/f.leads*100).toFixed(1) : "0")+"%") +
     metric("No-show %",(f.no_show_pct||0)+"%") +
@@ -2435,7 +2449,7 @@ async function renderOwner(){
   const defRows = await rpc("agent_definitief", {...r, p_park_id: scopePark}) || [];
   const defMap = {}; defRows.forEach(x=>defMap[x.agent_id]=Number(x.definitief)||0);
   $("agentTable").innerHTML =
-    `<thead><tr><th>Makelaar</th><th>Leads</th><th>Afspraken</th><th>Show %</th><th>Shows</th><th>Closing %</th><th>Sales</th><th>Definitief</th><th>Omzet per afspraak</th><th>Omzet</th></tr></thead>
+    `<thead><tr><th>Makelaar</th><th>Leads</th><th>Afspraken</th><th>Show %</th><th>Shows</th><th>Closing %</th><th>Sales</th><th>Definitief</th>${geenOmzet?"":"<th>Omzet per afspraak</th><th>Omzet</th>"}</tr></thead>
      <tbody>${agents.map(a=>{
        const showPct = Math.round((100 - (a.no_show_pct||0))*10)/10;
        const scls = showPct>=90?"good":showPct<80?"bad":"";
@@ -2448,20 +2462,23 @@ async function renderOwner(){
          <td class="${cls}">${a.shows>0?a.closing_rate_pct+"%":"—"}</td>
          ${dcell(a.sales,'verkopen',a.agent_id,a.agent)}
          <td>${defMap[a.agent_id]||0}</td>
-         <td>${eur(a.revenue_per_appt)}</td><td style="font-weight:600">${eur(a.revenue)}</td></tr>`;
+         ${geenOmzet?"":`<td>${eur(a.revenue_per_appt)}</td><td style="font-weight:600">${eur(a.revenue)}</td>`}</tr>`;
      }).join("")}</tbody>`;
   const _ds = Number(dc.sales)||0, _dd = Number(dc.definitief)||0;
   $("definitiefNote").textContent = _ds===0 ? "" : (_dd>=_ds ? "Alle verkopen zijn definitief." : "Nog niet alle koopovereenkomsten zijn definitief voor deze maand.");
 
-  const pa = await rpc("owner_park_agent", {...r, p_park_id: scopePark}) || [];
-  const parkNames = [...new Set(pa.map(x=>x.park))];
-  const agentNames = [...new Set(pa.map(x=>x.agent))];
-  const palette = ["#2C5F52","#B8862E","#B5432E","#726F60","#4B7A3E"];
-  const datasets = agentNames.map((ag,i)=>({
-    label:ag, backgroundColor:palette[i%palette.length],
-    data: parkNames.map(pn => Number((pa.find(x=>x.park===pn&&x.agent===ag)||{}).revenue)||0)
-  }));
-  drawChart(parkNames.map(n=>n.replace("Park ","")), datasets);
+  $("omzetParkSec").classList.toggle("hidden", geenOmzet);   // omzet-per-park is courtage → weg voor Carl
+  if(!geenOmzet){
+    const pa = await rpc("owner_park_agent", {...r, p_park_id: scopePark}) || [];
+    const parkNames = [...new Set(pa.map(x=>x.park))];
+    const agentNames = [...new Set(pa.map(x=>x.agent))];
+    const palette = ["#2C5F52","#B8862E","#B5432E","#726F60","#4B7A3E"];
+    const datasets = agentNames.map((ag,i)=>({
+      label:ag, backgroundColor:palette[i%palette.length],
+      data: parkNames.map(pn => Number((pa.find(x=>x.park===pn&&x.agent===ag)||{}).revenue)||0)
+    }));
+    drawChart(parkNames.map(n=>n.replace("Park ","")), datasets);
+  }
 
   renderReasons(r);
   const opvolgStale = await renderOpvolg(agentVal==="all"?null:Number(agentVal), parkVal==="all"?null:Number(parkVal), true);
