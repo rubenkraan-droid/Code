@@ -1500,13 +1500,16 @@ async function applyRole(){
     if(activeTab==="bellen"){ activeTab="resultaten"; }
   }
   if(setterV){
-    // setter: alle andere tabbladen weg, direct op Bellen landen
+    // setter: alle andere tabknoppen ÉN content-panelen weg, direct op Bellen landen.
+    // (content-panelen expliciet dichtdoen, anders blijft bv. het Financiën-paneel uit een
+    //  vorige owner-sessie zichtbaar onder de setter-weergave.)
     ['resultaten','advertenties','archief','financien','mailflow','resale'].forEach(t=>{
       const b = document.querySelector(`.tab[data-tab="${t}"]`); if(b) b.classList.add("hidden");
     });
     document.querySelector('.tab[data-tab="bellen"]').classList.remove("hidden");
     document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active", x.dataset.tab==="bellen"));
-    $("tabResultaten").classList.add("hidden");
+    ['tabResultaten','tabAdvertenties','tabArchief','tabFinance','tabMailflow','tabResale']
+      .forEach(id=>$(id).classList.add("hidden"));
     $("tabBellen").classList.remove("hidden");
     activeTab = "bellen";
   }
