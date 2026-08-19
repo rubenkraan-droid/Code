@@ -1337,7 +1337,8 @@ async function startAsUser(email){
       AGENTS.push(DEMO_AGENT);   // demo-makelaar meelopen in de "Bekijk als"-lijst
       $("viewAs").innerHTML =
         `<option value="owner">Master (alles)</option>`
-        + `<optgroup label="Makelaar">${AGENTS.map(a=>`<option value="agent:${a.id}">${esc(a.name)}</option>`).join("")}</optgroup>`
+        + `<optgroup label="Makelaar">${AGENTS.filter(a=>!a.is_setter).map(a=>`<option value="agent:${a.id}">${esc(a.name)}</option>`).join("")}</optgroup>`
+        + (AGENTS.some(a=>a.is_setter) ? `<optgroup label="Setter">${AGENTS.filter(a=>a.is_setter).map(a=>`<option value="setter:${a.id}">${esc(a.name)}</option>`).join("")}</optgroup>` : "")
         + `<optgroup label="Recreatieontwikkelaar">${PARKS.map(p=>`<option value="park:${p.id}">${esc(p.name)}</option>`).join("")}</optgroup>`
         + `<optgroup label="Test"><option value="nofinance">Karl · Wielsche Dreef, zonder financiën</option>`
         + `<option value="toine">Toine · advertenties, geen beldata/financiën</option></optgroup>`;
@@ -1352,6 +1353,14 @@ async function startAsUser(email){
     AGENTS = [{ id: row.agent_id, name: row.agent_name }];
     $("viewAs").innerHTML = `<option value="agent:${row.agent_id}">${esc(row.agent_name)}</option>`;
     $("viewAs").value = "agent:" + row.agent_id;
+    $("viewAs").classList.add("hidden");               // op slot
+  } else if(row.role === "setter"){
+    // appointment setter: uitsluitend eigen belwerk (Bellen-tabblad), dropdown vergrendeld
+    $("whoami").textContent = email + " · Setter " + row.agent_name;
+    PARKS  = [DEMO_PARK];
+    AGENTS = [{ id: row.agent_id, name: row.agent_name }];
+    $("viewAs").innerHTML = `<option value="setter:${row.agent_id}">${esc(row.agent_name)}</option>`;
+    $("viewAs").value = "setter:" + row.agent_id;
     $("viewAs").classList.add("hidden");               // op slot
   } else {
     // parkgebruiker: uitsluitend eigen park, dropdown vergrendeld
@@ -1410,7 +1419,7 @@ function carlAdParks(){
 
 async function applyRole(){
   const v = currentView();
-  const owner = v.role==="owner", agentV = v.role==="agent", parkV = v.role==="park";
+  const owner = v.role==="owner", agentV = v.role==="agent", parkV = v.role==="park", setterV = v.role==="setter";
   $("ownerOnly").classList.toggle("hidden", !owner);
   $("agentOnly").classList.toggle("hidden", !agentV);
   $("parkOnly").classList.toggle("hidden", !parkV);
@@ -1434,6 +1443,9 @@ async function applyRole(){
   document.querySelector('.tab[data-tab="mailflow"]').classList.toggle("hidden", !owner || parkGebondenEig);
   // Resale (cross-park pijplijn) niet voor parkgebruiker of park-gebonden eigenaar (Carl/Karl)
   document.querySelector('.tab[data-tab="resale"]').classList.toggle("hidden", parkV || SCOPED_PARK != null || v.park != null);
+  // Resultaten: iedereen behalve de setter (die ziet alleen Bellen). Expliciet, anders blijft 'ie
+  // verborgen na een setter-preview bij het terugschakelen.
+  document.querySelector('.tab[data-tab="resultaten"]').classList.toggle("hidden", setterV);
   $("tabs").classList.remove("hidden");
   activeTab = "resultaten";
   document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active", x.dataset.tab==="resultaten"));
@@ -1469,6 +1481,12 @@ async function applyRole(){
     $("fPark").value = "all";
     setBranding(null);
     refresh = () => renderAgent(v.id);
+  } else if(setterV){
+    // appointment setter: alleen eigen belwerk
+    $("title").textContent = "Mijn belwerk";
+    $("subtitle").textContent = "Setter · " + ((AGENTS.find(a=>a.id===v.id)||{}).name||"");
+    setBranding(null);
+    refresh = renderBellen;
   } else {
     $("title").textContent = "Park dashboard";
     $("subtitle").textContent = "Parkweergave · " + ((PARKS.find(p=>p.id===v.id)||{}).name||"");
@@ -1480,6 +1498,17 @@ async function applyRole(){
   }
   if(LOGIN_NO_CALLS || v.nocalls){       // eigenaar zonder beldata (bv. Toine): Bellen-tab verborgen
     if(activeTab==="bellen"){ activeTab="resultaten"; }
+  }
+  if(setterV){
+    // setter: alle andere tabbladen weg, direct op Bellen landen
+    ['resultaten','advertenties','archief','financien','mailflow','resale'].forEach(t=>{
+      const b = document.querySelector(`.tab[data-tab="${t}"]`); if(b) b.classList.add("hidden");
+    });
+    document.querySelector('.tab[data-tab="bellen"]').classList.remove("hidden");
+    document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active", x.dataset.tab==="bellen"));
+    $("tabResultaten").classList.add("hidden");
+    $("tabBellen").classList.remove("hidden");
+    activeTab = "bellen";
   }
   await refresh();
   herstelTab();
@@ -2801,7 +2830,7 @@ async function renderBelBacklog(parkId){
 async function renderBellen(){
   const r = periodRange();
   const v = currentView();
-  const eigenAgent = v.role==="agent" ? v.id : null;   // makelaar: alleen eigen rij, geen collega's
+  const eigenAgent = (v.role==="agent" || v.role==="setter") ? v.id : null;   // makelaar/setter: alleen eigen rij, geen collega's
   // park-subtabbladen (Alle parken + per park); ook makelaars zien zo hun eigen cijfers per park
   const belParken = PARKS.filter(p=>!isDemo(p.id));
   if(BELPARK!=null && !belParken.find(p=>p.id===BELPARK)) BELPARK = null;
