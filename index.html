@@ -112,6 +112,10 @@
   @media(max-width:1180px){.cards.pairs2{grid-template-columns:repeat(4,1fr)}}
   @media(max-width:860px){.cards.pairs2{grid-template-columns:1fr 1fr}}
   @media(max-width:340px){.cards.pairs2{grid-template-columns:1fr}}
+  .cards.pairs2.met-optie{grid-template-columns:repeat(8,1fr)}   /* WD: extra Onder Optie-tegel */
+  @media(max-width:1180px){.cards.pairs2.met-optie{grid-template-columns:repeat(4,1fr)}}
+  @media(max-width:860px){.cards.pairs2.met-optie{grid-template-columns:1fr 1fr}}
+  @media(max-width:340px){.cards.pairs2.met-optie{grid-template-columns:1fr}}
   .metric{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px 17px;box-shadow:var(--shadow)}
   .metric.hasdonut{display:flex;align-items:center;gap:13px}
   .metric .mtxt{min-width:0}
@@ -1266,7 +1270,7 @@ function defSubKaart(ds){
 const closingOpShows = (sales, shows) => shows>0 ? Math.round((Number(sales)||0)/shows*100) : 0;
 
 /* klikbare deals-cellen/cards: leads/afspraken/verkopen -> lijst met Pipedrive-links */
-const KINDLBL = { leads:"Leads", afspraken:"Afspraken", verkopen:"Verkopen" };
+const KINDLBL = { leads:"Leads", afspraken:"Afspraken", verkopen:"Verkopen", onder_optie:"Onder Optie" };
 const dcell = (waarde, kind, agentId, naam, resale) => Number(waarde)>0
   ? `<td><span class="deal-link" data-kind="${kind}" data-agentid="${agentId==null?'':agentId}" data-naam="${String(naam||'').replace(/"/g,'')}" data-resale="${resale?1:0}" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px">${waarde}</span></td>`
   : `<td>${waarde}</td>`;
@@ -2475,7 +2479,14 @@ async function renderOwner(){
   const closing = closingOpShows(f.sales, shows);   // closing telt op shows (afspraken die geweest zijn)
   const perAppt = f.appointments ? Math.round(f.revenue/f.appointments) : 0;
   const roasTxt = Number(f.spend)>0 ? (f.revenue/f.spend).toFixed(2) : "—";
-  $("cardsTop").className = "cards pairs2";
+  // Onder Optie (WD-tussenstap tussen Shows en Sales): periode-count voor de klikbare funnel-tegel
+  const toonOptie = parkVal==="all" || Number(parkVal)===3;
+  let optieAantal = 0;
+  if(toonOptie){
+    optieAantal = ((await rpc("agent_deals", { p_agent_id:null, ...r, p_kind:'onder_optie', p_park_id: parkVal==="all"?3:Number(parkVal) })) || []).length;
+  }
+  const optiePct = shows>0 ? (optieAantal/shows*100).toFixed(1) : "0";
+  $("cardsTop").className = "cards pairs2" + (toonOptie ? " met-optie" : "");
   const defAant = Number(dc.definitief)||0;
   $("cardsTop").innerHTML =
     // bovenste rij: bron-KPI's (de trechter van uitgaven tot definitief)
@@ -2484,6 +2495,7 @@ async function renderOwner(){
     metricDeal("Leads",f.leads||0,'leads',null,'',false,parkVal==="all"?null:Number(parkVal),deltaSub(f.leads,fp&&fp.leads,heeftPrev)+sparkSlot("leads")) +
     metricDeal("Afspraken",f.appointments||0,'afspraken',null,'',false,parkVal==="all"?null:Number(parkVal),deltaSub(f.appointments,fp&&fp.appointments,heeftPrev)+sparkSlot("afspraken")) +
     metric("Shows",shows,`<div class="l" style="margin:5px 0 0">afspraken die geweest zijn</div>`) +
+    (toonOptie ? metricDeal("Onder Optie",optieAantal,'onder_optie',null,'',false,parkVal==="all"?3:Number(parkVal),`<div class="l" style="margin:5px 0 0">WD · klik voor de deals</div>`) : "") +
     metricDeal("Sales",f.sales||0,'verkopen',null,'',false,parkVal==="all"?null:Number(parkVal),deltaSub(f.sales,fp&&fp.sales,heeftPrev)+sparkSlot("sales")) +
     metric("Definitief",defAant,defSubKaart(dc)) +
     // onderste rij: afgeleide KPI's — exact ónder hun bron-KPI
@@ -2492,6 +2504,7 @@ async function renderOwner(){
     metric("CPL",eur(f.cost_per_lead)) +
     metric("Afspraak %",(f.leads ? (f.appointments/f.leads*100).toFixed(1) : "0")+"%") +
     metric("No-show %",(f.no_show_pct||0)+"%") +
+    (toonOptie ? metric("Optie %",optiePct+"%",`<div class="l" style="margin:5px 0 0">van de shows</div>`) : "") +
     metric("Closing %",(closing||0)+"%") +
     metric("Afval % "+AFVAL_TIP, afvalWaarde(f.afval_pct));
   $("heroWrap").classList.add("hidden");   // trechter verwijderd op verzoek — alleen de Afspraken/Shows/Sales-tegels
@@ -2553,7 +2566,6 @@ async function renderOwner(){
   const cohortMo = await rpc("ad_monthly", { p_park_id: parkVal==="all"?null:Number(parkVal), p_from:r.p_from, p_to:r.p_to }) || [];
   renderAdMonths(cohortMo, "ownerCohortTable", "ownerCohortSec");
   // Onder Optie (WD-tussenstap): afvalratio + conversievergelijking (direct vs via optie). Alleen bij WD in beeld.
-  const toonOptie = parkVal==="all" || Number(parkVal)===3;
   $("optieSec").classList.toggle("hidden", !toonOptie);
   if(toonOptie){
     const [oAfval, oConv] = await Promise.all([
