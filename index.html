@@ -502,6 +502,14 @@
     <div class="panel" style="margin-bottom:26px"><div class="scroll"><table id="ownerCohortTable"></table></div></div>
   </div>
 
+  <div id="optieSec" class="hidden">
+    <div class="sec">Onder Optie · Wielsche Dreef
+      <span class="info" tabindex="0">i<span class="tip">Sinds 24 aug 2026 zit er een tussenstap &lsquo;Onder Optie&rsquo; tussen &lsquo;Afspraak geweest&rsquo; en &lsquo;Informeel akkoord&rsquo;. Bovenaan: wat er gebeurt met deals die die stap in gaan (afval vs. doorstroom naar akkoord). Daaronder: converteren deals die na de afspraak dírect naar akkoord gaan beter of slechter dan deals die eerst een optie krijgen. Meet vanaf de invoering; deals van vóór 24 aug kenden deze stap niet, dus de cijfers bouwen zich op.</span></span>
+    </div>
+    <div id="optieKpis" class="cards"></div>
+    <div class="panel" style="margin:12px 0 26px"><div class="scroll"><table id="optieConvTable"></table></div></div>
+  </div>
+
   <div id="apptSec" class="hidden">
     <div class="sec" id="apptTitle">Afspraken</div>
     <div class="panel"><div class="scroll"><table id="apptTable"></table></div></div>
@@ -2544,6 +2552,27 @@ async function renderOwner(){
   // cohort-rendement per lead-maand (advertentie-uitgaven vs resultaat van dat cohort) — owner-only, park-gescoopt
   const cohortMo = await rpc("ad_monthly", { p_park_id: parkVal==="all"?null:Number(parkVal), p_from:r.p_from, p_to:r.p_to }) || [];
   renderAdMonths(cohortMo, "ownerCohortTable", "ownerCohortSec");
+  // Onder Optie (WD-tussenstap): afvalratio + conversievergelijking (direct vs via optie). Alleen bij WD in beeld.
+  const toonOptie = parkVal==="all" || Number(parkVal)===3;
+  $("optieSec").classList.toggle("hidden", !toonOptie);
+  if(toonOptie){
+    const [oAfval, oConv] = await Promise.all([
+      rpc("optie_afval").then(x=>x?.[0]||{}),
+      rpc("optie_conversie").then(x=>x||[]),
+    ]);
+    $("optieKpis").className = "cards";
+    $("optieKpis").innerHTML =
+      metric("In optie geweest", Number(oAfval.reached)||0) +
+      metric("Afval %", (oAfval.afval_pct||0)+"%", `<div class="l" style="margin:5px 0 0">${oAfval.verloren||0} verloren</div>`) +
+      metric("Naar akkoord %", (oAfval.akkoord_pct||0)+"%", `<div class="l" style="margin:5px 0 0">${oAfval.akkoord||0} deals</div>`) +
+      metric("Nog open", Number(oAfval.nog_open)||0);
+    const rijVoor = naam => (oConv.find(x=>x.route===naam) || {aantal:0,akkoord:0,definitief:0,verloren:0,akkoord_pct:0,definitief_pct:0});
+    const direct = rijVoor("direct"), via = rijVoor("via optie");
+    const convRij = (label,x) => `<tr><td style="text-align:left">${label}</td><td>${x.aantal}</td><td>${x.akkoord}</td><td style="font-weight:600">${x.akkoord_pct}%</td><td>${x.definitief}</td><td>${x.definitief_pct}%</td><td>${x.verloren}</td></tr>`;
+    $("optieConvTable").innerHTML =
+      `<thead><tr><th style="text-align:left">Route na afspraak</th><th>Deals</th><th>Naar akkoord</th><th>Akkoord %</th><th>Definitief</th><th>Definitief %</th><th>Verloren</th></tr></thead>
+       <tbody>${convRij("Direct naar akkoord", direct)}${convRij("Via Onder Optie", via)}</tbody>`;
+  }
   const sMo = mo.slice(-8);
   vulSparks("cardsTop", {
     uitgaven:  { values: sMo.map(x=>x.spend),        kleur:"#94A1B5" },
@@ -2563,6 +2592,7 @@ async function renderOwner(){
 /* ---------- MAKELAAR: eigen cijfers + teamgemiddelde, geen collega's ---------- */
 async function renderAgent(agentId){
   $("ownerCohortSec").classList.add("hidden");   // cohort-rendement is owner-only
+  $("optieSec").classList.add("hidden");        // Onder Optie-analyse is owner-only
   const r = periodRange();
   const parkVal = $("fPark").value;
   const pp = parkVal==="all" ? null : Number(parkVal);
@@ -2616,6 +2646,7 @@ async function renderAgent(agentId){
 /* ---------- RECREATIEONTWIKKELAAR: alleen parkgemiddelden ---------- */
 async function renderPark(parkId){
   $("ownerCohortSec").classList.add("hidden");   // cohort-rendement is owner-only
+  $("optieSec").classList.add("hidden");        // Onder Optie-analyse is owner-only
   const r = periodRange();
   setBranding(parkId);
   const rPrevP = vorigePeriode(r);
