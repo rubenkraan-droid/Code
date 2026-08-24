@@ -448,6 +448,13 @@
 
   <div class="cards" id="cardsTop"></div>
 
+  <div id="geplandSec" class="hidden">
+    <div class="sec"><span id="geplandTitle">Aankomende afspraken</span>
+      <span class="info" tabindex="0">i<span class="tip">Afspraken die nú gepland staan maar nog moeten plaatsvinden (stage &lsquo;Afspraak gepland&rsquo;, datum vanaf vandaag). Deze tellen bewust nog niet mee in de Afspraken-KPI hierboven &mdash; dat gebeurt pas zodra de afspraak is geweest. Dit is dus de pijplijn aan verkoopkansen die eraan komt.</span></span>
+    </div>
+    <div class="panel" style="margin-bottom:26px"><div class="scroll"><table id="geplandTable"></table></div></div>
+  </div>
+
   <div id="agentOnly" class="hidden">
     <div class="sec" id="teamTitle">Teamgemiddelde (alle makelaars, zonder namen)</div>
     <div class="cards" id="cardsTeam"></div>
@@ -2445,6 +2452,22 @@ async function renderLive(r, pp){
 }
 
 /* ---------- EIGENAAR ---------- */
+// Aankomende, nog te houden afspraken (pijplijn aan verkoopkansen). parkId/agentId = null → alles.
+async function renderGepland(parkId, agentId){
+  const rows = await rpc("geplande_afspraken", { p_park_id: parkId==null?null:Number(parkId), p_agent_id: agentId==null?null:Number(agentId) }) || [];
+  $("geplandSec").classList.remove("hidden");
+  $("geplandTitle").textContent = `Aankomende afspraken (${rows.length})`;
+  const parkNaam = id => (PARKS.find(p=>p.id===id)||{}).name || (id===3?"Wielsche Dreef":id===1?"Frankrijk":"—");
+  $("geplandTable").innerHTML =
+    `<thead><tr><th class="tl">Datum</th><th class="tl">Deal</th><th class="tl">Makelaar</th><th class="tl">Park</th><th></th></tr></thead>
+     <tbody>${rows.map(x=>`<tr>
+       <td style="text-align:left">${x.gepland_op?dt(x.gepland_op):"—"}</td>
+       <td style="text-align:left">#${x.deal_id}${x.titel?` · ${esc(x.titel)}`:""}</td>
+       <td style="text-align:left">${x.agent_naam?esc(x.agent_naam):"—"}</td>
+       <td style="text-align:left">${esc(parkNaam(Number(x.park_id)))}</td>
+       <td><a href="${safeUrl(x.pipedrive_url)}" target="_blank" rel="noopener">Pipedrive ↗</a></td></tr>`).join("")
+       || `<tr><td colspan="5" style="color:var(--muted);padding:14px">Nog geen afspraken gepland die nog moeten plaatsvinden.</td></tr>`}</tbody>`;
+}
 async function renderOwner(){
   const r = periodRange();
   // gescoopte eigenaar (Carl-login) of Karl-preview: park vastzetten en het parkfilter vergrendelen.
@@ -2508,6 +2531,7 @@ async function renderOwner(){
     metric("Closing %",(closing||0)+"%") +
     metric("Afval % "+AFVAL_TIP, afvalWaarde(f.afval_pct));
   $("heroWrap").classList.add("hidden");   // trechter verwijderd op verzoek — alleen de Afspraken/Shows/Sales-tegels
+  await renderGepland(parkVal==="all"?null:Number(parkVal), agentVal==="all"?null:Number(agentVal));   // aankomende afspraken (pijplijn)
 
   let agents = await rpc("owner_agent_performance", {...r, p_park_id: scopePark}) || [];
   if(agentVal!=="all") agents = agents.filter(a=>String(a.agent_id)===agentVal);
@@ -2630,6 +2654,7 @@ async function renderAgent(agentId){
     metric("Closing %",(closingA||0)+"%") + metric("Afval % "+AFVAL_TIP, afvalWaarde(s.afval_pct)) +
     metric("No-show %",(s.no_show_pct||0)+"%");
   $("heroWrap").classList.add("hidden");   // trechter verwijderd op verzoek — alleen de Afspraken/Shows/Sales-tegels
+  await renderGepland(null, null);   // makelaar: teampijplijn van aankomende afspraken (motivationeel)
   $("cardsTeam").innerHTML =
     metricT("Omzet per afspraak",eur(s.team_revenue_per_appt)) +
     metricT("Closing %",(s.team_closing_rate_pct||0)+"%") +
@@ -2693,6 +2718,7 @@ async function renderPark(parkId){
     metric("Closing %",closingOpShows(f.sales,showsP)+"%") +
     metric("Afval % "+AFVAL_TIP, afvalWaarde(f.afval_pct));
   $("heroWrap").classList.add("hidden");   // trechter verwijderd op verzoek — alleen de Afspraken/Shows/Sales-tegels
+  await renderGepland(parkId, null);   // parkweergave: aankomende afspraken van dit park
   const moP = await rpc("monthly_overview", {p_park_id:parkId}) || [];
   renderMonths(moP, {spend:false, leads:true, def: await defMaandMap(null, parkId)});
   const sMoP = moP.slice(-8);
