@@ -1451,8 +1451,8 @@ async function applyRole(){
   const parkGebondenEig = owner && (SCOPED_PARK != null || v.park != null);
   const geenBeldata = !!(LOGIN_NO_CALLS || v.nocalls);   // echte boolean: anders wordt toggle("hidden", undefined) een flip (tab knippert aan/uit)
   document.querySelector('.tab[data-tab="bellen"]').classList.toggle("hidden", !!(parkV || parkGebondenEig || geenBeldata));
-  // Mailflow: alleen de master-eigenaar (Ruben), niet makelaars/parkgebruiker en niet de park-gebonden eigenaar (Karl/Carl)
-  document.querySelector('.tab[data-tab="mailflow"]').classList.toggle("hidden", !owner || parkGebondenEig);
+  // Mailflow: alle eigenaren (incl. de park-gebonden eigenaar Carl → backend scoopt 'm op WD), niet makelaars/setter/parkgebruiker
+  document.querySelector('.tab[data-tab="mailflow"]').classList.toggle("hidden", !owner);
   // Resale (cross-park pijplijn) niet voor parkgebruiker of park-gebonden eigenaar (Carl/Karl)
   document.querySelector('.tab[data-tab="resale"]').classList.toggle("hidden", parkV || SCOPED_PARK != null || v.park != null);
   // Resultaten: iedereen behalve de setter (die ziet alleen Bellen). Expliciet, anders blijft 'ie
