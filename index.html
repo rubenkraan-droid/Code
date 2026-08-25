@@ -385,6 +385,8 @@
       <button class="tab" data-tab="archief" title="Archief · creative-library"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></svg><span class="lbl">Archief</span></button>
       <button class="tab" data-tab="financien" title="Financiën"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5c0-1.4 1.2-2 2.5-2s2.5.7 2.5 1.8c0 2.4-5 1.3-5 3.7 0 1.1 1.2 1.8 2.5 1.8s2.5-.6 2.5-2"/></svg><span class="lbl">Financiën</span></button>
       <button class="tab" data-tab="resale" title="Resale"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-7 9 7M5 10v9h5v-6h4v6h5v-9"/></svg><span class="lbl">Resale</span></button>
+      <button class="tab" data-tab="campagnes" title="Campagnes · CBO / adset"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18M7 15l4-5 3 3 5-7"/></svg><span class="lbl">Campagnes</span></button>
+      <button class="tab" data-tab="bevindingen" title="Bevindingen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.2 1 2.5h6c0-1.3.3-1.8 1-2.5A6 6 0 0 0 12 3z"/></svg><span class="lbl">Bevindingen</span></button>
     </nav>
     <div class="who">
       <button id="refreshBtn" class="btn hidden" title="Vernieuwen · verse Pipedrive-sync + data opnieuw ophalen" aria-label="Vernieuwen"><svg class="rico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v5h-5"/></svg></button>
@@ -757,6 +759,26 @@
     </div>
     <div id="archGrid" class="arch"></div>
     <p class="foot" id="archFoot"></p>
+  </div>
+
+  <div id="tabCampagnes" class="hidden">
+    <div id="campParkTabs" class="tabs hidden" style="margin-bottom:16px"></div>
+    <div class="sec" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span style="flex:1;min-width:220px">Kosten per afspraak &amp; per sale <span id="campScope" style="font-weight:400;text-transform:none;color:var(--muted)"></span>
+        <span class="info" tabindex="0">i<span class="tip">Rolt de advertentiekosten (uit Meta) op naar campagne- of adsetniveau en zet ze tegen de afspraken en sales uit Pipedrive. Afspraak telt pas als hij geweest is; sale = echte verkoop; resale uitgesloten. Verse adsets: de afspraken lopen achter op de leads, dus de CPA zakt nog als die leads converteren. CPL/CPA/CPSale = uitgaven ÷ leads/afspraken/sales. Alleen leads die aan een advertentie gekoppeld zijn tellen mee.</span></span>
+      </span>
+      <div class="segwrap" id="campToggle" style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden">
+        <button class="segbtn" data-camp="adset" style="border:0;background:transparent;padding:7px 14px;cursor:pointer;font:inherit">Per adset</button>
+        <button class="segbtn" data-camp="campagne" style="border:0;background:transparent;padding:7px 14px;cursor:pointer;font:inherit">Per campagne (CBO)</button>
+      </div>
+    </div>
+    <div class="panel" style="overflow-x:auto"><table id="campTable"></table></div>
+    <p class="foot" id="campFoot"></p>
+  </div>
+
+  <div id="tabBevindingen" class="hidden">
+    <div class="sec">Bevindingen · vastgelegde analyses om later op terug te grijpen</div>
+    <div id="bevindingenList"></div>
   </div>
   </main>
 </div>
@@ -1453,6 +1475,9 @@ async function applyRole(){
   // makelaar ziet Resultaten + Financiën (eigen commissie); geen advertenties/archief.
   document.querySelector('.tab[data-tab="advertenties"]').classList.toggle("hidden", agentV);
   document.querySelector('.tab[data-tab="archief"]').classList.toggle("hidden", agentV);
+  // Campagnes (CBO/adset): zelfde publiek als Advertenties (niet de makelaar). Bevindingen: alleen eigenaar.
+  document.querySelector('.tab[data-tab="campagnes"]').classList.toggle("hidden", agentV);
+  document.querySelector('.tab[data-tab="bevindingen"]').classList.toggle("hidden", !owner);
   document.querySelector('.tab[data-tab="financien"]').classList.toggle("hidden", parkV);
   // Bellen: makelaars + master-eigenaar, niet de parkeigenaar/park-gebonden eigenaar (Karl/Carl)
   // en niet een eigenaar zonder beldata-toegang (bv. Toine, echt óf testweergave)
@@ -1473,6 +1498,8 @@ async function applyRole(){
   $("tabAdvertenties").classList.add("hidden");
   $("tabArchief").classList.add("hidden");
   $("tabResale").classList.add("hidden");
+  $("tabCampagnes").classList.add("hidden");
+  $("tabBevindingen").classList.add("hidden");
   if(owner && SCOPED_PARK != null){
     // park-gebonden eigenaar (Carl): eigen-park-weergave. Mét extra ad-parken (AD_PARKS) mag hij op
     // Resultaten/Advertenties/Archief tussen zijn parken schakelen; anders alleen het eigen park.
@@ -1523,12 +1550,12 @@ async function applyRole(){
     // setter: alle andere tabknoppen ÉN content-panelen weg, direct op Bellen landen.
     // (content-panelen expliciet dichtdoen, anders blijft bv. het Financiën-paneel uit een
     //  vorige owner-sessie zichtbaar onder de setter-weergave.)
-    ['resultaten','advertenties','archief','financien','mailflow','resale'].forEach(t=>{
+    ['resultaten','advertenties','archief','financien','mailflow','resale','campagnes','bevindingen'].forEach(t=>{
       const b = document.querySelector(`.tab[data-tab="${t}"]`); if(b) b.classList.add("hidden");
     });
     document.querySelector('.tab[data-tab="bellen"]').classList.remove("hidden");
     document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active", x.dataset.tab==="bellen"));
-    ['tabResultaten','tabAdvertenties','tabArchief','tabFinance','tabMailflow','tabResale']
+    ['tabResultaten','tabAdvertenties','tabArchief','tabFinance','tabMailflow','tabResale','tabCampagnes','tabBevindingen']
       .forEach(id=>$(id).classList.add("hidden"));
     $("tabBellen").classList.remove("hidden");
     activeTab = "bellen";
@@ -1551,6 +1578,8 @@ function renderActieveTab(){
   else if(activeTab==="bellen") renderBellen();
   else if(activeTab==="mailflow") renderMailflow();
   else if(activeTab==="resale") renderResale();
+  else if(activeTab==="campagnes") renderCampagnes();
+  else if(activeTab==="bevindingen") renderBevindingen();
 }
 $("fPeriod").addEventListener("change", e=>{
   const show = e.target.value==="custom";
@@ -1594,6 +1623,7 @@ $("sideToggle").addEventListener("click", () => {
 
 /* ---------- tabs ---------- */
 let activeTab = "resultaten";
+let CAMPPARK = null, CAMPVIEW = "adset";
 function toonTab(tab, opts){
   opts = opts || {};
   activeTab = tab;
@@ -1605,8 +1635,10 @@ function toonTab(tab, opts){
   $("tabBellen").classList.toggle("hidden", tab!=="bellen");
   $("tabMailflow").classList.toggle("hidden", tab!=="mailflow");
   $("tabResale").classList.toggle("hidden", tab!=="resale");
+  $("tabCampagnes").classList.toggle("hidden", tab!=="campagnes");
+  $("tabBevindingen").classList.toggle("hidden", tab!=="bevindingen");
   $("fAgent").classList.toggle("hidden", tab!=="resultaten" || !currentView || currentView().role!=="owner");
-  $("fPark").classList.toggle("hidden", (currentView && currentView().role==="park") || tab==="advertenties" || tab==="archief" || tab==="financien" || tab==="bellen" || tab==="mailflow" || tab==="resale");
+  $("fPark").classList.toggle("hidden", (currentView && currentView().role==="park") || tab==="advertenties" || tab==="archief" || tab==="financien" || tab==="bellen" || tab==="mailflow" || tab==="resale" || tab==="campagnes" || tab==="bevindingen");
   if(!opts.silent) localStorage.setItem("activeTab", tab);
   if(tab==="advertenties") renderAds();
   if(tab==="archief") renderArchief();
@@ -1614,6 +1646,8 @@ function toonTab(tab, opts){
   if(tab==="bellen") renderBellen();
   if(tab==="mailflow") renderMailflow();
   if(tab==="resale") renderResale();
+  if(tab==="campagnes") renderCampagnes();
+  if(tab==="bevindingen") renderBevindingen();
 }
 // een verborgen tab (niet beschikbaar voor deze rol) is geen geldige bestemming
 function tabBeschikbaar(tab){
@@ -1626,6 +1660,80 @@ function herstelTab(){
   if(saved && saved!=="resultaten" && tabBeschikbaar(saved)) toonTab(saved, {silent:true});
 }
 document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => toonTab(t.dataset.tab)));
+
+/* ---------- CAMPAGNES (CBO / adset) ---------- */
+async function renderCampagnes(){
+  const v = currentView();
+  const lockPark = (v.role==="owner") ? (v.park ?? SCOPED_PARK ?? null) : null;   // Carl/Karl: vast park
+  const adKeuze = carlAdParks();
+  let pp;
+  const koppelTabs = () => document.querySelectorAll("#campParkTabs .tab").forEach(b=>b.addEventListener("click", ()=>{ CAMPPARK=Number(b.dataset.park); renderCampagnes(); }));
+  if(v.role==="park"){ pp = v.id; $("campParkTabs").classList.add("hidden"); }
+  else if(adKeuze){
+    if(!CAMPPARK || !adKeuze.find(p=>p.id===CAMPPARK)) CAMPPARK = (lockPark ?? adKeuze[0].id);
+    pp = CAMPPARK;
+    $("campParkTabs").innerHTML = adKeuze.map(p=>`<button class="tab ${p.id===CAMPPARK?"active":""}" data-park="${p.id}">${p.name}</button>`).join("");
+    $("campParkTabs").classList.remove("hidden"); koppelTabs();
+  }
+  else if(lockPark != null){ pp = lockPark; $("campParkTabs").classList.add("hidden"); }
+  else {
+    if(!CAMPPARK || !PARKS.find(p=>p.id===CAMPPARK)) CAMPPARK = (PARKS[0]||{}).id;
+    pp = CAMPPARK;
+    $("campParkTabs").innerHTML = PARKS.map(p=>`<button class="tab ${p.id===CAMPPARK?"active":""}" data-park="${p.id}">${p.name}</button>`).join("");
+    $("campParkTabs").classList.remove("hidden"); koppelTabs();
+  }
+  document.querySelectorAll("#campToggle .segbtn").forEach(b=>{
+    const aan = b.dataset.camp===CAMPVIEW;
+    b.style.background = aan ? "var(--line)" : "transparent";
+    b.style.fontWeight = aan ? "700" : "400";
+    b.onclick = ()=>{ CAMPVIEW = b.dataset.camp; renderCampagnes(); };
+  });
+  setBranding(pp);
+  $("campScope").textContent = "· " + ((PARKS.find(p=>p.id===pp)||{}).name || "");
+  const r = periodRange();
+  const perAdset = CAMPVIEW==="adset";
+  const rows = await rpc(perAdset ? "adset_kpis" : "campaign_kpis", { ...r, p_park_id: pp }) || [];
+  const geld = n => (Number(n)>0 ? eur(n) : "—");
+  const getal = n => (Number(n)||0).toLocaleString("nl-NL");
+  if(!rows.length){
+    $("campTable").innerHTML = "";
+    $("campFoot").textContent = "Geen gekoppelde campagnedata voor dit park in deze periode.";
+    return;
+  }
+  const head = perAdset
+    ? `<tr><th style="text-align:left">Campagne</th><th style="text-align:left">Adset</th><th>Ads</th><th>Spend</th><th>Leads</th><th>Afspr.</th><th>Sales</th><th>CPL</th><th>CPA</th><th>CPSale</th><th>ROAS</th></tr>`
+    : `<tr><th style="text-align:left">Campagne</th><th>Ads</th><th>Spend</th><th>Leads</th><th>Afspr.</th><th>Sales</th><th>CPL</th><th>CPA</th><th>CPSale</th><th>ROAS</th></tr>`;
+  const body = rows.map(c=>{
+    const naam = perAdset
+      ? `<td style="text-align:left">${c.campaign_name||"—"}</td><td style="text-align:left">${c.adset_name||"—"}</td>`
+      : `<td style="text-align:left">${c.campaign_name||"—"}</td>`;
+    return `<tr>${naam}<td>${getal(c.ads_actief)}</td><td>${geld(c.spend)}</td><td>${getal(c.leads)}</td>`
+      + `<td>${getal(c.afspraken)}</td><td>${getal(c.sales)}</td>`
+      + `<td>${Number(c.leads)>0?geld(c.kosten_per_lead):"—"}</td>`
+      + `<td style="font-weight:700">${Number(c.afspraken)>0?geld(c.kosten_per_afspraak):"—"}</td>`
+      + `<td style="font-weight:700">${Number(c.sales)>0?geld(c.kosten_per_sale):"—"}</td>`
+      + `<td>${Number(c.roas)>0?Number(c.roas).toLocaleString("nl-NL")+"×":"—"}</td></tr>`;
+  }).join("");
+  $("campTable").innerHTML = `<thead>${head}</thead><tbody>${body}</tbody>`;
+  $("campFoot").textContent = perAdset
+    ? "Per adset, onder de CBO-campagne. Afspraak telt pas als hij geweest is; verse adsets: CPA zakt nog als leads converteren."
+    : "Per campagne (CBO). Afspraak telt pas als hij geweest is.";
+}
+
+/* ---------- BEVINDINGEN ---------- */
+async function renderBevindingen(){
+  const rows = await rpc("bevindingen") || [];
+  if(!rows.length){ $("bevindingenList").innerHTML = `<p class="foot">Nog geen bevindingen vastgelegd.</p>`; return; }
+  const dfmt = d => { const s = new Date(d).toLocaleDateString("nl-NL",{day:"numeric",month:"long",year:"numeric"}); return s; };
+  $("bevindingenList").innerHTML = rows.map(b=>
+    `<div class="panel" style="margin-bottom:16px;padding:18px 20px">
+       <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:10px">
+         <div style="font-weight:700;font-size:16px">${b.titel||""}</div>
+         <div class="l" style="white-space:nowrap">${dfmt(b.datum)}</div>
+       </div>
+       <div style="line-height:1.6;overflow-x:auto">${b.inhoud||""}</div>
+     </div>`).join("");
+}
 
 /* ---------- FINANCIEN ---------- */
 let finChart;
