@@ -633,8 +633,9 @@
 
     <div id="belBacklogSec" class="hidden" style="margin-bottom:26px">
       <div class="sec">Belachterstand &amp; benodigd tempo <span id="belBacklogScope" style="font-weight:400;text-transform:none;color:var(--muted)"></span>
-        <span class="info" tabindex="0">i<span class="tip">Achterstand = het aantal belletjes dat nog nodig is om elke open lead tot 4 belpogingen te brengen: de leads die we nog niet bereikt hebben (Nieuwe aanvraag / Geen gehoor) plus de "In contact"-leads die al meer dan 3 dagen niet meer gebeld zijn. Keep-up = de belletjes per beldag die de nieuwe instroom vraagt (nieuwe leads per dag &#215; 7/5 omdat we 5 dagen bellen &#215; gemiddeld aantal pogingen per lead). De tabel toont hoeveel belletjes per beldag nodig zijn om de achterstand in 2, 4 of 6 weken weg te werken, keep-up inbegrepen. De grafiek is een prognose van de resterende achterstand per beldag bij die tempo's en bij jullie huidige tempo.</span></span>
+        <span class="info" tabindex="0">i<span class="tip">Achterstand = het aantal belletjes dat nog nodig is om elke open, nog niet bereikte lead (Nieuwe aanvraag / Gespreksaanvraag / Geen gehoor) tot 4 belpogingen te brengen. Leads waar al contact mee is ("In contact") tellen bewust niet mee — dat is lopende opvolging, geen belvoorraad. Keep-up = de belletjes per beldag die de nieuwe instroom vraagt (nieuwe leads per dag &#215; 7/5 omdat we 5 dagen bellen &#215; gemiddeld aantal pogingen per lead). De tabel toont hoeveel belletjes per beldag nodig zijn om de achterstand in 2, 4 of 6 weken weg te werken, keep-up inbegrepen. De grafiek is een prognose van de resterende achterstand per beldag bij die tempo's en bij jullie huidige tempo.</span></span>
       </div>
+      <div id="belBacklogVerdict" class="banner" style="margin-bottom:12px;display:none"></div>
       <div id="belBacklogCards" class="cards"></div>
       <div class="panel" style="margin-top:14px;overflow-x:auto"><table id="belBacklogTable"></table></div>
       <div class="chartbox" style="margin-top:14px"><canvas id="belBacklogChart" height="220"></canvas></div>
@@ -2862,6 +2863,22 @@ async function renderBelBacklog(parkId){
   const keepUp = Math.round(inflow * 7/5 * gemPog);
   const parkNaam = parkId==null ? "alle parken" : ((PARKS.find(p=>p.id===parkId)||{}).name || "");
   $("belBacklogScope").textContent = "· " + parkNaam;
+  // duidelijke verdict-regel: de achterstand in menselijke maat (1 setter ≈ 25 belletjes/uur, ~6 beluur/beldag)
+  const perUur = 25, beluurPerDag = 6;
+  const setterUur = Math.max(1, Math.round(backlog/perUur));
+  const beldagenIn = Math.max(1, Math.ceil(setterUur/beluurPerDag));
+  const vEl = $("belBacklogVerdict");
+  if(backlog<=0){
+    vEl.style.display=""; vEl.style.cssText+=";background:#eaf5ef;border:1px solid #cfe6db;color:#2C5F52";
+    vEl.innerHTML = "<b>Geen achterstand.</b> Alle open leads zijn tot 4 belpogingen gebeld.";
+  } else {
+    const rustig = beldagenIn<=7;
+    vEl.style.display="";
+    vEl.style.cssText += rustig
+      ? ";background:#eaf5ef;border:1px solid #cfe6db;color:#2C5F52"
+      : ";background:#fbf3e8;border:1px solid #eeddc2;color:#8a5a1a";
+    vEl.innerHTML = `<b>${rustig?"Onder controle.":"Aandacht nodig."}</b> ${backlog} openstaande belletjes ≈ <b>${setterUur} uur</b> belwerk — met één setter (±${perUur}/uur) in <b>~${beldagenIn} beldag${beldagenIn===1?"":"en"}</b> ingelopen.`;
+  }
   const sub = t => `<div class="l" style="margin:5px 0 0">${t}</div>`;
   $("belBacklogCards").innerHTML =
     metric("Achterstand", backlog + " belletjes", sub(leads + " leads")) +
