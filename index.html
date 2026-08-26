@@ -849,6 +849,12 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 /* ---------- helpers ---------- */
 const $ = id => document.getElementById(id);
 const eur = n => "€"+Math.round(n||0).toLocaleString("nl-NL");
+// subregel op de Afspraken-tegel: hoeveel afspraken staan nog vooruit gepland (tellen niet mee in de conversie)
+function geplandSub(n){
+  return Number(n)>0
+    ? `<div class="l" style="margin:5px 0 0;color:#2C5F52">+ ${n} nog gepland <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">Afspraken die nu vooruit gepland staan (stage &lsquo;Afspraak gepland&rsquo;, datum vanaf vandaag). Ze tellen bewust nog niet mee als afspraak of in de conversie &mdash; dat gebeurt pas zodra ze hebben plaatsgevonden.</span></span></div>`
+    : "";
+}
 const initials = n => n.slice(0,2).toUpperCase();
 const esc = s => String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 const escAttr = esc;
@@ -1962,7 +1968,7 @@ async function renderAds(){
   ADROASCAP = Infinity;   // ROAS wordt nergens meer gecapt (ook demopark rekent op echte cijfers)
   const r = periodRange();
   const rPrevAd = vorigePeriode(r);
-  const [k, daily, ov, mnd, unlinked, dsAds, kPrev] = await Promise.all([
+  const [k, daily, ov, mnd, unlinked, dsAds, kPrev, geplandAd] = await Promise.all([
     rpc("ad_kpis",  { ...r, p_park_id: pp }).then(x=>x?.[0]||{}),
     rpc("ad_daily", { ...r, p_park_id: pp }),
     rpc("ad_overview", { ...r, p_park_id: pp }),
@@ -1970,6 +1976,7 @@ async function renderAds(){
     rpc("ad_unlinked_overview", { ...r, p_park_id: pp }).then(x=>x?.[0]||null),
     rpc("definitief_stats", { ...r, p_agent_id:null, p_park_id: pp, p_anchor:'lead' }).then(x=>x?.[0]||{}),
     rPrevAd ? rpc("ad_kpis", { ...rPrevAd, p_park_id: pp }).then(x=>x?.[0]) : Promise.resolve(null),
+    rpc("geplande_afspraken", { p_park_id: pp, p_agent_id: null }).then(x=>(x||[]).length),
   ]);
   const heeftPrevAd = !!kPrev;
 
@@ -1989,7 +1996,7 @@ async function renderAds(){
     metric("Clicks", clicks.toLocaleString("nl-NL")) +
     metric("Leads", leads, deltaSub(leads,kPrev&&kPrev.leads,heeftPrevAd)+sparkline(sMnd.map(x=>x.leads),"#5B8DEF")) +
     metric("Kosten per lead", leads ? eur(spend/leads) : "—", leads&&prevCpl!=null ? deltaSub(spend/leads,prevCpl,true,true) : "") +
-    metric("Afspraken", afspr, netwAfspr>0 ? `<div class="l" style="margin:5px 0 0">waarvan ${netwAfspr} uit eigen netwerk <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">${netwAfspr===1?"Deze afspraak komt":"Deze afspraken komen"} uit het eigen netwerk, niet uit een advertentie. ${netwAfspr===1?"Hij telt":"Ze tellen"} wel mee als afspraak, maar niet in de kosten-per-afspraak.</span></span></div>` : "") +
+    metric("Afspraken", afspr, (netwAfspr>0 ? `<div class="l" style="margin:5px 0 0">waarvan ${netwAfspr} uit eigen netwerk <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">${netwAfspr===1?"Deze afspraak komt":"Deze afspraken komen"} uit het eigen netwerk, niet uit een advertentie. ${netwAfspr===1?"Hij telt":"Ze tellen"} wel mee als afspraak, maar niet in de kosten-per-afspraak.</span></span></div>` : "") + geplandSub(geplandAd)) +
     metric("Kosten per afspraak"+kpaTip, afsprBet ? eur(spend/afsprBet) : "—") +
     metric("Sales", sales, defSub(dsAds) + (netwSales>0 ? `<div class="l" style="margin:5px 0 0">waarvan ${netwSales} uit eigen netwerk <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">${netwSales===1?"Deze sale komt":"Deze sales komen"} uit het eigen netwerk, niet uit een advertentie. ${netwSales===1?"Hij telt":"Ze tellen"} wel mee als omzet en sale (prestatie), maar bewust NIET in de ROAS en de kosten-per-sale, zodat het advertentierendement zuiver blijft.</span></span></div>` : "")) +
     metric("Kosten per sale"+kpsTip, salesBet ? eur(spend/salesBet) : "—") +
@@ -2576,6 +2583,7 @@ async function renderGepland(parkId, agentId){
        <td style="text-align:left">${esc(parkNaam(Number(x.park_id)))}</td>
        <td><a href="${safeUrl(x.pipedrive_url)}" target="_blank" rel="noopener">Pipedrive ↗</a></td></tr>`).join("")
        || `<tr><td colspan="5" style="color:var(--muted);padding:14px">Nog geen afspraken gepland die nog moeten plaatsvinden.</td></tr>`}</tbody>`;
+  return rows.length;
 }
 async function renderOwner(){
   const r = periodRange();
@@ -2618,6 +2626,8 @@ async function renderOwner(){
     optieAantal = ((await rpc("agent_deals", { p_agent_id:null, ...r, p_kind:'onder_optie', p_park_id: parkVal==="all"?3:Number(parkVal) })) || []).length;
   }
   const optiePct = shows>0 ? (optieAantal/shows*100).toFixed(1) : "0";
+  // aankomende afspraken (pijplijn) — telling vooraf zodat hij ook op de Afspraken-tegel past
+  const geplandN = await renderGepland(parkVal==="all"?null:Number(parkVal), agentVal==="all"?null:Number(agentVal));
   $("cardsTop").className = "cards pairs2" + (toonOptie ? " met-optie" : "");
   const defAant = Number(dc.definitief)||0;
   $("cardsTop").innerHTML =
@@ -2625,7 +2635,7 @@ async function renderOwner(){
     metric("Uitgaven",eur(f.spend),deltaSub(f.spend,fp&&fp.spend,heeftPrev,true)+sparkSlot("uitgaven")) +
     (geenOmzet ? "" : metric("Omzet",eur(f.revenue),deltaSub(f.revenue,fp&&fp.revenue,heeftPrev)+sparkSlot("omzet"))) +
     metricDeal("Leads",f.leads||0,'leads',null,'',false,parkVal==="all"?null:Number(parkVal),deltaSub(f.leads,fp&&fp.leads,heeftPrev)+sparkSlot("leads")) +
-    metricDeal("Afspraken",f.appointments||0,'afspraken',null,'',false,parkVal==="all"?null:Number(parkVal),deltaSub(f.appointments,fp&&fp.appointments,heeftPrev)+sparkSlot("afspraken")) +
+    metricDeal("Afspraken",f.appointments||0,'afspraken',null,'',false,parkVal==="all"?null:Number(parkVal),deltaSub(f.appointments,fp&&fp.appointments,heeftPrev)+sparkSlot("afspraken")+geplandSub(geplandN)) +
     metric("Shows",shows,`<div class="l" style="margin:5px 0 0">afspraken die geweest zijn</div>`) +
     (toonOptie ? metricDeal("Onder Optie",optieAantal,'onder_optie',null,'',false,parkVal==="all"?3:Number(parkVal),`<div class="l" style="margin:5px 0 0">WD · klik voor de deals</div>`) : "") +
     metricDeal("Sales",f.sales||0,'verkopen',null,'',false,parkVal==="all"?null:Number(parkVal),deltaSub(f.sales,fp&&fp.sales,heeftPrev)+sparkSlot("sales")) +
@@ -2640,7 +2650,7 @@ async function renderOwner(){
     metric("Closing %",(closing||0)+"%") +
     metric("Afval % "+AFVAL_TIP, afvalWaarde(f.afval_pct));
   $("heroWrap").classList.add("hidden");   // trechter verwijderd op verzoek — alleen de Afspraken/Shows/Sales-tegels
-  await renderGepland(parkVal==="all"?null:Number(parkVal), agentVal==="all"?null:Number(agentVal));   // aankomende afspraken (pijplijn)
+  // (aankomende afspraken zijn hierboven al gerenderd, vóór de tegels)
 
   let agents = await rpc("owner_agent_performance", {...r, p_park_id: scopePark}) || [];
   if(agentVal!=="all") agents = agents.filter(a=>String(a.agent_id)===agentVal);
@@ -2805,6 +2815,7 @@ async function renderPark(parkId){
   const showsP = Number(f.shows)||0;               // alleen afspraken die geweest zijn (uit de RPC)
   const perAppt = f.appointments ? Math.round(f.revenue/f.appointments) : 0;
   const roasTxtP = Number(f.spend)>0 ? (f.revenue/f.spend).toFixed(2) : "—";
+  const geplandNP = await renderGepland(parkId, null);   // aankomende afspraken (pijplijn), telling vooraf voor de tegel
   $("cardsTop").className = "cards pairs2";
   const defAantP = Number(dsPark.definitief)||0;
   $("cardsTop").innerHTML =
@@ -2814,7 +2825,7 @@ async function renderPark(parkId){
      </div><div class="v">${eur(f.spend)}</div>${deltaSub(f.spend,fPrev&&fPrev.spend,heeftPrevP,true)}</div></div>` +
     metric("Omzet",eur(f.revenue),deltaSub(f.revenue,fPrev&&fPrev.revenue,heeftPrevP)+sparkSlot("omzet")) +
     metric("Leads",f.leads||0,deltaSub(f.leads,fPrev&&fPrev.leads,heeftPrevP)+sparkSlot("leads")) +
-    metric("Afspraken",f.appointments||0,deltaSub(f.appointments,fPrev&&fPrev.appointments,heeftPrevP)+sparkSlot("afspraken")) +
+    metric("Afspraken",f.appointments||0,deltaSub(f.appointments,fPrev&&fPrev.appointments,heeftPrevP)+sparkSlot("afspraken")+geplandSub(geplandNP)) +
     metric("Shows",showsP,`<div class="l" style="margin:5px 0 0">afspraken die geweest zijn</div>`) +
     metric("Sales",f.sales||0,deltaSub(f.sales,fPrev&&fPrev.sales,heeftPrevP)+sparkSlot("sales")) +
     metric("Definitief",defAantP,defSubKaart(dsPark)) +
@@ -2827,7 +2838,7 @@ async function renderPark(parkId){
     metric("Closing %",closingOpShows(f.sales,showsP)+"%") +
     metric("Afval % "+AFVAL_TIP, afvalWaarde(f.afval_pct));
   $("heroWrap").classList.add("hidden");   // trechter verwijderd op verzoek — alleen de Afspraken/Shows/Sales-tegels
-  await renderGepland(parkId, null);   // parkweergave: aankomende afspraken van dit park
+  // (aankomende afspraken zijn hierboven al gerenderd, vóór de tegels)
   const moP = await rpc("monthly_overview", {p_park_id:parkId}) || [];
   renderMonths(moP, {spend:false, leads:true, def: await defMaandMap(null, parkId)});
   const sMoP = moP.slice(-8);
