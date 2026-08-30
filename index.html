@@ -2214,11 +2214,21 @@ function drawAdTable(){
     .filter(a => ADSTATUS==="all" || a.status===ADSTATUS)
     .filter(a => ADKANAAL==="all" || String(a.kanaal||"").toLowerCase()===ADKANAAL)
     .sort((a,b)=>{
-      if(s.key==="awareness_stage") return (faseSortVal(a)-faseSortVal(b)) * s.dir;
-      if(s.key==="kwaliteit") return (((a._kwal&&a._kwal.score)??-1)-((b._kwal&&b._kwal.score)??-1)) * s.dir;
-      if(s.key==="conv_pct") return ((convPct(a)||0)-(convPct(b)||0)) * s.dir;
-      if(s.key==="clos_pct") return ((closPct(a)||0)-(closPct(b)||0)) * s.dir;
-      const av=a[s.key], bv=b[s.key];
+      const val = r => {
+        if(s.key==="awareness_stage") return faseSortVal(r);
+        if(s.key==="kwaliteit") return (r._kwal && r._kwal.score!=null) ? r._kwal.score : null;
+        if(s.key==="conv_pct") return convPct(r);
+        if(s.key==="clos_pct") return closPct(r);
+        return r[s.key];
+      };
+      const av=val(a), bv=val(b);
+      // lege of nul-cellen (de "—" en 0) zakken altijd naar onderen, ongeacht de sorteerrichting,
+      // zodat oplopend sorteren bij de eerste échte waarde begint (niet bij een rij nullen)
+      const leeg = v => v==null || v==="" || (typeof v!=="string" && (Number.isNaN(Number(v)) || Number(v)===0));
+      const ae=leeg(av), be=leeg(bv);
+      if(ae && be) return 0;
+      if(ae) return 1;
+      if(be) return -1;
       return (typeof av==="string" ? av.localeCompare(bv) : (Number(av)||0)-(Number(bv)||0)) * s.dir;
     });
   $("adTable").innerHTML =
