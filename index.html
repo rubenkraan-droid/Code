@@ -3063,6 +3063,8 @@ async function renderBellen(){
   } else { $("belParkTabs").classList.add("hidden"); }
   // belcijfers (respecteert de periode + gekozen park; park wordt voor Carl backend gescoopt)
   const calls = await rpc("call_overview", { p_from:r.p_from, p_to:r.p_to, p_park_id:BELPARK, p_agent_id:eigenAgent }) || [];
+  // standaard sorteren op beste Gesprek -> afspraak %; makelaars zonder gesprekken (null) onderaan
+  calls.sort((a,b)=> ((Number(b.gesprek_naar_afspraak_pct)||-1) - (Number(a.gesprek_naar_afspraak_pct)||-1)));
   const agentIdOpNaam = n => (AGENTS.find(a=>a.name===n)||{}).id;
   $("callTable").innerHTML =
     `<thead><tr><th>Makelaar</th><th>Gebeld</th><th>Gesprek</th><th>Unieke leads</th><th>Afspraken</th><th>% gesprek van gebeld</th><th>Gesprek &#8594; afspraak %</th><th>Gebeld &#8594; afspraak %</th></tr></thead>
