@@ -3067,15 +3067,15 @@ async function renderBellen(){
   $("callTable").innerHTML =
     `<thead><tr><th>Makelaar</th><th>Gebeld</th><th>Gesprek</th><th>Unieke leads</th><th>Afspraken</th><th>% gesprek van gebeld</th><th>Gesprek &#8594; afspraak %</th><th>Gebeld &#8594; afspraak %</th></tr></thead>
      <tbody>${calls.map(c=>{
-       const conv = Number(c.unieke_leads)>0 ? Math.round(Number(c.afspraken)/Number(c.unieke_leads)*100) : null;
-       const convGebeld = Number(c.gebeld)>0 ? Math.round(Number(c.afspraken)/Number(c.gebeld)*100) : null;
+       const conv = Number(c.unieke_leads)>0 ? (Number(c.afspraken)/Number(c.unieke_leads)*100).toFixed(2) : null;
+       const convGebeld = Number(c.gebeld)>0 ? (Number(c.afspraken)/Number(c.gebeld)*100).toFixed(2) : null;
        const aid = agentIdOpNaam(c.agent);
        const afsprCel = Number(c.afspraken)>0 && aid!=null
          ? `<span class="bel-afsp-link" data-agent="${aid}" data-naam="${escAttr(c.agent)}" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px" title="Bekijk de afspraken die deze makelaar in deze periode boekte">${c.afspraken}</span>`
          : c.afspraken;
        return `<tr><td style="text-align:left">${esc(c.agent)}</td><td>${c.gebeld}</td><td>${c.gesprek}</td>
          <td>${c.unieke_leads}</td><td>${afsprCel}</td>
-         <td>${c.gebeld>0 ? Math.round(c.gesprek/c.gebeld*100)+"%" : "—"}</td>
+         <td>${c.gebeld>0 ? (c.gesprek/c.gebeld*100).toFixed(2)+"%" : "—"}</td>
          <td>${conv!=null ? conv+"%" : "—"}</td>
          <td>${convGebeld!=null ? convGebeld+"%" : "—"}</td></tr>`; }).join("")
        || `<tr><td colspan="8" style="color:var(--muted);padding:14px">Nog geen belactiviteiten gelogd.</td></tr>`}</tbody>`;
