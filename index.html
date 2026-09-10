@@ -1020,6 +1020,9 @@ function demoMonths(){
   const totOmzet = demoSom(out,'omzet'), totLeads = demoSom(out,'leads');
   const cpl = totLeads>0 ? (totOmzet/ROAS_DOEL)/totLeads : 90;
   out.forEach(x=>{ x.spend = Math.max(1, Math.round(x.leads * cpl)); });
+  // CPL maximaal €24: verhoog het getoonde leadvolume tot spend/leads <= 24. Spend, afspraken en sales
+  // (en dus ROAS, CPA en CPSale) blijven ongewijzigd.
+  out.forEach(x=>{ x.leads = Math.max(x.leads, Math.ceil(x.spend/24)); });
   return out;
 }
 // coherente maandreeks voor één demo-makelaar (kleiner dan het hele park)
