@@ -1050,13 +1050,17 @@ function demoAds(){
     ["DEMO-AD5","onbewust","paused","#F16D9A","linkedin"], ["DEMO-AD6","oplossingsbewust","killed","#7A8598","organisch"],
   ];
   return defs.map((d,i)=>{
-    const leads = Math.round(20 + r()*90);
-    const afspraken = Math.round(leads*(0.10+r()*0.06));   // lage conversie -> hoge kosten per afspraak
+    // funnel-basis: afspraken en sales blijven hierop gebaseerd, zodat CPA en CPSale ongewijzigd blijven
+    const baseLeads = Math.round(20 + r()*90);
+    const afspraken = Math.round(baseLeads*(0.10+r()*0.06));   // lage conversie -> hoge kosten per afspraak
     // niet elke advertentie heeft al sales: een paar winnaars, de rest nog niet
     const sales = (i<3 && afspraken>0) ? Math.max(1, Math.round(afspraken*(0.16+r()*0.14))) : 0;
     const omzet = sales * 342000;
-    // uitgaven: ads mét sales zó dat ROAS ≈ 95 (berekend, niet gecapt); ads zonder sales gewoon CPL-gebaseerd
-    const spend = sales>0 ? Math.max(1, Math.round(omzet/(90+r()*10))) : Math.round(leads*(80+r()*40));
+    // uitgaven: ads mét sales zó dat ROAS ≈ 95 (berekend, niet gecapt); ads zonder sales gewoon leadvolume
+    const spend = sales>0 ? Math.max(1, Math.round(omzet/(90+r()*10))) : Math.round(baseLeads*(80+r()*40));
+    // CPL maximaal €24: verhoog het leadvolume tot spend/leads <= 24. Spend, afspraken en sales blijven gelijk,
+    // dus CPA (spend/afspraken) en CPSale (spend/sales) veranderen niet.
+    const leads = Math.max(baseLeads, Math.ceil(spend/24));
     const clicks = Math.round(leads*(20+r()*40));
     const ongek = Math.round(leads*(0.05+r()*0.22));
     return { ad_id: 90000+i, code:d[0], advertentie:d[0], status:d[2], platform:d[4], kanaal:d[4],
@@ -1065,8 +1069,8 @@ function demoAds(){
       no_show_pct: +(r()*12).toFixed(1), ongekwalificeerd_pct: leads?+(ongek/leads*100).toFixed(1):0, ongekwalificeerd_n: ongek,
       sales, omzet, kost_per_sale: sales?Math.round(spend/sales):0, roas: spend?+(omzet/spend).toFixed(2):0,
       awareness_stage: d[1], werkte: sales>0?"wel":(afspraken===0?"niet":null),
-      waarom: i===0?"Sterke hook op rendement; veel gekwalificeerde leads.":(i===5?"Publiek uitgeput, CPL liep op.":null),
-      kill_reason: d[2]==="killed"?"Te hoge kosten per lead na 3 weken.":null };
+      waarom: i===0?"Sterke hook op rendement; veel gekwalificeerde leads.":(i===5?"Publiek uitgeput, kosten per afspraak liepen op.":null),
+      kill_reason: d[2]==="killed"?"Te hoge kosten per afspraak na 3 weken.":null };
   });
 }
 function demoDeals(kind){
