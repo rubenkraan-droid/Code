@@ -2639,6 +2639,7 @@ async function renderOwner(){
   const geenOmzet = LOGIN_NO_FINANCE || cvO.nofinance;   // no_finance (Carl): courtage/omzet-euro's verbergen op Resultaten
   const agentVal = $("fAgent").value;
   const parkNum = parkVal==="all" ? null : Number(parkVal);
+  scopePark = parkNum;   // parkfilter (dropdown) ook doorvoeren in de Per makelaar-sectie / setter-rij / omzet-per-park
   renderLive(r, parkNum);
   setBranding(parkNum);
 
