@@ -1325,7 +1325,7 @@ function defSubKaart(ds){
 const closingOpShows = (sales, shows) => shows>0 ? Math.round((Number(sales)||0)/shows*100) : 0;
 
 /* klikbare deals-cellen/cards: leads/afspraken/verkopen -> lijst met Pipedrive-links */
-const KINDLBL = { leads:"Leads", afspraken:"Afspraken", verkopen:"Verkopen", onder_optie:"Onder Optie" };
+const KINDLBL = { leads:"Leads", afspraken:"Afspraken", shows:"Shows", verkopen:"Verkopen", onder_optie:"Onder Optie" };
 const dcell = (waarde, kind, agentId, naam, resale) => Number(waarde)>0
   ? `<td><span class="deal-link" data-kind="${kind}" data-agentid="${agentId==null?'':agentId}" data-naam="${String(naam||'').replace(/"/g,'')}" data-resale="${resale?1:0}" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px">${waarde}</span></td>`
   : `<td>${waarde}</td>`;
@@ -2710,7 +2710,7 @@ async function renderOwner(){
          ${a._setter?sdcell(a.leads,'leads',a.agent_id,a.agent,scopePark):dcell(a.leads,'leads',a.agent_id,a.agent)}
          ${a._setter?sdcell(a.appointments,'afspraken',a.agent_id,a.agent,scopePark):dcell(a.appointments,'afspraken',a.agent_id,a.agent)}
          <td class="${scls}">${a.appointments>0?showPct+"%":"—"}</td>
-         <td>${a.shows}</td>
+         ${a._setter?sdcell(a.shows,'shows',a.agent_id,a.agent,scopePark):dcell(a.shows,'shows',a.agent_id,a.agent)}
          <td class="${cls}">${a.shows>0?a.closing_rate_pct+"%":"—"}</td>
          ${a._setter?sdcell(a.sales,'verkopen',a.agent_id,a.agent,scopePark):dcell(a.sales,'verkopen',a.agent_id,a.agent)}
          <td>${defMap[a.agent_id]||0}</td>
