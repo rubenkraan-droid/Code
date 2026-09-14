@@ -436,8 +436,6 @@
   <div id="liveSec" class="hidden">
     <div class="banner"><span style="color:var(--good)">●</span><span>Live uit Pipedrive · echte leads</span></div>
     <div class="cards" id="liveCards"></div>
-    <div class="sec">Leads per maand uit Pipedrive</div>
-    <div class="panel"><table id="liveMonths"></table></div>
   </div>
 
   <div id="heroWrap" class="hero hidden">
@@ -514,6 +512,11 @@
       <span class="info" tabindex="0">i<span class="tip">Elke rij is het cohort van leads dat in die maand binnenkwam, met de advertentie-uitgaven van die maand en het uiteindelijke resultaat van dat cohort (afspraken, sales, omzet), ongeacht wanneer het omsloeg. ROAS = omzet ÷ uitgaven. Recente maanden moeten nog omslaan, dus lage cijfers daar zijn normaal.</span></span>
     </div>
     <div class="panel" style="margin-bottom:26px"><div class="scroll"><table id="ownerCohortTable"></table></div></div>
+  </div>
+
+  <div id="liveMonthsSec" class="hidden">
+    <div class="sec">Leads per maand uit Pipedrive</div>
+    <div class="panel" style="margin-bottom:26px"><table id="liveMonths"></table></div>
   </div>
 
   <div id="optieSec" class="hidden">
@@ -1492,6 +1495,7 @@ async function applyRole(){
   $("agentOnly").classList.toggle("hidden", !agentV);
   $("parkOnly").classList.toggle("hidden", !parkV);
   $("liveSec").classList.toggle("hidden", !owner);
+  $("liveMonthsSec").classList.toggle("hidden", !owner);
   $("adLink").classList.add("hidden");
   $("monthSec").classList.remove("hidden");
   $("apptSec").classList.toggle("hidden", parkV);
@@ -1534,6 +1538,7 @@ async function applyRole(){
     $("title").textContent = pnaam;
     $("subtitle").textContent = "Eigenaar · " + pnaam;
     $("liveSec").classList.add("hidden");              // geen multi-park master-overzicht
+    $("liveMonthsSec").classList.add("hidden");
     $("fPark").classList.toggle("hidden", !carlKiest); // parkkeuze alleen bij extra parken (Carl)
     fillSelect($("fPark"), (carlKiest ? AD_PARKS : PARKS.filter(p=>!isDemo(p.id))).map(p=>({value:p.id,label:p.name})), null);
     fillSelect($("fAgent"), AGENTS.filter(a=>!isDemoAgent(a.id)).map(a=>({value:a.id,label:a.name})), "Alle makelaars");
