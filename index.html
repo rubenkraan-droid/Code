@@ -676,10 +676,10 @@
         <span class="info" tabindex="0">i<span class="tip">Alleen voor eigenaren. Waarde per afspraak = closing % × marge per sale. Waarde per call = conversie bij dat aantal belpogingen × waarde per afspraak. Kost per call = setterkost (uurtarief ÷ belletjes per uur, bv. €20 ÷ 10 = €2) + eventuele kost/opportuniteit per belslot. Break-even-conversie = kost per call ÷ waarde per afspraak: zolang de conversie daarboven ligt, loont doorbellen. Belt de makelaar zelf en kost een extra call niets? Zet dan het uurtarief en de kost op €0. Zijn de belslots schaars, vul dan bij kost/opportuniteit de waarde van een verse 1e-call in.</span></span>
       </div>
       <div class="chartbox" style="display:flex;flex-wrap:wrap;gap:18px;align-items:flex-end;margin-bottom:12px">
-        <label style="font-size:12px;color:var(--muted)">Closing % (afspraak → sale)<br><input id="coClosing" type="number" min="0" max="100" step="1" value="25" style="width:100px;margin-top:5px"></label>
+        <label style="font-size:12px;color:var(--muted)">Closing % (afspraak → sale)<br><input id="coClosing" type="number" min="0" max="100" step="1" value="29" style="width:100px;margin-top:5px"></label>
         <label style="font-size:12px;color:var(--muted)">Marge per sale (€)<br><input id="coMarge" type="number" min="0" step="50" value="2575" style="width:120px;margin-top:5px"></label>
-        <label style="font-size:12px;color:var(--muted)">Belletjes per uur (setter)<br><input id="coBelUur" type="number" min="0" step="1" value="10" style="width:130px;margin-top:5px"></label>
-        <label style="font-size:12px;color:var(--muted)">Uurtarief setter (€)<br><input id="coUurtarief" type="number" min="0" step="1" value="20" style="width:130px;margin-top:5px"></label>
+        <label style="font-size:12px;color:var(--muted)">Belletjes per uur (setter)<br><input id="coBelUur" type="number" min="0" step="0.01" value="19.56" style="width:130px;margin-top:5px"></label>
+        <label style="font-size:12px;color:var(--muted)">Uurtarief setter (€)<br><input id="coUurtarief" type="number" min="0" step="1" value="25" style="width:130px;margin-top:5px"></label>
         <label style="font-size:12px;color:var(--muted)">Kost/opportuniteit per belslot (€)<br><input id="coKost" type="number" min="0" step="1" value="0" style="width:150px;margin-top:5px"></label>
         <div id="coBreakeven" style="font-weight:600;font-size:13px;flex-basis:100%;margin-top:2px;color:var(--accent-ink)"></div>
       </div>
