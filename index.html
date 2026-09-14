@@ -474,6 +474,7 @@
     </div>
     <div class="sec">Per makelaar</div>
     <div class="panel"><table id="agentTable"></table></div>
+    <p class="foot" id="agentSetterFoot" style="display:none">Rijen met &lsquo;&middot; boekt&rsquo; zijn setters (zoals Bardo) die zelf geen afspraken lopen. Hun cijfers tonen de afspraken die z&iacute;j <b>boekten</b> en hoe die converteren (shows, closing, sales, omzet), ongeacht welke makelaar ze uitvoerde. Die afspraken tellen dus ook bij de uitvoerende makelaar mee &mdash; bewust dubbel, want het meet twee rollen. Bij een setter is &lsquo;Leads&rsquo; het aantal leads dat hij bel<b>de</b> (niet toegewezen leads).</p>
     <p id="definitiefNote" class="foot" style="margin-top:6px"></p>
     <div id="omzetParkSec">
       <div class="sec" style="margin-top:24px">Omzet per park</div>
@@ -680,6 +681,14 @@
         <div id="coBreakeven" style="font-weight:600;font-size:13px;flex-basis:100%;margin-top:2px;color:var(--accent-ink)"></div>
       </div>
       <div class="panel"><table id="belCutoffTable"></table></div>
+    </div>
+
+    <div id="belVersSec" class="hidden" style="margin-top:26px">
+      <div class="sec">Belletjes: vers vs over datum &middot; per beller
+        <span class="info" tabindex="0">i<span class="tip">Van elke belpoging bepalen we hoe oud de lead toen was (beldatum &minus; aanmaakdatum). &lsquo;Vers&rsquo; = 20 dagen of jonger, &lsquo;over datum&rsquo; = ouder. Afspraak per 100 belletjes = afspraken (gekoppeld aan het bo&euml;k-belletje &mdash; het laatste belletje op of v&oacute;&oacute;r de boeking, zodat oude leads met een al bestaande afspraak niet meetellen) &divide; belletjes in die groep &times; 100. Zo zie je hoeveel beltijd naar oude leads gaat en hoeveel minder die opleveren. Over &aacute;lle beldata berekend, niet beperkt tot de periode.</span></span>
+      </div>
+      <div class="panel" style="overflow-x:auto"><table id="belVersTable"></table></div>
+      <p class="foot">Over datum = lead ouder dan 20 dagen op het moment van bellen. Verse belletjes leveren doorgaans ~2&times; zoveel afspraken op.</p>
     </div>
 
     <div id="opvolgSec" class="hidden" style="margin-top:26px">
@@ -1316,6 +1325,10 @@ const closingOpShows = (sales, shows) => shows>0 ? Math.round((Number(sales)||0)
 const KINDLBL = { leads:"Leads", afspraken:"Afspraken", verkopen:"Verkopen", onder_optie:"Onder Optie" };
 const dcell = (waarde, kind, agentId, naam, resale) => Number(waarde)>0
   ? `<td><span class="deal-link" data-kind="${kind}" data-agentid="${agentId==null?'':agentId}" data-naam="${String(naam||'').replace(/"/g,'')}" data-resale="${resale?1:0}" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px">${waarde}</span></td>`
+  : `<td>${waarde}</td>`;
+// setter-cel: boeker-gebaseerde drilldown (setter_deals) i.p.v. eigenaar-gebaseerde
+const sdcell = (waarde, kind, agentId, naam, parkId) => Number(waarde)>0
+  ? `<td><span class="deal-link" data-kind="${kind}" data-setter="1" data-agentid="${agentId==null?'':agentId}" data-naam="${String(naam||'').replace(/"/g,'')}" data-park="${parkId==null?'':parkId}" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px">${waarde}</span></td>`
   : `<td>${waarde}</td>`;
 const metricDeal = (l,v,kind,agentId,naam,resale,parkId,sub) =>
   `<div class="metric deal-link" style="cursor:pointer" data-kind="${kind}" data-agentid="${agentId==null?'':agentId}" data-naam="${String(naam||'').replace(/"/g,'')}" data-resale="${resale?1:0}" data-park="${parkId==null?'':parkId}"><div class="l">${l} <span style="font-size:11px;color:var(--muted)">↗</span></div><div class="v">${v}</div>${sub||""}</div>`;
@@ -2670,6 +2683,15 @@ async function renderOwner(){
   // (aankomende afspraken zijn hierboven al gerenderd, vóór de tegels)
 
   let agents = await rpc("owner_agent_performance", {...r, p_park_id: scopePark}) || [];
+  // setters (bv. Bardo) lopen geen afspraken zelf; toon hun rij op de afspraken die zij boekten en hoe die converteren
+  const setterRows = await rpc("setter_appointment_conversion", {...r, p_park_id: scopePark}) || [];
+  if(setterRows.length){
+    const sMap = {}; setterRows.forEach(s=>sMap[s.agent_id]=s);
+    agents = agents.map(a=> sMap[a.agent_id] ? {...sMap[a.agent_id], _setter:true} : a);
+    setterRows.forEach(s=>{ if(!agents.find(a=>String(a.agent_id)===String(s.agent_id))) agents.push({...s, _setter:true}); });
+    agents.sort((a,b)=>(Number(b.revenue)||0)-(Number(a.revenue)||0));
+  }
+  $("agentSetterFoot").style.display = agents.some(a=>a._setter) ? "" : "none";
   if(agentVal!=="all") agents = agents.filter(a=>String(a.agent_id)===agentVal);
   const defRows = await rpc("agent_definitief", {...r, p_park_id: scopePark}) || [];
   const defMap = {}; defRows.forEach(x=>defMap[x.agent_id]=Number(x.definitief)||0);
@@ -2679,13 +2701,13 @@ async function renderOwner(){
        const showPct = Math.round((100 - (a.no_show_pct||0))*10)/10;
        const scls = showPct>=90?"good":showPct<80?"bad":"";
        const cls = a.closing_rate_pct>=40?"good":a.closing_rate_pct<30?"bad":"";
-       return `<tr><td><span class="av"><span class="dot">${initials(a.agent)}</span>${esc(a.agent)}</span></td>
-         ${dcell(a.leads,'leads',a.agent_id,a.agent)}
-         ${dcell(a.appointments,'afspraken',a.agent_id,a.agent)}
+       return `<tr><td><span class="av"><span class="dot">${initials(a.agent)}</span>${esc(a.agent)}${a._setter?' <span style="font-weight:400;color:var(--muted);font-size:11px">&middot; boekt</span>':''}</span></td>
+         ${a._setter?sdcell(a.leads,'leads',a.agent_id,a.agent,scopePark):dcell(a.leads,'leads',a.agent_id,a.agent)}
+         ${a._setter?sdcell(a.appointments,'afspraken',a.agent_id,a.agent,scopePark):dcell(a.appointments,'afspraken',a.agent_id,a.agent)}
          <td class="${scls}">${a.appointments>0?showPct+"%":"—"}</td>
          <td>${a.shows}</td>
          <td class="${cls}">${a.shows>0?a.closing_rate_pct+"%":"—"}</td>
-         ${dcell(a.sales,'verkopen',a.agent_id,a.agent)}
+         ${a._setter?sdcell(a.sales,'verkopen',a.agent_id,a.agent,scopePark):dcell(a.sales,'verkopen',a.agent_id,a.agent)}
          <td>${defMap[a.agent_id]||0}</td>
          ${geenOmzet?"":`<td>${eur(a.revenue_per_appt)}</td><td style="font-weight:600">${eur(a.revenue)}</td>`}</tr>`;
      }).join("")}</tbody>`;
@@ -2939,6 +2961,24 @@ async function toonAgentDeals(agentId, kind, naam, parkId){
   $("lostDealsSec").classList.remove("hidden");
   $("lostDealsSec").scrollIntoView({ behavior:"smooth", block:"nearest" });
 }
+// setter-drilldown: de deals die de setter (bv. Bardo) boekte (afspraken = alleen geweest)
+async function toonSetterDeals(agentId, kind, naam, parkId){
+  const rows = await rpc("setter_deals", { p_agent_id: agentId==null?null:Number(agentId), ...periodRange(), p_kind: kind, p_park_id: parkId==null?null:Number(parkId) }) || [];
+  $("lostDealsTitle").textContent = `${KINDLBL[kind]||"Deals"} · ${naam||"setter"} · geboekt (${rows.length})`;
+  $("lostDealsTable").innerHTML =
+    `<thead><tr><th class="tl">Deal</th><th class="tl">Fase</th><th class="tl">Lead sinds</th><th class="tl">Afspraak</th><th class="tl">Verkocht</th><th>Verkoopsom</th><th></th></tr></thead>
+     <tbody>${rows.map(x=>`<tr>
+       <td style="text-align:left">#${x.deal_id}${x.titel?` · ${esc(x.titel)}`:""}</td>
+       <td style="text-align:left">${x.stage_name?esc(x.stage_name):"—"}</td>
+       <td style="text-align:left">${x.lead_created?dt(x.lead_created):"—"}</td>
+       <td style="text-align:left">${x.appointment_date?dt(x.appointment_date):"—"}</td>
+       <td style="text-align:left">${x.sale_date?dt(x.sale_date):"—"}</td>
+       <td>${x.bedrag>0?eur(x.bedrag):"—"}</td>
+       <td><a href="${safeUrl(x.pipedrive_url)}" target="_blank" rel="noopener">Pipedrive ↗</a></td></tr>`).join("")
+       || `<tr><td colspan="7" style="color:var(--muted);padding:14px">Geen deals gevonden.</td></tr>`}</tbody>`;
+  $("lostDealsSec").classList.remove("hidden");
+  $("lostDealsSec").scrollIntoView({ behavior:"smooth", block:"nearest" });
+}
 
 /* ---------- BELLEN: belcijfers + belcurve (reachability) + conversie per aantal keer gebeld ---------- */
 let belCurveChart, belBacklogChart, BEL_CONV = [];
@@ -3148,6 +3188,22 @@ async function renderBellen(){
        <td>${c.afspraak_pct}%</td></tr>`).join("")
        || `<tr><td colspan="4" style="color:var(--muted);padding:14px">Geen data.</td></tr>`}</tbody>`;
   berekenCutoff();   // cut-off-rekenmodel (zichtbaarheid is hierboven al op eigenaar gezet)
+
+  // belletjes: vers vs over datum per beller (belproductiviteit op oude vs verse leads)
+  const vers = await rpc("call_freshness_by_agent", { p_park_id:BELPARK, p_grens:20 }) || [];
+  $("belVersSec").classList.toggle("hidden", vers.length===0);
+  if(vers.length){
+    const pct = v => v==null ? "&#8212;" : Number(v).toFixed(2)+"%";
+    const num = n => (Number(n)||0).toLocaleString("nl-NL");
+    $("belVersTable").innerHTML =
+      `<thead><tr><th>Beller</th><th>Belletjes vers</th><th>Afspr./100 vers</th>
+        <th>Belletjes over datum</th><th>Afspr./100 over datum</th><th>% beltijd over datum</th></tr></thead>
+       <tbody>${vers.map(v=>`<tr>
+         <td style="text-align:left">${esc(v.agent)}</td>
+         <td>${num(v.bel_vers)}</td><td>${pct(v.pct_vers)}</td>
+         <td>${num(v.bel_over)}</td><td>${pct(v.pct_over)}</td>
+         <td>${v.beltijd_over_pct==null?"&#8212;":Number(v.beltijd_over_pct).toFixed(1)+"%"}</td></tr>`).join("")}</tbody>`;
+  }
 
   // opvolglijst (volledige werk-wachtrij, verhuisd vanuit Resultaten); eigenaar ziet alle contacten, geen filter
   $("opvolgFilter").classList.add("hidden");
@@ -3429,7 +3485,8 @@ document.addEventListener("click", (e) => {
   const agentId = el.dataset.agentid ? Number(el.dataset.agentid) : null;
   const naam = el.dataset.naam || "";
   const parkId = el.dataset.park ? Number(el.dataset.park) : null;
-  if(el.dataset.resale === "1") resaleDealsToon(agentId, kind, naam);
+  if(el.dataset.setter === "1") toonSetterDeals(agentId, kind, naam, parkId);
+  else if(el.dataset.resale === "1") resaleDealsToon(agentId, kind, naam);
   else toonAgentDeals(agentId, kind, naam, parkId);
 });
 
