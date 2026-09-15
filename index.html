@@ -690,6 +690,19 @@
       <p class="foot">Over datum = lead ouder dan 20 dagen op het moment van bellen. Verse belletjes leveren doorgaans ~2&times; zoveel afspraken op.</p>
     </div>
 
+    <div id="belDuurSec" class="hidden" style="margin-top:26px">
+      <div class="sec">Gespreksduur per beller
+        <span class="info" tabindex="0">i<span class="tip">Uit de CloudTalk-notities in Pipedrive. Per belpoging: geen gehoor (type ggh), voicemail (notitie bevat &lsquo;voicemail&rsquo;) of gesprek. De duur komt uit de notitie (&lsquo;Duration&rsquo;), niet uit het Pipedrive-duurveld (dat rondt af). Alleen gesprekken tellen in de duurverdeling: onder 2 min, 2-4 min, 4 min of langer (% van de gesprekken). Gem./poging = gemiddelde duur over álle belpogingen. Belletjes zonder gekoppelde deal tellen mee, maar staan apart als datakwaliteit-signaal.</span></span>
+        <span style="float:right;font-weight:400;text-transform:none">
+          <select id="belDuurBeller" style="border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:4px 10px;font:inherit;font-size:12px"></select>
+        </span>
+      </div>
+      <div class="panel" style="overflow-x:auto"><table id="belDuurTable"></table></div>
+      <div class="sec" style="margin-top:18px;font-size:13px;color:var(--muted)">Per beller per week (verschuiving over tijd)</div>
+      <div class="panel" style="overflow-x:auto"><table id="belDuurWeekTable"></table></div>
+      <p class="foot" id="belDuurFoot"></p>
+    </div>
+
     <div id="opvolgSec" class="hidden" style="margin-top:26px">
       <div class="sec"><span id="opvolgTitle">Opvolgen</span>
         <span class="info" tabindex="0">i<span class="tip">Alleen leads in de stage "In contact". Leads met een toekomstig agendapunt vallen eruit (die staan al gepland). Gesorteerd op het laatste contactmoment — de nieuwste van notitie óf e-mail: leads zonder contact bovenaan, daarna de langst geleden. "Type" en "Door" tonen wat het laatste contact was en van wie. Rood = 30+ dagen (of nooit).</span></span>
@@ -3238,7 +3251,49 @@ async function renderBellen(){
   // opvolglijst (volledige werk-wachtrij, verhuisd vanuit Resultaten); eigenaar ziet alle contacten, geen filter
   $("opvolgFilter").classList.add("hidden");
   await renderOpvolg(isDemoAgent(eigenAgent) ? DEMO_AGENT_ID : null, BELPARK, true);
+  await renderBelDuur();
 }
+
+/* ---------- Gespreksduur per beller (CloudTalk-notities) ---------- */
+let BELDUUR_BELLER = null;   // null = alle bellers
+const fmtDur = s => { s=Math.round(Number(s)||0); const m=Math.floor(s/60), r=s%60; return m>0 ? `${m}m ${r}s` : `${r}s`; };
+const nPct = (n,p) => `${(Number(n)||0).toLocaleString("nl-NL")} · ${p==null?"—":Number(p).toFixed(1)+"%"}`;
+const pct1 = p => p==null ? "—" : Number(p).toFixed(1)+"%";
+async function renderBelDuur(){
+  const r = periodRange();
+  const [stats, wk] = await Promise.all([
+    rpc("caller_duration_stats", { p_from:r.p_from, p_to:r.p_to, p_beller:null }).then(x=>x||[]),
+    rpc("caller_duration_weekly", { p_from:r.p_from, p_to:r.p_to, p_beller: BELDUUR_BELLER }).then(x=>x||[]),
+  ]);
+  $("belDuurSec").classList.toggle("hidden", stats.length===0);
+  if(!stats.length) return;
+  const opts = `<option value="">Alle bellers</option>` + stats.map(s=>`<option value="${s.beller_user_id}">${esc(s.beller)}</option>`).join("");
+  if($("belDuurBeller").innerHTML !== opts){ $("belDuurBeller").innerHTML = opts; $("belDuurBeller").value = BELDUUR_BELLER==null?"":String(BELDUUR_BELLER); }
+  const shown = BELDUUR_BELLER==null ? stats : stats.filter(s=>String(s.beller_user_id)===String(BELDUUR_BELLER));
+  $("belDuurTable").innerHTML =
+    `<thead><tr><th class="tl">Beller</th><th>Pogingen</th><th>Geen gehoor</th><th>Voicemail</th><th>Gesprekken</th>
+      <th>&lt;2 min</th><th>2-4 min</th><th>&ge;4 min</th><th>Gem. gesprek</th><th>Mediaan</th><th>Gem./poging</th><th>Niet aan deal</th></tr></thead>
+     <tbody>${shown.map(s=>`<tr>
+       <td style="text-align:left">${esc(s.beller)}</td>
+       <td>${(Number(s.pogingen)||0).toLocaleString("nl-NL")}</td>
+       <td>${nPct(s.ggh,s.ggh_pct)}</td><td>${nPct(s.voicemail,s.voicemail_pct)}</td><td>${nPct(s.gesprekken,s.gesprek_pct)}</td>
+       <td>${nPct(s.u2,s.u2_pct)}</td><td>${nPct(s.m24,s.m24_pct)}</td><td>${nPct(s.o4,s.o4_pct)}</td>
+       <td>${fmtDur(s.gem_gesprek_sec)}</td><td>${fmtDur(s.med_gesprek_sec)}</td><td>${fmtDur(s.gem_poging_sec)}</td>
+       <td>${Number(s.zonder_deal)||0}</td></tr>`).join("")}</tbody>`;
+  $("belDuurWeekTable").innerHTML =
+    `<thead><tr><th class="tl">Week</th>${BELDUUR_BELLER==null?'<th class="tl">Beller</th>':''}<th>Pogingen</th><th>Geen gehoor</th><th>Voicemail</th><th>Gesprekken</th>
+      <th>&lt;2 min</th><th>2-4 min</th><th>&ge;4 min</th><th>Gem. gesprek</th><th>Mediaan</th><th>Gem./poging</th></tr></thead>
+     <tbody>${wk.map(w=>`<tr>
+       <td style="text-align:left">${dt(w.week)}</td>${BELDUUR_BELLER==null?`<td style="text-align:left">${esc(w.beller)}</td>`:''}
+       <td>${(Number(w.pogingen)||0).toLocaleString("nl-NL")}</td>
+       <td>${pct1(w.ggh_pct)}</td><td>${pct1(w.voicemail_pct)}</td><td>${nPct(w.gesprekken,w.gesprek_pct)}</td>
+       <td>${pct1(w.u2_pct)}</td><td>${pct1(w.m24_pct)}</td><td>${pct1(w.o4_pct)}</td>
+       <td>${fmtDur(w.gem_gesprek_sec)}</td><td>${fmtDur(w.med_gesprek_sec)}</td><td>${fmtDur(w.gem_poging_sec)}</td></tr>`).join("")
+       || `<tr><td colspan="12" style="color:var(--muted);padding:14px">Geen data in deze periode.</td></tr>`}</tbody>`;
+  const totOngekoppeld = stats.reduce((a,s)=>a+(Number(s.zonder_deal)||0),0);
+  $("belDuurFoot").textContent = `Belletjes zonder gekoppelde deal tellen mee (ze zijn wel gebeld), maar staan apart in 'Niet aan deal' als datakwaliteit-signaal — nu ${totOngekoppeld}. Duur uit de CloudTalk-notitie; percentages op 1 decimaal.`;
+}
+$("belDuurBeller").addEventListener("change", e=>{ BELDUUR_BELLER = e.target.value===""?null:Number(e.target.value); renderBelDuur(); });
 
 /* ---------- MAILFLOW (owner-only): mailattributie van de 15-mails-flow ---------- */
 const MAIL_FASES = [
