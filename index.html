@@ -876,6 +876,12 @@ function geplandSub(n){
     ? `<div class="l" style="margin:5px 0 0;color:#2C5F52">+ ${n} nog gepland <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">Afspraken die nu vooruit gepland staan (stage &lsquo;Afspraak gepland&rsquo;, datum vanaf vandaag). Ze tellen bewust nog niet mee als afspraak of in de conversie &mdash; dat gebeurt pas zodra ze hebben plaatsgevonden.</span></span></div>`
     : "";
 }
+// variant voor de Resultaten-tab: de geplande afspraken tellen hier WEL mee (ze zijn al geboekt/gerealiseerd)
+function geplandSubIn(n){
+  return Number(n)>0
+    ? `<div class="l" style="margin:5px 0 0;color:#2C5F52">waarvan ${n} nog te gaan <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">Deze afspraken zijn al geboekt en tellen mee als afspraak; ze hebben alleen nog niet plaatsgevonden (dus nog geen show, no-show of sale). Zodra ze zijn geweest schuiven ze door naar Shows.</span></span></div>`
+    : "";
+}
 const initials = n => n.slice(0,2).toUpperCase();
 const esc = s => String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 const escAttr = esc;
@@ -2680,7 +2686,7 @@ async function renderOwner(){
     metric("Uitgaven",eur(f.spend),deltaSub(f.spend,fp&&fp.spend,heeftPrev,true)+sparkSlot("uitgaven")) +
     (geenOmzet ? "" : metric("Omzet",eur(f.revenue),deltaSub(f.revenue,fp&&fp.revenue,heeftPrev)+sparkSlot("omzet"))) +
     metricDeal("Leads",f.leads||0,'leads',null,'',false,parkVal==="all"?null:Number(parkVal),deltaSub(f.leads,fp&&fp.leads,heeftPrev)+sparkSlot("leads")) +
-    metricDeal("Afspraken",f.appointments||0,'afspraken',null,'',false,parkVal==="all"?null:Number(parkVal),deltaSub(f.appointments,fp&&fp.appointments,heeftPrev)+sparkSlot("afspraken")+geplandSub(geplandN)) +
+    metricDeal("Afspraken",(f.appointments||0)+(geplandN||0),'afspraken',null,'',false,parkVal==="all"?null:Number(parkVal),deltaSub((f.appointments||0)+(geplandN||0),fp&&fp.appointments,heeftPrev)+sparkSlot("afspraken")+geplandSubIn(geplandN)) +
     metric("Shows",shows,`<div class="l" style="margin:5px 0 0">afspraken die geweest zijn</div>`) +
     (toonOptie ? metricDeal("Onder Optie",optieAantal,'onder_optie',null,'',false,parkVal==="all"?3:Number(parkVal),`<div class="l" style="margin:5px 0 0">WD · klik voor de deals</div>`) : "") +
     metricDeal("Sales",f.sales||0,'verkopen',null,'',false,parkVal==="all"?null:Number(parkVal),deltaSub(f.sales,fp&&fp.sales,heeftPrev)+sparkSlot("sales")) +
@@ -2689,7 +2695,7 @@ async function renderOwner(){
     metric(`ROAS <span class="info" tabindex="0">i<span class="tip">Omzet (verkoopsom) &divide; advertentiekosten van deze periode. Let op: dit zet de totale omzet af tegen de advertentie-uitgaven — ook omzet uit leads die niet via een advertentie binnenkwamen telt mee. Een lead van nu leidt bovendien vaak pas later tot omzet.</span></span>`, roasTxt) +
     (geenOmzet ? "" : metric("Omzet per afspraak",eur(perAppt))) +
     metric("CPL",eur(f.cost_per_lead)) +
-    metric("Afspraak %",(f.leads ? (f.appointments/f.leads*100).toFixed(1) : "0")+"%") +
+    metric("Afspraak %",(f.leads ? (((f.appointments||0)+(geplandN||0))/f.leads*100).toFixed(1) : "0")+"%") +
     metric("No-show %",(f.no_show_pct||0)+"%") +
     (toonOptie ? metric("Optie %",optiePct+"%",`<div class="l" style="margin:5px 0 0">van de shows</div>`) : "") +
     metric("Closing %",(closing||0)+"%") +
@@ -2879,7 +2885,7 @@ async function renderPark(parkId){
      </div><div class="v">${eur(f.spend)}</div>${deltaSub(f.spend,fPrev&&fPrev.spend,heeftPrevP,true)}</div></div>` +
     metric("Omzet",eur(f.revenue),deltaSub(f.revenue,fPrev&&fPrev.revenue,heeftPrevP)+sparkSlot("omzet")) +
     metric("Leads",f.leads||0,deltaSub(f.leads,fPrev&&fPrev.leads,heeftPrevP)+sparkSlot("leads")) +
-    metric("Afspraken",f.appointments||0,deltaSub(f.appointments,fPrev&&fPrev.appointments,heeftPrevP)+sparkSlot("afspraken")+geplandSub(geplandNP)) +
+    metric("Afspraken",(f.appointments||0)+(geplandNP||0),deltaSub((f.appointments||0)+(geplandNP||0),fPrev&&fPrev.appointments,heeftPrevP)+sparkSlot("afspraken")+geplandSubIn(geplandNP)) +
     metric("Shows",showsP,`<div class="l" style="margin:5px 0 0">afspraken die geweest zijn</div>`) +
     metric("Sales",f.sales||0,deltaSub(f.sales,fPrev&&fPrev.sales,heeftPrevP)+sparkSlot("sales")) +
     metric("Definitief",defAantP,defSubKaart(dsPark)) +
@@ -2887,7 +2893,7 @@ async function renderPark(parkId){
     metric(`ROAS <span class="info" tabindex="0">i<span class="tip">Omzet (verkoopsom) &divide; advertentiekosten van deze periode. Let op: dit zet de totale omzet af tegen de advertentie-uitgaven — ook omzet uit leads die niet via een advertentie binnenkwamen telt mee. Een lead van nu leidt bovendien vaak pas later tot omzet.</span></span>`, roasTxtP) +
     metric("Omzet per afspraak (gem.)",eur(perAppt)) +
     metric("CPL",eur(f.cost_per_lead)) +
-    metric("Afspraak %",(f.leads ? (f.appointments/f.leads*100).toFixed(1) : "0")+"%") +
+    metric("Afspraak %",(f.leads ? (((f.appointments||0)+(geplandNP||0))/f.leads*100).toFixed(1) : "0")+"%") +
     metric("No-show %",(f.no_show_pct||0)+"%") +
     metric("Closing %",closingOpShows(f.sales,showsP)+"%") +
     metric("Afval % "+AFVAL_TIP, afvalWaarde(f.afval_pct));
