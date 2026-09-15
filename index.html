@@ -663,17 +663,12 @@
         <div class="chartbox" style="margin-bottom:14px"><canvas id="belCurveChart" height="200"></canvas></div>
       </div>
       <div class="panel" style="margin-bottom:26px"><table id="belCurveTable"></table></div>
-
-      <div class="sec">Conversie naar afspraak per aantal keer gebeld
-        <span class="info" tabindex="0">i<span class="tip">Van de leads die je X keer belde, welk deel werd uiteindelijk een afspraak. Let op: nog kleine aantallen, dus indicatief; wordt betrouwbaarder naarmate er meer data is.</span></span>
-      </div>
-      <div class="panel"><table id="belConvTable"></table></div>
-      <p class="foot">De belcurve en conversie worden over álle beldata berekend (niet beperkt tot de gekozen periode), zodat er genoeg leads in zitten.</p>
+      <p class="foot">De belcurve wordt over álle beldata berekend (niet beperkt tot de gekozen periode), zodat er genoeg leads in zitten. De conversie-per-call staat in de cut-off-tabel hieronder.</p>
     </div>
 
     <div id="belCutoffSec" class="hidden" style="margin-top:26px">
       <div class="sec">Cut-off · tot hoe vaak doorbellen loont
-        <span class="info" tabindex="0">i<span class="tip">Alleen voor eigenaren. Waarde per afspraak = closing % × marge per sale. Waarde per call = conversie bij dat aantal belpogingen × waarde per afspraak. Kost per call = setterkost (uurtarief ÷ belletjes per uur, bv. €20 ÷ 10 = €2) + eventuele kost/opportuniteit per belslot. Break-even-conversie = kost per call ÷ waarde per afspraak: zolang de conversie daarboven ligt, loont doorbellen. Belt de makelaar zelf en kost een extra call niets? Zet dan het uurtarief en de kost op €0. Zijn de belslots schaars, vul dan bij kost/opportuniteit de waarde van een verse 1e-call in.</span></span>
+        <span class="info" tabindex="0">i<span class="tip">Alleen voor eigenaren. Conversie call N = afspraken op call N &divide; het aantal leads dat call N daadwerkelijk kreeg (Bereikt_N = alle leads met N of meer belpogingen). Dat is de marginale kans dat j&uacute;ist die extra call een afspraak oplevert &mdash; leads die na call N nog eens gebeld zijn vallen dus niet uit de noemer. Cumulatief = alle afspraken t/m call N &divide; het totaal aantal leads. Waarde van call N = conversie call N &times; waarde per afspraak (closing % &times; marge). Kost per call = setterkost (uurtarief &divide; belletjes per uur) + kost/opportuniteit per belslot. Loont zolang de waarde van call N boven de kost ligt. Vink &lsquo;Auto&rsquo; aan om de opportuniteitskost gelijk te zetten aan de waarde van een verse 1e call: dan zie je vanaf welke call een oude lead minder waard is dan een nieuwe. Rijen met minder dan 30 leads staan grijs (te weinig data).</span></span>
       </div>
       <div class="chartbox" style="display:flex;flex-wrap:wrap;gap:18px;align-items:flex-end;margin-bottom:12px">
         <label style="font-size:12px;color:var(--muted)">Closing % (afspraak → sale)<br><input id="coClosing" type="number" min="0" max="100" step="1" value="29" style="width:100px;margin-top:5px"></label>
@@ -681,6 +676,7 @@
         <label style="font-size:12px;color:var(--muted)">Belletjes per uur (setter)<br><input id="coBelUur" type="number" min="0" step="0.01" value="19.56" style="width:130px;margin-top:5px"></label>
         <label style="font-size:12px;color:var(--muted)">Uurtarief setter (€)<br><input id="coUurtarief" type="number" min="0" step="1" value="25" style="width:130px;margin-top:5px"></label>
         <label style="font-size:12px;color:var(--muted)">Kost/opportuniteit per belslot (€)<br><input id="coKost" type="number" min="0" step="1" value="0" style="width:150px;margin-top:5px"></label>
+        <label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;align-self:flex-end;margin-bottom:6px"><input id="coOppAuto" type="checkbox" style="width:auto;margin:0">Auto: opportuniteit = waarde 1e call</label>
         <div id="coBreakeven" style="font-weight:600;font-size:13px;flex-basis:100%;margin-top:2px;color:var(--accent-ink)"></div>
       </div>
       <div class="panel"><table id="belCutoffTable"></table></div>
@@ -2993,28 +2989,61 @@ let belCurveChart, belBacklogChart, BEL_CONV = [];
 function berekenCutoff(){
   const closing = (parseFloat($("coClosing").value)||0)/100;
   const marge = parseFloat($("coMarge").value)||0;
-  const kost = parseFloat($("coKost").value)||0;      // handmatige kost/opportuniteit per belslot
-  // setterkost per belslot = uurtarief ÷ belletjes per uur (bv. €20 / 10 = €2 per call)
+  // setterkost (kost per call) = uurtarief ÷ belletjes per uur (bv. €25 / 19,56 ≈ €1,28)
   const belUur = parseFloat($("coBelUur").value)||0;
   const uurtarief = parseFloat($("coUurtarief").value)||0;
   const setterKost = belUur>0 ? uurtarief/belUur : 0;
-  const kostTotaal = setterKost + kost;               // setter + eventuele opportuniteitskost
   const waarde = closing*marge;                       // waarde per afspraak
-  const breakeven = waarde>0 ? kostTotaal/waarde*100 : 0;   // break-even-conversie (%)
+
+  // rijen op volgorde; totaal aantal leads = Bereikt_1 = som van alle Leads_N
+  const rows = (BEL_CONV||[]).slice().sort((a,b)=>Number(a.keer_gebeld)-Number(b.keer_gebeld));
+  const totaal = rows.reduce((s,r)=>s+(Number(r.leads)||0),0);
+
+  // waarde van een verse 1e call (alternatief voor een extra poging) → auto-opportuniteitskost
+  const r1 = rows.find(r=>Number(r.keer_gebeld)===1);
+  const conv1 = (r1 && totaal>0) ? (Number(r1.met_afspraak)||0)/totaal : 0;
+  const waardeCall1 = conv1*waarde;
+  const autoOpp = $("coOppAuto") && $("coOppAuto").checked;
+  if(autoOpp){ $("coKost").value = waardeCall1.toFixed(2); $("coKost").disabled = true; }
+  else if($("coKost").disabled){ $("coKost").disabled = false; }
+  const kost = parseFloat($("coKost").value)||0;      // kost/opportuniteit per belslot
+  const kostTotaal = setterKost + kost;               // kost van één call
+
   const eur2 = n => "€" + n.toFixed(2).replace(".", ",");
   $("coBreakeven").textContent = waarde>0
     ? `Waarde per afspraak: ${eur(Math.round(waarde))} · kost per call: ${eur2(kostTotaal)}`
-      + (setterKost>0 ? ` (setter ${eur2(setterKost)}${kost>0?` + opportuniteit ${eur2(kost)}`:""})` : "")
-      + ` · break-even-conversie: ${breakeven.toFixed(2)}%`
+      + (setterKost>0 ? ` (setter ${eur2(setterKost)}${kost>0?` + opportuniteit ${eur2(kost)}`:""})` : (kost>0?` (opportuniteit ${eur2(kost)})`:""))
+      + (autoOpp ? ` · opportuniteit = waarde 1e call` : "")
     : "Vul closing % en marge in.";
+
+  // marginale conversie per call: Afspraken_N ÷ Bereikt_N (leads met N of meer calls)
+  let leadsBelow=0, cumAfspr=0;
+  const trs = rows.map(r=>{
+    const N=Number(r.keer_gebeld), leadsN=Number(r.leads)||0, afsprN=Number(r.met_afspraak)||0;
+    const bereiktN = totaal - leadsBelow;             // leads die call N daadwerkelijk kregen
+    leadsBelow += leadsN; cumAfspr += afsprN;
+    const convN = bereiktN>0 ? afsprN/bereiktN : 0;   // marginaal
+    const cumConv = totaal>0 ? cumAfspr/totaal : 0;   // t.o.v. alle leads
+    const wpc = convN*waarde;                         // waarde van call N
+    const thin = bereiktN < 30;
+    const loont = wpc > kostTotaal;
+    return `<tr${thin?' style="opacity:.5"':''}>
+      <td style="text-align:left">${N}&#215;</td>
+      <td>${leadsN}</td>
+      <td>${bereiktN}</td>
+      <td>${afsprN}</td>
+      <td>${(convN*100).toFixed(2)}%</td>
+      <td>${(cumConv*100).toFixed(2)}%</td>
+      <td>${eur(Math.round(wpc))}</td>
+      <td>${thin ? '<span style="color:var(--muted)">te weinig data</span>' : `<span class="${loont?"good":"bad"}">${loont?"✓ loont":"✕ stop"}</span>`}</td>
+    </tr>`;
+  }).join("");
   $("belCutoffTable").innerHTML =
-    `<thead><tr><th>Keer gebeld</th><th>Conversie</th><th>Waarde per call</th><th>Loont?</th></tr></thead>
-     <tbody>${(BEL_CONV||[]).map(c=>{ const conv=Number(c.afspraak_pct)||0, wpc=conv/100*waarde, loont=conv>=breakeven;
-       return `<tr><td style="text-align:left">${c.keer_gebeld}&#215;</td><td>${conv}%</td><td>${eur(Math.round(wpc))}</td>
-         <td class="${loont?"good":"bad"}">${loont?"✓ loont":"✕ stop"}</td></tr>`; }).join("")
-       || `<tr><td colspan="4" style="color:var(--muted);padding:14px">Geen conversiedata.</td></tr>`}</tbody>`;
+    `<thead><tr><th>Keer gebeld</th><th>Leads in rij</th><th>Kreeg deze call</th><th>Afspraken</th><th>Conversie call N</th><th>Cumulatief</th><th>Waarde van call N</th><th>Loont?</th></tr></thead>
+     <tbody>${trs || `<tr><td colspan="8" style="color:var(--muted);padding:14px">Geen conversiedata.</td></tr>`}</tbody>`;
 }
 ["coClosing","coMarge","coKost","coBelUur","coUurtarief"].forEach(id=>$(id).addEventListener("input", berekenCutoff));
+$("coOppAuto").addEventListener("change", berekenCutoff);
 // heatmap: aantal belletjes per makelaar per uur (9-21) in de gekozen periode
 async function renderBelUur(r, agentId){
   const rows = await rpc("call_hours_by_agent", { p_from:r.p_from, p_to:r.p_to, p_park_id:BELPARK, p_agent_id:agentId }) || [];
@@ -3188,11 +3217,6 @@ async function renderBellen(){
   // conversie naar afspraak per aantal keer gebeld
   const conv = await rpc("call_conversion_by_attempts", { p_park_id:BELPARK }) || [];
   BEL_CONV = conv;
-  $("belConvTable").innerHTML =
-    `<thead><tr><th>Keer gebeld</th><th>Leads</th><th>Met afspraak</th><th>Afspraak %</th></tr></thead>
-     <tbody>${conv.map(c=>`<tr><td style="text-align:left">${c.keer_gebeld}&#215;</td><td>${c.leads}</td><td>${c.met_afspraak}</td>
-       <td>${c.afspraak_pct}%</td></tr>`).join("")
-       || `<tr><td colspan="4" style="color:var(--muted);padding:14px">Geen data.</td></tr>`}</tbody>`;
   berekenCutoff();   // cut-off-rekenmodel (zichtbaarheid is hierboven al op eigenaar gezet)
 
   // belletjes: vers vs over datum per beller (belproductiviteit op oude vs verse leads)
