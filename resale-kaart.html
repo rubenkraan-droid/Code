@@ -116,7 +116,6 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
-const STAND = '22-09-2026';
 
 const STATUS = {
   verkoop:  { label:'In verkoop',          kleur:'var(--verkoop)' },
@@ -124,75 +123,13 @@ const STATUS = {
   acq:      { label:'Acquisitie',          kleur:'var(--acq)' },
 };
 
-// Snapshot uit Pipedrive, pipeline 8 (Resale), open verkoper-deals.
-// geo: exact adres wordt in de browser nog verfijnd via PDOK (alleen NL).
-// Geen namen/contactgegevens van verkopers op deze pagina (AVG).
-const WONINGEN = [
-  { id:985, status:'verkoop', park:'Vakantiepark De Ossenberg', adres:'Dwarsweg 3-12, 3959 AC Overberg', geo:'Dwarsweg 3 3959AC Overberg',
-    lat:52.0402, lng:5.4838, prijs:190000, prijsNoot:'k.k.',
-    kenmerken:['Ca. 90 m², 3 slaapkamers','Eigen grond: 568 m² incl. eigen parkeerplaats','Nieuwe cv-ketel (2026), nieuwe dakgoten','Parkkosten 2026: € 1.730 incl. btw','365 dagen per jaar recreëren, direct tegen het Amerongse Bos'],
-    kopers:{ totaal:4, bezichtiging:2 },
-    links:[{t:'Select Makelaars', u:'https://www.select-makelaars.nl/woningaanbod/koop/overberg/dwarsweg/3-12'}] },
-  { id:511, status:'verkoop', park:'Natuurcamping De Jutberg', adres:'De Jutberg 78-82, 6957 DP Laag-Soeren', geo:'De Jutberg 78 6957DP Laag-Soeren',
-    lat:52.0786, lng:6.0845, prijs:119000, prijsNoot:'k.k.',
-    kenmerken:['Veluwe, midden in de natuur','Houtkachel + airco (Toshiba, wifi-bediening)','Extra berging, ruim parkeren op eigen kavel','Geen verhuurplicht, zelf beheren kan','Huurkavel: jaarplaats ca. € 3.500, betaald t/m sept. 2027','Ouderdomsclausule 10 jaar'],
-    kopers:{ totaal:4, bezichtiging:0 },
-    links:[{t:'Funda', u:'https://www.funda.nl/detail/recreatie/laag-soeren/huis-de-jutberg-78-82/17282796/'},{t:'Select Makelaars', u:'https://www.select-makelaars.nl/woningaanbod/koop/laag-soeren/de-jutberg/78-82'}] },
-  { id:504, status:'verkoop', park:'Resort Bosvallei', adres:'Barteweg 15-384, 6718 TH Ede', geo:'Barteweg 15 6718TH Ede',
-    lat:52.0330, lng:5.6300, prijs:69750, prijsNoot:'k.k.',
-    kenmerken:['39 m², 2 kamers, perceel 200 m²','Hoekkavel, geen aangrenzende tuin','Elke dag van het jaar recreëren, geen permanente bewoning','Verhuur niet mogelijk','Speeltuinen binnen/buiten, buitenzwembad'],
-    kopers:{ totaal:1, bezichtiging:1 } },
-  { id:508, status:'verkoop', park:'Bospark Ede (TopParken)', adres:'Zonneoordlaan 47-407, 6718 TL Ede', geo:'Zonneoordlaan 47 6718TL Ede',
-    lat:52.0290, lng:5.6400, prijs:62500, prijsNoot:'k.k.',
-    kenmerken:['Verhuur via TopParken, positief rendement','Nieuwe cv-ketel','Recht van eerste terugkoop TopParken (geen interesse)'],
-    kopers:{ totaal:1, bezichtiging:1 } },
-  { id:574, status:'verkoop', park:'Resort Rhederlaagse Meren', adres:'Marsweg 2-V212, 6988 BM Lathum', geo:'Marsweg 2 6988BM Lathum',
-    lat:51.9880, lng:6.0250, prijs:194949, prijsNoot:'k.k.',
-    kenmerken:['6 personen, 3 slaapkamers, ca. 100 m² over twee woonlagen','Perceel ca. 220 m²','Recent grondig gerenoveerd','Rustig deel van het park, dichtbij de visvijver'],
-    kopers:{ totaal:0, bezichtiging:0 },
-    links:[{t:'Select Makelaars', u:'https://www.select-makelaars.nl/woningaanbod/koop/lathum/marsweg/2'},{t:'Succesparken', u:'https://www.succesparken.nl/rhederlaagse-meren/vakantiehuis-vv212-een-rustig-deel-van-het-park-dichtbij-de-visvijver-6-personen'}] },
-  { id:1168, status:'verkoop', park:'Recreatiepark Proosdij, Vinkeveense Plassen', adres:'Herenweg 276-B26, 3645 DX Vinkeveen', geo:'Herenweg 276 3645DX Vinkeveen',
-    lat:52.2290, lng:4.9230, prijs:410000, prijsNoot:'v.o.n.',
-    kenmerken:['Nieuwbouw, direct aan de Vinkeveense Plassen','Documentatie staat in de Drive'],
-    kopers:{ totaal:1, bezichtiging:1 } },
-  { id:1517, status:'contract', park:'Hofparken De Bergvennen', adres:'Bergvennenweg 35-K11, 7635 NJ Lattrop-Breklenkamp', geo:'Bergvennenweg 35 7635NJ Lattrop-Breklenkamp',
-    lat:52.4420, lng:6.9880, prijs:156000,
-    kenmerken:['Nieuw vakantiepark (villa\'s vanaf 2023)','Verkoopcontract verstuurd, nog niet getekend — nog niet online'],
-    kopers:{ totaal:0, bezichtiging:0 } },
-
-  { id:455, status:'acq', park:"Recreatiepark 't Posterbos", adres:'Posterholt (Midden-Limburg)', approx:true,
-    lat:51.1240, lng:6.0450, prijs:89000,
-    kenmerken:['Stenen halfvrijstaande woning (1996), 210 m² eigen grond','Badkamer, keuken en vloeren nieuw (2025)','Vrije verhuur toegestaan (park rekent 20% fee)','Parklasten ca. € 2.000 p/j','Nu nog bij andere makelaar'] },
-  { id:458, status:'acq', park:'Landal Bungalowpark Hoenderloo', adres:'Hoenderloo (Veluwe)', approx:true,
-    lat:52.1130, lng:5.8730, prijs:145000,
-    kenmerken:['Eigen grond','Jaarrond verhuur via Landal','Parklasten ca. € 340 p/m','Staat ook bij andere makelaar'] },
-  { id:518, status:'acq', park:'Wemeldinge', adres:'Wemeldinge (Zeeland)', approx:true,
-    lat:51.5190, lng:3.9950, prijs:350000,
-    kenmerken:['Bouwjaar 2021','Eigen grond, perceel ca. 410 m²'] },
-  { id:404, status:'acq', park:'Vakantiepark Capfun De Rotonde', adres:'Enspijk (Betuwe)', approx:true,
-    lat:51.8690, lng:5.1990, prijs:135000,
-    kenmerken:['Eerdere koper haakte op het laatst af'] },
-  { id:388, status:'acq', park:'Vakantiepark De Ossenberg', adres:'Overberg', approx:true,
-    lat:52.0385, lng:5.4870, prijs:null,
-    kenmerken:['Instapklaar chalet (2022)','Verhuur mogelijk'] },
-  { id:406, status:'acq', park:"Landal Bospark 't Wolfsven", adres:'Mierlo', approx:true,
-    lat:51.4320, lng:5.6200, prijs:null,
-    kenmerken:['Verkoper twijfelt tussen RecraVas en Landal'] },
-  { id:418, status:'acq', park:'Chalet in Chaam', adres:'Chaam', approx:true,
-    lat:51.5060, lng:4.8600, prijs:52250,
-    kenmerken:['Verhuur niet toegestaan','Moet vóór november verkocht zijn','Camping rekent 5% van de verkoopprijs'] },
-  { id:389, status:'acq', park:'Vakantiewoning Sauerland', adres:'Sauerland (Duitsland), locatie bij benadering', approx:true,
-    lat:51.1800, lng:8.4900, prijs:null,
-    kenmerken:['Eigenaar verkoopt voorlopig zelf'] },
-  { id:407, status:'acq', park:'Via Marktplaats', adres:'Locatie onbekend', lat:null, lng:null, prijs:32950,
-    kenmerken:['Contact via Marktplaats'] },
-];
+// Data: resale-kaart.json (dagelijks bijgewerkt door een Claude-routine uit Pipedrive).
+let WONINGEN = [];
 
 const eur = n => n==null ? 'Prijs n.t.b.' : '€ ' + n.toLocaleString('nl-NL');
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const pd = id => 'https://recravas.pipedrive.com/deal/' + id;
 
-document.getElementById('stand').textContent = STAND;
 
 const map = L.map('map', { zoomControl:true, scrollWheelZoom:true }).setView([52.1, 5.6], 8);
 // Tegels zonder API-key: OpenStreetMap (kaart) en PDOK (luchtfoto NL, overheid, gratis).
@@ -232,10 +169,6 @@ function popupHtml(w){
 }
 
 const markers = {};
-WONINGEN.forEach(w => {
-  if (w.lat == null) return;
-  markers[w.id] = L.marker([w.lat, w.lng], { icon: icon(w), title: w.park }).bindPopup(popupHtml(w));
-});
 
 // Filters
 const actief = { verkoop:true, contract:true, acq:true };
@@ -305,14 +238,26 @@ function fitAll(){
 
 document.getElementById('q').addEventListener('input', e => { zoek = e.target.value.trim().toLowerCase(); render(); });
 
-render();
-fitAll();
+async function laad(){
+  const r = await fetch('resale-kaart.json', { cache:'no-store' });
+  const d = await r.json();
+  WONINGEN = d.woningen;
+  document.getElementById('stand').textContent = d.stand.split('-').reverse().join('-');
+  WONINGEN.forEach(w => {
+    if (w.lat == null) return;
+    markers[w.id] = L.marker([w.lat, w.lng], { icon: icon(w), title: w.park }).bindPopup(popupHtml(w));
+  });
+  render();
+  fitAll();
+  verfijn();
+}
+laad().catch(() => { document.getElementById('list').innerHTML = '<div class="item"><div class="a">Data kon niet geladen worden. Ververs de pagina.</div></div>'; });
 
 // Exacte pins verfijnen via PDOK Locatieserver (NL, gratis, CORS). Faalt stil: dan blijft de benaderde pin staan.
 function cacheGet(k){ try { return JSON.parse(localStorage.getItem(k)); } catch(e){ return null; } }
 function cacheSet(k,v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
 
-WONINGEN.filter(w => w.geo && markers[w.id]).forEach(async w => {
+function verfijn(){ WONINGEN.filter(w => w.geo && markers[w.id]).forEach(async w => {
   const key = 'geo:' + w.geo;
   let ll = cacheGet(key);
   if (!ll) {
@@ -324,7 +269,7 @@ WONINGEN.filter(w => w.geo && markers[w.id]).forEach(async w => {
     } catch(e) {}
   }
   if (ll) markers[w.id].setLatLng(ll);
-});
+}); }
 </script>
 </body>
 </html>

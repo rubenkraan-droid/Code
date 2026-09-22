@@ -122,6 +122,26 @@ elk niet-API-kanaal:
    impressions)` zetten (leads/sales blijven 0 — die komen uit Pipedrive). sync-meta raakt dit niet
    (alleen Meta-ads). Bij nieuwe CSV-periode: nieuwe dagregels toevoegen.
 
+## Resale-kaart (`resale-kaart.html` + `resale-kaart.json`)
+
+Publieke kaart voor makelaars: `dashboard.recraparcs.nl/resale-kaart.html`. De HTML laadt alleen
+`resale-kaart.json`; een dagelijkse Claude-routine werkt **alleen die JSON** bij vanuit Pipedrive
+(pipeline 8) en pusht naar `main` (alleen als er iets veranderd is). Regels:
+- **Welke deals:** open deals in verkoper-stages van pipeline 8. Status: stage 90 (Verkoopcontract
+  definitief) → `verkoop`; 88 (Verkoopcontract verstuurd) → `contract`; 80/81/83/91 → `acq`.
+  Stages 92/93/94 zijn **kopers**, geen woningen — die tellen alleen mee in `kopers` van de woning
+  waar ze op reageren (match via titel: dwarsweg/ossenberg → De Ossenberg, jutberg → De Jutberg,
+  barteweg → Barteweg, zonneoordlaan → Zonneoordlaan, vinkeveen → Vinkeveen; `bezichtiging` = stage 94).
+  Lost/won deals eruit.
+- **Adres:** Pipedrive heeft geen adresveld — adressen staan in dealtitel/notities. Voor `verkoop`/`contract`
+  aanvullen via Funda/Select Makelaars (WebSearch; funda.nl en select-makelaars.nl zelf zijn
+  geblokkeerd voor fetch). Vul `geo` (straat + nr + postcode + plaats, zonder unit) voor PDOK-verfijning.
+- **Privacy (hard):** pagina is openbaar → **geen namen, telefoon, e-mail van verkopers/kopers**, geen
+  interne onderhandelingsinfo (minimumprijzen, "bereid te zakken", commissie-afspraken). `acq` alleen op
+  park-/plaatsniveau (`approx:true`, geen huisnummer).
+- **Prijs:** vraagprijs van Funda/Select (k.k./v.o.n.) wint van Pipedrive-`value`.
+- Bestaande handmatig aangevulde kenmerken/links niet weggooien zolang de deal open is.
+
 ## Gotchas (discovered the hard way)
 
 - **Postgres won't let `CREATE OR REPLACE FUNCTION` change a return type.** Adding a column to an RPC's
