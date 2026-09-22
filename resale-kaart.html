@@ -195,10 +195,16 @@ const pd = id => 'https://recravas.pipedrive.com/deal/' + id;
 document.getElementById('stand').textContent = STAND;
 
 const map = L.map('map', { zoomControl:true, scrollWheelZoom:true }).setView([52.1, 5.6], 8);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-  maxZoom: 19, subdomains:'abcd',
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+// Tegels zonder API-key: OpenStreetMap (kaart) en PDOK (luchtfoto NL, overheid, gratis).
+const kaart = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19,
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
 }).addTo(map);
+const luchtfoto = L.tileLayer('https://service.pdok.nl/hwh/luchtfotorgb/wmts/v1_0/Actueel_orthoHR/EPSG:3857/{z}/{x}/{y}.jpeg', {
+  maxZoom: 19, maxNativeZoom: 19,
+  attribution: 'Luchtfoto &copy; <a href="https://www.pdok.nl">PDOK</a>'
+});
+L.control.layers({ 'Kaart': kaart, 'Luchtfoto': luchtfoto }, null, { position:'topright' }).addTo(map);
 
 function kleurVan(w){ return getComputedStyle(document.documentElement).getPropertyValue('--' + w.status).trim() || '#2C5F52'; }
 
