@@ -3190,6 +3190,8 @@ async function renderBellen(){
   $("belUurSec").classList.toggle("hidden", !isOwner);
   $("belAnalyseSec").classList.toggle("hidden", !isOwner);
   $("belCutoffSec").classList.toggle("hidden", !isOwner);
+  $("belVersSec").classList.toggle("hidden", !isOwner);   // vers/over datum per beller: alleen eigenaar
+  $("belDuurSec").classList.toggle("hidden", !isOwner);   // gespreksduur per beller: alleen eigenaar
   if(!isOwner){
     // makelaar: standaard eigen opvolgcontacten, met filter naar alle
     $("opvolgFilter").classList.remove("hidden");
