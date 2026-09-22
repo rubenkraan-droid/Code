@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Resale Kaart</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%233A7A69'/%3E%3Cstop offset='1' stop-color='%23204538'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='24' fill='url(%23g)'/%3E%3Cpath d='M50 27 79 51 79 76 21 76 21 51Z' fill='%23fff'/%3E%3Crect x='43' y='57' width='14' height='19' rx='1.5' fill='%23255145'/%3E%3C/svg%3E" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<style>
+  :root{
+    --bg:#EEF1F7; --card:#FFFFFF; --surface-2:#F5F7FB;
+    --ink:#242A36; --muted:#7A8598; --faint:#AAB3C4;
+    --line:#E7ECF4; --line-strong:#D9E0EC;
+    --accent:#2C5F52; --accent-ink:#173D33; --accent-soft:#E4ECE7;
+    --verkoop:#2C5F52; --contract:#E0A23A; --acq:#5B8DEF;
+    --serif:Georgia,"Times New Roman",serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#141922; --card:#1C232E; --surface-2:#222B38;
+      --ink:#E8ECF4; --muted:#94A1B5; --faint:#5F6B80;
+      --line:#2A3342; --line-strong:#3A4557;
+      --accent-ink:#A9CDC0; --accent-soft:#22352E;
+      --verkoop:#4FA58C; --contract:#E8B45C; --acq:#7AA5F5;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#141922; --card:#1C232E; --surface-2:#222B38;
+    --ink:#E8ECF4; --muted:#94A1B5; --faint:#5F6B80;
+    --line:#2A3342; --line-strong:#3A4557;
+    --accent-ink:#A9CDC0; --accent-soft:#22352E;
+    --verkoop:#4FA58C; --contract:#E8B45C; --acq:#7AA5F5;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,Inter,Roboto,Arial,sans-serif;line-height:1.5;
+    display:flex;flex-direction:column}
+  header{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--card);border-bottom:1px solid var(--line)}
+  .logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#3A7A69,#204538);flex:none;
+    display:flex;align-items:center;justify-content:center}
+  header h1{font-family:var(--serif);font-weight:500;font-size:19px;margin:0;line-height:1.2}
+  header .sub{font-size:12px;color:var(--muted)}
+  header .stand{margin-left:auto;font-size:12px;color:var(--muted);text-align:right}
+  main{flex:1;display:flex;min-height:0}
+  aside{width:380px;flex:none;display:flex;flex-direction:column;background:var(--card);border-right:1px solid var(--line);min-height:0}
+  .controls{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .kpi{background:var(--surface-2);border-radius:10px;padding:8px 10px}
+  .kpi .v{font-family:var(--serif);font-size:20px;line-height:1.1}
+  .kpi .l{font-size:11px;color:var(--muted)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{border:1px solid var(--line-strong);background:var(--card);color:var(--ink);border-radius:999px;
+    padding:4px 10px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px}
+  .chip .dot{width:9px;height:9px;border-radius:50%}
+  .chip[aria-pressed="false"]{opacity:.45}
+  input[type=search]{width:100%;padding:8px 10px;border-radius:9px;border:1px solid var(--line-strong);
+    background:var(--surface-2);color:var(--ink);font-size:14px}
+  .list{overflow-y:auto;flex:1}
+  .item{padding:12px 16px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;gap:10px}
+  .item:hover,.item.active{background:var(--surface-2)}
+  .item .dot{width:10px;height:10px;border-radius:50%;margin-top:6px;flex:none}
+  .item .t{font-weight:600;font-size:14px}
+  .item .a{font-size:12px;color:var(--muted)}
+  .item .p{font-family:var(--serif);font-size:15px;margin-left:auto;white-space:nowrap;padding-left:8px}
+  .item .meta{font-size:11px;color:var(--muted);margin-top:2px}
+  .nopin{font-size:11px;color:var(--faint)}
+  #map{flex:1;min-height:0;background:var(--surface-2)}
+  .badge{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;color:#fff}
+  .leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--card);color:var(--ink)}
+  .leaflet-popup-content{margin:14px 16px;min-width:240px;max-width:300px;font-size:13px}
+  .pop h3{font-family:var(--serif);font-weight:500;font-size:17px;margin:6px 0 2px}
+  .pop .addr{color:var(--muted);font-size:12px}
+  .pop .price{font-family:var(--serif);font-size:22px;margin:6px 0}
+  .pop ul{margin:6px 0;padding-left:18px}
+  .pop li{margin:2px 0}
+  .pop .buyers{background:var(--surface-2);border-radius:8px;padding:6px 8px;font-size:12px;margin:6px 0}
+  .pop .links a{color:var(--accent-ink);font-weight:600;margin-right:12px;font-size:12px}
+  .pop .note{font-size:11px;color:var(--muted);font-style:italic}
+  .pin{width:26px;height:26px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid #fff;
+    box-shadow:0 2px 6px rgba(0,0,0,.35)}
+  .pin.approx{opacity:.8;border-style:dashed}
+  footer{font-size:11px;color:var(--muted);padding:8px 16px;border-top:1px solid var(--line)}
+  @media (max-width:760px){
+    header .stand{display:none}
+    html,body{height:auto}
+    main{flex-direction:column}
+    #map{flex:none;height:55vh;order:-1}
+    aside{width:100%;border-right:none;border-top:1px solid var(--line)}
+    .list{overflow:visible}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><svg width="20" height="20" viewBox="0 0 100 100"><path d="M50 18 88 50 88 84 12 84 12 50Z" fill="#fff"/><rect x="41" y="60" width="18" height="24" rx="2" fill="#255145"/></svg></div>
+  <div>
+    <h1>Resale-woningen</h1>
+    <div class="sub">RecraVas · interactieve kaart voor makelaars</div>
+  </div>
+  <div class="stand">Bron: Pipedrive (pipeline Resale)<br>Stand: <span id="stand"></span></div>
+</header>
+<main>
+  <aside>
+    <div class="controls">
+      <div class="kpis" id="kpis"></div>
+      <div class="chips" id="chips"></div>
+      <input type="search" id="q" placeholder="Zoek op park, plaats of adres…" />
+    </div>
+    <div class="list" id="list"></div>
+    <footer>Acquisitie-objecten staan op parkniveau (geen exact adres). Prijzen zijn vraagprijzen. Klik op een woning voor details.</footer>
+  </aside>
+  <div id="map"></div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const STAND = '22-09-2026';
+
+const STATUS = {
+  verkoop:  { label:'In verkoop',          kleur:'var(--verkoop)' },
+  contract: { label:'Contract verstuurd',  kleur:'var(--contract)' },
+  acq:      { label:'Acquisitie',          kleur:'var(--acq)' },
+};
+
+// Snapshot uit Pipedrive, pipeline 8 (Resale), open verkoper-deals.
+// geo: exact adres wordt in de browser nog verfijnd via PDOK (alleen NL).
+// Geen namen/contactgegevens van verkopers op deze pagina (AVG).
+const WONINGEN = [
+  { id:985, status:'verkoop', park:'Vakantiepark De Ossenberg', adres:'Dwarsweg 3-12, 3959 AC Overberg', geo:'Dwarsweg 3 3959AC Overberg',
+    lat:52.0402, lng:5.4838, prijs:190000,
+    kenmerken:['Eigen grond, ruim perceel (grond inbegrepen in vraagprijs)','Parkkosten 2026: € 1.730 incl. btw','365 dagen per jaar recreëren','Rustig park, direct tegen het bos'],
+    kopers:{ totaal:4, bezichtiging:2 } },
+  { id:511, status:'verkoop', park:'Vakantiedorp De Jutberg', adres:'De Jutberg 78-82, Laag-Soeren', geo:'De Jutberg 78 Laag-Soeren',
+    lat:52.0786, lng:6.0845, prijs:119000,
+    kenmerken:['Veluwe','Huurkavel (geen eigen grond), jaarplaats ca. € 3.500 p/j','Jaarplaats betaald t/m september 2027','Ouderdomsclausule 10 jaar'],
+    kopers:{ totaal:4, bezichtiging:0 },
+    links:[{t:'Funda', u:'https://www.funda.nl/detail/recreatie/laag-soeren/huis-de-jutberg-78-82/17282796/'}] },
+  { id:504, status:'verkoop', park:'Resort Bosvallei', adres:'Barteweg 15-384, Ede', geo:'Barteweg 15 Ede',
+    lat:52.0330, lng:5.6300, prijs:70000,
+    kenmerken:['Hoekkavel, geen aangrenzende tuin','Elke dag van het jaar recreëren, geen permanente bewoning','Verhuur niet mogelijk','Speeltuinen binnen/buiten, buitenzwembad'],
+    kopers:{ totaal:1, bezichtiging:1 } },
+  { id:508, status:'verkoop', park:'Bospark Ede (Topparken)', adres:'Zonneoordlaan 47, Ede', geo:'Zonneoordlaan 47 Ede',
+    lat:52.0290, lng:5.6400, prijs:65000,
+    kenmerken:['Verhuur via Topparken, positief rendement','Nieuwe cv-ketel','Recht van eerste terugkoop Topparken (geen interesse)'],
+    kopers:{ totaal:1, bezichtiging:1 } },
+  { id:574, status:'verkoop', park:'Rhederlaagse Meren', adres:'Vakantiehuis VV212, Marsweg 2, Lathum', geo:'Marsweg 2 Lathum',
+    lat:51.9880, lng:6.0250, prijs:194949,
+    kenmerken:['6 personen','Rustig deel van het park, dichtbij de visvijver'],
+    kopers:{ totaal:0, bezichtiging:0 },
+    links:[{t:'Succesparken', u:'https://www.succesparken.nl/rhederlaagse-meren/vakantiehuis-vv212-een-rustig-deel-van-het-park-dichtbij-de-visvijver-6-personen'}] },
+  { id:1168, status:'verkoop', park:'Vinkeveen', adres:'Vinkeveen (exact adres: zie Drive)', geo:null, approx:true,
+    lat:52.2150, lng:4.9330, prijs:410000, prijsNoot:'v.o.n. ex btw',
+    kenmerken:['Documentatie staat in de Drive'],
+    kopers:{ totaal:1, bezichtiging:1 } },
+  { id:1517, status:'contract', park:'Hofparken De Bergvennen', adres:'Bergvennenweg 35, kavel K-11, 7635 NJ Lattrop-Breklenkamp', geo:'Bergvennenweg 35 7635NJ Lattrop-Breklenkamp',
+    lat:52.4420, lng:6.9880, prijs:156000,
+    kenmerken:['Verkoopcontract verstuurd, nog niet getekend'],
+    kopers:{ totaal:0, bezichtiging:0 } },
+
+  { id:455, status:'acq', park:"Recreatiepark 't Posterbos", adres:'Posterholt (Midden-Limburg)', approx:true,
+    lat:51.1240, lng:6.0450, prijs:89000,
+    kenmerken:['Stenen halfvrijstaande woning (1996), 210 m² eigen grond','Badkamer, keuken en vloeren nieuw (2025)','Vrije verhuur toegestaan (park rekent 20% fee)','Parklasten ca. € 2.000 p/j','Nu nog bij andere makelaar'] },
+  { id:458, status:'acq', park:'Landal Bungalowpark Hoenderloo', adres:'Hoenderloo (Veluwe)', approx:true,
+    lat:52.1130, lng:5.8730, prijs:145000,
+    kenmerken:['Eigen grond','Jaarrond verhuur via Landal','Parklasten ca. € 340 p/m','Staat ook bij andere makelaar'] },
+  { id:518, status:'acq', park:'Wemeldinge', adres:'Wemeldinge (Zeeland)', approx:true,
+    lat:51.5190, lng:3.9950, prijs:350000,
+    kenmerken:['Bouwjaar 2021','Eigen grond, perceel ca. 410 m²'] },
+  { id:404, status:'acq', park:'Vakantiepark Capfun De Rotonde', adres:'Enspijk (Betuwe)', approx:true,
+    lat:51.8690, lng:5.1990, prijs:135000,
+    kenmerken:['Eerdere koper haakte op het laatst af'] },
+  { id:388, status:'acq', park:'Vakantiepark De Ossenberg', adres:'Overberg', approx:true,
+    lat:52.0385, lng:5.4870, prijs:null,
+    kenmerken:['Instapklaar chalet (2022)','Verhuur mogelijk'] },
+  { id:406, status:'acq', park:"Landal Bospark 't Wolfsven", adres:'Mierlo', approx:true,
+    lat:51.4320, lng:5.6200, prijs:null,
+    kenmerken:['Verkoper twijfelt tussen RecraVas en Landal'] },
+  { id:418, status:'acq', park:'Chalet in Chaam', adres:'Chaam', approx:true,
+    lat:51.5060, lng:4.8600, prijs:52250,
+    kenmerken:['Verhuur niet toegestaan','Moet vóór november verkocht zijn','Camping rekent 5% van de verkoopprijs'] },
+  { id:389, status:'acq', park:'Vakantiewoning Sauerland', adres:'Sauerland (Duitsland), locatie bij benadering', approx:true,
+    lat:51.1800, lng:8.4900, prijs:null,
+    kenmerken:['Eigenaar verkoopt voorlopig zelf'] },
+  { id:407, status:'acq', park:'Via Marktplaats', adres:'Locatie onbekend', lat:null, lng:null, prijs:32950,
+    kenmerken:['Contact via Marktplaats'] },
+];
+
+const eur = n => n==null ? 'Prijs n.t.b.' : '€ ' + n.toLocaleString('nl-NL');
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pd = id => 'https://recravas.pipedrive.com/deal/' + id;
+
+document.getElementById('stand').textContent = STAND;
+
+const map = L.map('map', { zoomControl:true, scrollWheelZoom:true }).setView([52.1, 5.6], 8);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+  maxZoom: 19, subdomains:'abcd',
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+}).addTo(map);
+
+function kleurVan(w){ return getComputedStyle(document.documentElement).getPropertyValue('--' + w.status).trim() || '#2C5F52'; }
+
+function icon(w){
+  return L.divIcon({ className:'', iconSize:[26,26], iconAnchor:[13,26], popupAnchor:[0,-24],
+    html:`<div class="pin${w.approx?' approx':''}" style="background:${kleurVan(w)}"></div>` });
+}
+
+function popupHtml(w){
+  const s = STATUS[w.status];
+  const kop = w.kopers ? `<div class="buyers"><b>${w.kopers.totaal}</b> geïnteresseerde koper${w.kopers.totaal===1?'':'s'} in Pipedrive` +
+    (w.kopers.bezichtiging ? ` · <b>${w.kopers.bezichtiging}</b> in fase bezichtiging` : '') + `</div>` : '';
+  const links = [...(w.links||[]), {t:'Open in Pipedrive', u:pd(w.id)}]
+    .map(l => `<a href="${esc(l.u)}" target="_blank" rel="noopener">${esc(l.t)} ↗</a>`).join('');
+  return `<div class="pop">
+    <span class="badge" style="background:${kleurVan(w)}">${s.label}</span>
+    <h3>${esc(w.park)}</h3>
+    <div class="addr">${esc(w.adres)}</div>
+    <div class="price">${eur(w.prijs)}${w.prijsNoot?` <span class="addr">${esc(w.prijsNoot)}</span>`:''}</div>
+    ${w.kenmerken?.length ? '<ul>' + w.kenmerken.map(k => `<li>${esc(k)}</li>`).join('') + '</ul>' : ''}
+    ${kop}
+    ${w.approx ? '<div class="note">Pin staat op park-/plaatsniveau, niet op het exacte adres.</div>' : ''}
+    <div class="links">${links}</div>
+  </div>`;
+}
+
+const markers = {};
+WONINGEN.forEach(w => {
+  if (w.lat == null) return;
+  markers[w.id] = L.marker([w.lat, w.lng], { icon: icon(w), title: w.park }).bindPopup(popupHtml(w));
+});
+
+// Filters
+const actief = { verkoop:true, contract:true, acq:true };
+let zoek = '';
+
+function zichtbaar(w){
+  if (!actief[w.status]) return false;
+  if (!zoek) return true;
+  return (w.park + ' ' + w.adres).toLowerCase().includes(zoek);
+}
+
+function renderChips(){
+  document.getElementById('chips').innerHTML = Object.entries(STATUS).map(([k,s]) => {
+    const n = WONINGEN.filter(w => w.status===k).length;
+    return `<button class="chip" data-k="${k}" aria-pressed="${actief[k]}"><span class="dot" style="background:${s.kleur}"></span>${s.label} (${n})</button>`;
+  }).join('');
+  document.querySelectorAll('.chip').forEach(b => b.onclick = () => { actief[b.dataset.k] = !actief[b.dataset.k]; render(); });
+}
+
+function renderKpis(lijst){
+  const inVerkoop = lijst.filter(w => w.status!=='acq');
+  const waarde = inVerkoop.reduce((s,w) => s + (w.prijs||0), 0);
+  const kopers = lijst.reduce((s,w) => s + (w.kopers?.totaal||0), 0);
+  document.getElementById('kpis').innerHTML = [
+    [inVerkoop.length, 'In verkoop / contract'],
+    ['€ ' + (waarde/1e6).toLocaleString('nl-NL',{maximumFractionDigits:2}) + ' mln', 'Totale vraagprijs'],
+    [kopers, 'Koperinteresses'],
+  ].map(([v,l]) => `<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
+}
+
+function render(){
+  renderChips();
+  const lijst = WONINGEN.filter(zichtbaar);
+  renderKpis(lijst);
+  const volgorde = { verkoop:0, contract:1, acq:2 };
+  lijst.sort((a,b) => volgorde[a.status]-volgorde[b.status] || (b.prijs||0)-(a.prijs||0));
+  document.getElementById('list').innerHTML = lijst.map(w => `
+    <div class="item" data-id="${w.id}">
+      <span class="dot" style="background:${STATUS[w.status].kleur}"></span>
+      <div>
+        <div class="t">${esc(w.park)}</div>
+        <div class="a">${esc(w.adres)}</div>
+        <div class="meta">${STATUS[w.status].label}${w.kopers?.totaal ? ` · ${w.kopers.totaal} koper${w.kopers.totaal===1?'':'s'}` : ''}${w.lat==null ? ' · <span class="nopin">geen locatie</span>' : ''}</div>
+      </div>
+      <div class="p">${eur(w.prijs)}</div>
+    </div>`).join('') || '<div class="item"><div class="a">Geen woningen gevonden.</div></div>';
+  document.querySelectorAll('.item[data-id]').forEach(el => el.onclick = () => focus(+el.dataset.id));
+  Object.entries(markers).forEach(([id,m]) => {
+    const w = WONINGEN.find(x => x.id === +id);
+    if (zichtbaar(w)) m.addTo(map); else m.remove();
+  });
+}
+
+function focus(id){
+  document.querySelectorAll('.item').forEach(el => el.classList.toggle('active', +el.dataset.id === id));
+  const m = markers[id];
+  if (!m) { const w = WONINGEN.find(x => x.id===id); window.open(pd(w.id), '_blank', 'noopener'); return; }
+  if (window.innerWidth <= 760) window.scrollTo({ top:0, behavior:'smooth' });
+  map.flyTo(m.getLatLng(), Math.max(map.getZoom(), 13), { duration:.6 });
+  setTimeout(() => m.openPopup(), 650);
+}
+
+function fitAll(){
+  const pts = WONINGEN.filter(w => w.lat!=null && w.lng<7.5).map(w => [w.lat,w.lng]); // Sauerland buiten beeld bij start
+  if (pts.length) map.fitBounds(pts, { padding:[40,40] });
+}
+
+document.getElementById('q').addEventListener('input', e => { zoek = e.target.value.trim().toLowerCase(); render(); });
+
+render();
+fitAll();
+
+// Exacte pins verfijnen via PDOK Locatieserver (NL, gratis, CORS). Faalt stil: dan blijft de benaderde pin staan.
+function cacheGet(k){ try { return JSON.parse(localStorage.getItem(k)); } catch(e){ return null; } }
+function cacheSet(k,v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+
+WONINGEN.filter(w => w.geo && markers[w.id]).forEach(async w => {
+  const key = 'geo:' + w.geo;
+  let ll = cacheGet(key);
+  if (!ll) {
+    try {
+      const r = await fetch('https://api.pdok.nl/bzk/locatieserver/search/v3_1/free?rows=1&fq=type:adres&fl=centroide_ll&q=' + encodeURIComponent(w.geo));
+      const doc = (await r.json())?.response?.docs?.[0];
+      const m = doc?.centroide_ll?.match(/POINT\(([-\d.]+) ([-\d.]+)\)/);
+      if (m) { ll = [+m[2], +m[1]]; cacheSet(key, ll); }
+    } catch(e) {}
+  }
+  if (ll) markers[w.id].setLatLng(ll);
+});
+</script>
+</body>
+</html>
