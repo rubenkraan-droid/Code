@@ -429,6 +429,7 @@
     <select id="fAgent"></select>
     <button id="recravasBtn" class="btn impact" title="Toon alleen resultaten vanaf 17 juli: het werk van RecraVas.">RecraVas <small>vanaf 17 juli</small></button>
     <button id="supermindsBtn" class="btn impact" title="Toon alleen resultaten tot 17 juli: het werk van de vorige marketingpartij Superminds.">Superminds <small>tot 17 juli</small></button>
+    <button id="uitgerijptBtn" class="btn impact" title="Toon alleen leads van 17 juli tot 25 dagen geleden — oud genoeg om (bij een cyclus van ~25 dagen) te zijn omgeslagen. De einddatum rolt automatisch mee met vandaag.">Uitgerijpt <small>17 jul &ndash; 25 dgn geleden</small></button>
   </div>
   <div id="impactBanner" class="impactbanner"><span>◉</span><span id="impactBannerTxt"></span></div>
 
@@ -1201,14 +1202,17 @@ function demoAgentData(fn, args){
 
 const IMPACT_DATUM = '2026-07-17';        // RecraVas: vanaf deze dag
 const IMPACT_DATUM_VOOR = '2026-07-16';  // Superminds: t/m deze dag (dag vóór de overname)
-// periode-bron: 'alles' (standaard) | 'recravas' (vanaf 17 juli) | 'superminds' (tot 17 juli)
+const RIJP_DAGEN = 25;                   // Uitgerijpt: einddatum = vandaag − dit aantal dagen (≈ sales-cyclus)
+// periode-bron: 'alles' (standaard) | 'recravas' (vanaf 17 juli) | 'superminds' (tot 17 juli) | 'uitgerijpt' (17 juli t/m vandaag−25d, meerollend)
 let PERIODE_BRON = localStorage.getItem("periode_bron") || "alles";
 function pasImpactToggleToe(){
   $("recravasBtn").classList.toggle("aan", PERIODE_BRON==="recravas");
   $("supermindsBtn").classList.toggle("aan", PERIODE_BRON==="superminds");
+  $("uitgerijptBtn").classList.toggle("aan", PERIODE_BRON==="uitgerijpt");
   $("impactBanner").classList.toggle("aan", PERIODE_BRON!=="alles");
   if(PERIODE_BRON==="recravas") $("impactBannerTxt").textContent = "RecraVas · resultaten vanaf 17 juli. Alles daarvóór is buiten beschouwing gelaten.";
   else if(PERIODE_BRON==="superminds") $("impactBannerTxt").textContent = "Superminds · resultaten tot 17 juli (vorige marketingpartij). Alles daarna is buiten beschouwing gelaten.";
+  else if(PERIODE_BRON==="uitgerijpt") $("impactBannerTxt").textContent = "Uitgerijpt · leads van 17 juli tot " + RIJP_DAGEN + " dagen geleden — oud genoeg om (bij een cyclus van ~" + RIJP_DAGEN + " dagen) te zijn omgeslagen. De einddatum rolt mee met vandaag; recentere leads blijven buiten beschouwing.";
 }
 function kiesBron(bron){
   PERIODE_BRON = (PERIODE_BRON===bron) ? "alles" : bron;   // nogmaals klikken zet 'm weer uit
@@ -1244,6 +1248,13 @@ function periodRange(){
   // RecraVas: alleen vanaf 17 juli. Superminds: alleen t/m 16 juli.
   if(PERIODE_BRON==="recravas"  && p_from < IMPACT_DATUM)      p_from = IMPACT_DATUM;
   if(PERIODE_BRON==="superminds" && p_to   > IMPACT_DATUM_VOOR) p_to   = IMPACT_DATUM_VOOR;
+  // Uitgerijpt: vanaf 17 juli, en einddatum meerollend op vandaag − RIJP_DAGEN (alleen leads die tijd hadden om om te slaan).
+  if(PERIODE_BRON==="uitgerijpt"){
+    if(p_from < IMPACT_DATUM) p_from = IMPACT_DATUM;
+    const rijp = new Date(today); rijp.setDate(today.getDate()-RIJP_DAGEN);
+    const rijpIso = iso(rijp);
+    if(p_to > rijpIso) p_to = rijpIso;
+  }
   return { p_from, p_to };
 }
 const metric  = (l,v,sub) => {
@@ -1639,6 +1650,7 @@ let refresh = ()=>{};
 pasImpactToggleToe();
 $("recravasBtn").addEventListener("click", ()=>kiesBron("recravas"));
 $("supermindsBtn").addEventListener("click", ()=>kiesBron("superminds"));
+$("uitgerijptBtn").addEventListener("click", ()=>kiesBron("uitgerijpt"));
 // Vernieuwen: forceer een verse Pipedrive-sync (server-side), wacht tot die klaar is, en
 // herteken dan de huidige weergave met de nieuwe data. Geen paginaherlaad.
 $("refreshBtn").addEventListener("click", async ()=>{
