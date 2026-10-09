@@ -831,6 +831,10 @@
         <select id="edFase"></select>
       </div>
       <div class="ep-field">
+        <label for="edICP">ICP · bedoelde doelgroep</label>
+        <select id="edICP"></select>
+      </div>
+      <div class="ep-field">
         <label for="edKanaal">Kanaal</label>
         <select id="edKanaal"></select>
       </div>
@@ -916,6 +920,26 @@ const KANALEN = [
 ];
 const KANAAL_LABEL = k => { const s=String(k||"").toLowerCase();
   return (KANALEN.find(x=>x.key===s)||{}).label || (k?String(k):"—"); };
+
+/* ---------- ICP (bedoelde doelgroep), instelbaar per advertentie ---------- */
+const ICPS = [
+  { key:"dga",         label:"DGA / ondernemer" },
+  { key:"ervaren",     label:"Ervaren belegger" },
+  { key:"eerste",      label:"Eerste belegger" },
+  { key:"eigen",       label:"Eigengebruiker" },
+  { key:"combinatie",  label:"Combinatie" },
+  { key:"vastgoedpro", label:"Vastgoedprofessional" },
+  { key:"erfenis",     label:"Erfenis" },
+  { key:"overig",      label:"Overig" },
+];
+const ICP_BY = Object.fromEntries(ICPS.map(i=>[i.key,i]));
+const ICP_UITLEG = "Bedoelde doelgroep (ICP) van deze advertentie. Klik op een cel om in te stellen. Later vergelijken we dit met het werkelijke profiel van de leads die op afspraak zijn geweest.";
+function icpPill(icp){
+  const i = ICP_BY[icp];
+  return i ? `<span class="fase" title="${i.label}" style="background:var(--accent-soft);color:var(--accent-soft-ink)">${i.label}</span>`
+           : `<span class="fase fase-leeg" title="Nog geen ICP ingesteld">—</span>`;
+}
+let ICP_BY_CODE = {};   // code -> icp, los opgehaald via ad_icp_map en gemerged in ADROWS/ARCHROWS
 
 /* ---------- mini-donut voor % stat-kaarten + gradient chart-vullingen ---------- */
 function donutMini(pct, color){
@@ -2020,7 +2044,7 @@ async function renderAds(){
   ADROASCAP = Infinity;   // ROAS wordt nergens meer gecapt (ook demopark rekent op echte cijfers)
   const r = periodRange();
   const rPrevAd = vorigePeriode(r);
-  const [k, daily, ov, mnd, unlinked, dsAds, kPrev, geplandAd] = await Promise.all([
+  const [k, daily, ov, mnd, unlinked, dsAds, kPrev, geplandAd, icpRows] = await Promise.all([
     rpc("ad_kpis",  { ...r, p_park_id: pp }).then(x=>x?.[0]||{}),
     rpc("ad_daily", { ...r, p_park_id: pp }),
     rpc("ad_overview", { ...r, p_park_id: pp }),
@@ -2029,7 +2053,9 @@ async function renderAds(){
     rpc("definitief_stats", { ...r, p_agent_id:null, p_park_id: pp, p_anchor:'lead' }).then(x=>x?.[0]||{}),
     rPrevAd ? rpc("ad_kpis", { ...rPrevAd, p_park_id: pp }).then(x=>x?.[0]) : Promise.resolve(null),
     rpc("geplande_afspraken", { p_park_id: pp, p_agent_id: null }).then(x=>(x||[]).length),
+    rpc("ad_icp_map", { p_park_id: pp }).catch(()=>[]),
   ]);
+  ICP_BY_CODE = Object.fromEntries((icpRows||[]).map(x=>[x.code, x.icp]));
   const heeftPrevAd = !!kPrev;
 
   const spend=Number(k.spend)||0, leads=Number(k.leads)||0, afspr=Number(k.afspraken)||0,
@@ -2069,6 +2095,7 @@ async function renderAds(){
   // De generieke Meta-verzamelbak (€0 spend, alle facebook-leads zonder specifieke advertentie)
   // hoort niet in de advertentietabellen; die leads staan onder "Niet gekoppeld" in de kanalen-tabel.
   ADROWS = (ov || []).filter(a => String(a.advertentie||"").trim().toLowerCase() !== "meta (facebook/instagram)");
+  ADROWS.forEach(a => a.icp = ICP_BY_CODE[a.code] || null);
   ADUNLINKED = (unlinked && Number(unlinked.leads)>0) ? unlinked : null;   // regel 'Niet gekoppeld' in de kanalen-tabel
   // status-filter vullen met wat er in dit park voorkomt ("Actief" eerst, dan de rest)
   const adStatussen = [...new Set(ADROWS.map(a=>a.status).filter(Boolean))]
@@ -2157,7 +2184,7 @@ async function renderAdDetail(adId, naam){
 }
 
 const ADCOLS = [
-  ["advertentie","Advertentie"], ["kwaliteit","Kwaliteit"], ["gelanceerd","Gelanceerd"], ["status","Status"], ["awareness_stage","Fase"], ["spend","Uitgaven"], ["clicks","Clicks"],
+  ["advertentie","Advertentie"], ["kwaliteit","Kwaliteit"], ["gelanceerd","Gelanceerd"], ["status","Status"], ["awareness_stage","Fase"], ["icp","ICP"], ["spend","Uitgaven"], ["clicks","Clicks"],
   ["cpc","CPC"], ["leads","Leads"], ["cpl","CPL"], ["afspraken","Afspraken"], ["cpa","CPA"], ["conv_pct","Conv. %"], ["clos_pct","Closing %"],
   ["ongekwalificeerd_pct","Ongekwalificeerd %"], ["sales","Sales"], ["omzet","Omzet"], ["roas","ROAS"], ["kanaal","Kanaal"],
 ];
@@ -2288,13 +2315,15 @@ function drawAdTable(){
       const arrow = s.key===key ? (s.dir<0?" ↓":" ↑") : "";
       const info = key==='awareness_stage'
         ? ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">${FASE_UITLEG}</span></span>`
+        : key==='icp'
+        ? ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">${ICP_UITLEG}</span></span>`
         : key==='conv_pct'
         ? ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">Conversie van lead naar afspraak (afspraken ÷ leads). Dé kwaliteitsmaat naast de prijs per lead: een goedkope lead die nooit een afspraak wordt, is alsnog duur.</span></span>`
         : key==='clos_pct'
         ? ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">Closing van afspraak naar sale (sales ÷ afspraken). Laat zien hoe goed de afspraken uit deze advertentie ook echt tot een verkoop leiden.</span></span>`
         : key==='kwaliteit'
         ? ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">Automatisch kwaliteitsoordeel per advertentie, relatief binnen dit park. Zwaarst weegt de kostenefficiëntie (liefst kost per sale, anders kost per afspraak), daarna de leadkwaliteit: conversie lead→afspraak plus het aandeel ongekwalificeerde leads (Wilson-ondergrens tegen kleine aantallen). Onder 5 leads geen oordeel. Beweeg over een label voor de onderbouwing.</span></span>` : "";
-      const tl = (key==='advertentie'||key==='kwaliteit'||key==='gelanceerd'||key==='status'||key==='awareness_stage'||key==='kanaal') ? 'tl' : '';
+      const tl = (key==='advertentie'||key==='kwaliteit'||key==='gelanceerd'||key==='status'||key==='awareness_stage'||key==='icp'||key==='kanaal') ? 'tl' : '';
       return `<th data-key="${key}" class="${tl}" style="cursor:pointer;user-select:none">${label}${arrow}${info}</th>`;
     }).join("")}</tr></thead>
      <tbody>${(()=>{ const ctx = ongekStats(); return rows.map(a=>{
@@ -2326,6 +2355,7 @@ function drawAdTable(){
          <td class="tl" style="white-space:nowrap;color:var(--muted)">${fmtLaunch(a.gelanceerd)}</td>
          <td style="text-align:left"><span class="badge ${st[1]}">${st[0]}</span></td>
          <td class="tl fase-cell" data-code="${escAttr(a.code)}" style="cursor:pointer" title="Klik om de fase/notities te wijzigen">${fasePill(a.awareness_stage)}</td>
+         <td class="tl icp-cell" data-code="${escAttr(a.code)}" style="cursor:pointer" title="Klik om de ICP te wijzigen">${icpPill(a.icp)}</td>
          <td style="font-weight:600">${eur(a.spend)}</td><td>${a.clicks}</td>
          <td>${a.cpc ? "€"+Number(a.cpc).toLocaleString("nl-NL",{minimumFractionDigits:2,maximumFractionDigits:2}) : "—"}</td>
          <td>${adLink(a.leads,'leads',a.ad_id,a.advertentie)}</td><td>${a.leads>0 ? eur(a.cpl) : "—"}</td>
@@ -2345,7 +2375,7 @@ function drawAdTable(){
   document.querySelectorAll("#adTable tbody tr").forEach(tr => tr.addEventListener("click", () => {
     renderAdDetail(Number(tr.dataset.adid), tr.dataset.naam);
   }));
-  document.querySelectorAll("#adTable .fase-cell, #adTable .kanaal-cell").forEach(el => el.addEventListener("click", (e) => {
+  document.querySelectorAll("#adTable .fase-cell, #adTable .icp-cell, #adTable .kanaal-cell").forEach(el => el.addEventListener("click", (e) => {
     e.stopPropagation();
     const row = ADROWS.find(r => r.code === el.dataset.code);
     if(row) openAdEdit(row, "ad");
@@ -3795,6 +3825,7 @@ function openAdEdit(row, source){
   $("adEditTitle").textContent = row.advertentie || row.code;
   $("adEditSub").textContent = "Code: " + row.code + (row.status ? " · " + (STATUSNL[row.status]||[row.status])[0] : "");
   $("edFase").value   = row.awareness_stage || "";
+  $("edICP").value    = row.icp || "";
   // kanaal: leeg = automatisch (uit platform). Alleen voorvullen als er een echte override is.
   $("edKanaal").value = (row.kanaal && String(row.kanaal).toLowerCase() !== String(row.platform||"").toLowerCase())
     ? String(row.kanaal).toLowerCase() : "";
@@ -3817,19 +3848,22 @@ async function saveAdEdit(){
     p_kill_reason: $("edKill").value.trim() || null,
     p_kanaal: $("edKanaal").value || null,
   };
+  const icpVal = $("edICP").value || null;
   const { error } = await sb.rpc("set_ad_annotation", args);
-  if(error){
-    $("edMsg").textContent = "Opslaan mislukt: " + error.message;
+  const { error: icpErr } = error ? { error:null } : await sb.rpc("set_ad_icp", { p_code: EDIT_CTX.code, p_icp: icpVal });
+  if(error || icpErr){
+    $("edMsg").textContent = "Opslaan mislukt: " + (error||icpErr).message;
     $("edMsg").style.color = "var(--bad)";
     $("edMsg").classList.remove("hidden");
     $("edSave").disabled = false;
     return;
   }
+  ICP_BY_CODE[EDIT_CTX.code] = icpVal;
   // lokale datasets meteen bijwerken zodat beide tabs kloppen zonder herladen
   const patch = a => { if(a && a.code===EDIT_CTX.code){
     a.awareness_stage = args.p_awareness_stage; a.werkte = args.p_werkte;
     a.waarom = args.p_waarom; a.kill_reason = args.p_kill_reason;
-    a.kanaal = args.p_kanaal || a.platform || a.kanaal; } };
+    a.kanaal = args.p_kanaal || a.platform || a.kanaal; a.icp = icpVal; } };
   ADROWS.forEach(patch); ARCHROWS.forEach(patch);
   const src = EDIT_CTX.source;
   closeAdEdit();
@@ -3869,6 +3903,8 @@ async function renderArchief(){
   setBranding(pp);
   ARCHROWS = (await rpc("ad_archive", { p_park_id: pp }) || [])
     .filter(a => String(a.advertentie||"").trim().toLowerCase() !== "meta (facebook/instagram)");
+  const archIcpBy = Object.fromEntries(((await rpc("ad_icp_map", { p_park_id: pp }).catch(()=>[]))||[]).map(x=>[x.code, x.icp]));
+  ARCHROWS.forEach(a => a.icp = archIcpBy[a.code] || null);
   // status-filter vullen met de statussen die in dit park voorkomen
   const statuses = [...new Set(ARCHROWS.map(a=>a.status).filter(Boolean))];
   if(ARCHSTATUS!=="all" && !statuses.includes(ARCHSTATUS)) ARCHSTATUS = "all";
@@ -3898,6 +3934,7 @@ function drawArchGrid(){
         <div class="arch-pills">
           <span class="badge ${st[1]}">${st[0]}</span>
           ${a.awareness_stage?fasePill(a.awareness_stage):""}
+          ${a.icp?icpPill(a.icp):""}
         </div>
         ${a.preview_link?`<a class="arch-preview" href="${escAttr(a.preview_link)}" target="_blank" rel="noopener" title="Advertentie bekijken op Facebook" onclick="event.stopPropagation()">Bekijk ad ↗</a>`:""}
       </div>
@@ -3936,6 +3973,8 @@ $("edFase").innerHTML = `<option value="">— geen fase —</option>`
   + FASES.map(f=>`<option value="${f.key}">${f.afk} · ${f.label}</option>`).join("");
 $("edKanaal").innerHTML = `<option value="">— automatisch (uit platform) —</option>`
   + KANALEN.map(k=>`<option value="${k.key}">${k.label}</option>`).join("");
+$("edICP").innerHTML = `<option value="">— geen ICP —</option>`
+  + ICPS.map(i=>`<option value="${i.key}">${i.label}</option>`).join("");
 $("edSave").addEventListener("click", saveAdEdit);
 $("edCancel").addEventListener("click", closeAdEdit);
 $("adEditOverlay").addEventListener("click", e=>{ if(e.target.id==="adEditOverlay") closeAdEdit(); });
