@@ -380,6 +380,7 @@
     <nav id="tabs" class="tabs">
       <button class="tab active" data-tab="resultaten" title="Resultaten"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19h16M7 15v4M12 10v9M17 6v13"/></svg><span class="lbl">Resultaten</span></button>
       <button class="tab" data-tab="advertenties" title="Advertenties"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M7 13h4M7 16h7"/></svg><span class="lbl">Advertenties</span></button>
+      <button class="tab" data-tab="icp" title="ICP · bedoeld vs werkelijk"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg><span class="lbl">ICP</span></button>
       <button class="tab" data-tab="bellen" title="Bellen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3h3l2 5-2.5 1.5a11 11 0 0 0 5 5L16 13l5 2v3a2 2 0 0 1-2.2 2A16 16 0 0 1 3 5.2 2 2 0 0 1 5 3z"/></svg><span class="lbl">Bellen</span></button>
       <button class="tab" data-tab="mailflow" title="Mailflow · mailattributie"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg><span class="lbl">Mailflow</span></button>
       <button class="tab" data-tab="archief" title="Archief · creative-library"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></svg><span class="lbl">Archief</span></button>
@@ -802,6 +803,9 @@
     <div class="sec">Bevindingen · vastgelegde analyses om later op terug te grijpen</div>
     <div id="bevindingenList"></div>
   </div>
+  <div id="tabICP" class="hidden">
+    <div id="icpBody"></div>
+  </div>
   </main>
 </div>
 </div>
@@ -940,6 +944,91 @@ function icpPill(icp){
            : `<span class="fase fase-leeg" title="Nog geen ICP ingesteld">—</span>`;
 }
 let ICP_BY_CODE = {};   // code -> icp, los opgehaald via ad_icp_map en gemerged in ADROWS/ARCHROWS
+const icpLabel = k => k ? ((ICP_BY[k]||{}).label || k) : "—";
+const ICP_AFK = { dga:"DGA", ervaren:"Ervaren", eerste:"Eerste", eigen:"Eigen", combinatie:"Combi", vastgoedpro:"Vastgoed", erfenis:"Erfenis", overig:"Overig" };
+const icpAfk = k => k ? (ICP_AFK[k]||k) : "Onbekend";
+
+/* ---------- ICP-tabblad: bedoeld (ad-ICP) vs werkelijk (customer_profile) ---------- */
+async function renderICP(){
+  const body = $("icpBody");
+  const pp = ADPARK;   // volgt de parkkeuze van de Advertenties-tab; null = alle parken
+  const r = periodRange();
+  body.innerHTML = `<div style="color:var(--muted);padding:6px 0">Laden…</div>`;
+  let ov, icpRows, match;
+  try{
+    [ov, icpRows, match] = await Promise.all([
+      rpc("ad_overview", { ...r, p_park_id: pp }),
+      rpc("ad_icp_map",  { p_park_id: pp }).catch(()=>[]),
+      rpc("icp_match",   { ...r, p_park_id: pp }).catch(()=>[]),
+    ]);
+  }catch(e){ body.innerHTML = `<div style="color:var(--bad);padding:8px 0">Kon ICP-data niet laden: ${esc(String((e&&e.message)||e))}</div>`; return; }
+
+  const icpBy = Object.fromEntries((icpRows||[]).map(x=>[x.code,x.icp]));
+  const ads = (ov||[]).filter(a=>String(a.advertentie||"").trim().toLowerCase()!=="meta (facebook/instagram)")
+                      .map(a=>({...a, icp: icpBy[a.code]||null}));
+  const m = (match||[]).map(x=>({code:x.code, bedoeld:x.bedoeld||null, werkelijk:x.werkelijk||null, afspraken:Number(x.afspraken)||0, sales:Number(x.sales)||0}));
+  const sum = (arr,f)=>arr.reduce((s,a)=>s+(Number(a[f])||0),0);
+  const parkNaam = pp==null ? "alle parken" : (((PARKS||[]).find(p=>p.id===pp)||{}).name || ("park "+pp));
+
+  // Panel A: per bedoelde ICP
+  const gA={}; ads.forEach(a=>{ const k=a.icp||"__geen"; (gA[k]=gA[k]||[]).push(a); });
+  const ordA=[...ICPS.map(i=>i.key),"__geen"].filter(k=>gA[k]);
+  const rowsA=ordA.map(k=>{ const g=gA[k], spend=sum(g,'spend'),leads=sum(g,'leads'),afspr=sum(g,'afspraken'),sales=sum(g,'sales'),omzet=sum(g,'omzet');
+    return {k,n:g.length,spend,leads,afspr,sales,omzet,cpa:afspr>0?spend/afspr:null,roas:spend>0?omzet/spend:null}; });
+  const tA={spend:sum(ads,'spend'),leads:sum(ads,'leads'),afspr:sum(ads,'afspraken'),sales:sum(ads,'sales'),omzet:sum(ads,'omzet')};
+  const geenCount=ads.filter(a=>!a.icp).length;
+  const panelA = `
+    <div class="sec">Per bedoelde doelgroep (ICP) · advertentieprestatie · ${esc(parkNaam)}
+      <span class="info" tabindex="0">i<span class="tip">Alle advertenties met dezelfde bedoelde ICP opgeteld, voor de gekozen periode en park. Stel de ICP per advertentie in op de Advertenties-tab.</span></span>
+    </div>
+    <div class="panel"><div class="scroll"><table><thead><tr>
+      <th class="tl">ICP</th><th>Ads</th><th>Uitgaven</th><th>Leads</th><th>Afspraken</th><th>€/afspraak</th><th>Sales</th><th>Omzet</th><th>ROAS</th>
+    </tr></thead><tbody>
+    ${rowsA.map(x=>`<tr><td class="tl">${x.k==="__geen"?'<span style="color:var(--faint)">— geen ICP —</span>':icpPill(x.k)}</td>
+      <td>${x.n}</td><td>${eur(x.spend)}</td><td>${x.leads}</td><td>${x.afspr}</td><td>${x.cpa!=null?eur(x.cpa):"—"}</td>
+      <td>${x.sales}</td><td>${x.omzet>0?eur(x.omzet):"—"}</td><td>${x.roas!=null?x.roas.toFixed(1)+"×":"—"}</td></tr>`).join("")
+      || `<tr><td class="tl" colspan="9" style="color:var(--muted)">Nog geen advertenties met data in deze periode.</td></tr>`}
+    </tbody><tfoot><tr style="font-weight:700;border-top:2px solid var(--line-strong)">
+      <td class="tl">Totaal</td><td>${ads.length}</td><td>${eur(tA.spend)}</td><td>${tA.leads}</td><td>${tA.afspr}</td>
+      <td>${tA.afspr>0?eur(tA.spend/tA.afspr):"—"}</td><td>${tA.sales}</td><td>${tA.omzet>0?eur(tA.omzet):"—"}</td>
+      <td>${tA.spend>0?(tA.omzet/tA.spend).toFixed(1)+"×":"—"}</td></tr></tfoot></table></div></div>
+    ${geenCount?`<div style="font-size:12px;color:var(--muted);margin:8px 0 0">${geenCount} advertentie(s) nog zonder ICP. Vul ze in op de Advertenties-tab voor een scherper beeld.</div>`:""}`;
+
+  // Panel B: matrix bedoeld x werkelijk (afspraken)
+  const totAfspr=sum(m,'afspraken');
+  const profPresent=ICPS.map(i=>i.key).filter(k=> m.some(x=>x.werkelijk===k && x.afspraken>0));
+  const onbCol=m.some(x=>!x.werkelijk && x.afspraken>0);
+  const cols=[...profPresent, ...(onbCol?["__onb"]:[])];
+  const bedPresent=[...ICPS.map(i=>i.key),"__geen"].filter(k=> m.some(x=>(x.bedoeld||"__geen")===k && x.afspraken>0));
+  const cellv=(b,w)=> sum(m.filter(x=>(x.bedoeld||"__geen")===b && (x.werkelijk||"__onb")===w),'afspraken');
+  const matrixTbl=(totAfspr>0 && cols.length)?`
+    <div class="panel"><div class="scroll"><table><thead><tr><th class="tl">Bedoeld ↓ / werkelijk →</th>
+      ${cols.map(w=>`<th title="${w==="__onb"?"Nog geen profiel ingevuld":esc(icpLabel(w))}">${w==="__onb"?"Onbekend":esc(icpAfk(w))}</th>`).join("")}<th>Totaal</th></tr></thead>
+    <tbody>${bedPresent.map(b=>{ const rowTot=sum(m.filter(x=>(x.bedoeld||"__geen")===b),'afspraken');
+      return `<tr><td class="tl">${b==="__geen"?'<span style="color:var(--faint)">— geen ICP —</span>':icpPill(b)}</td>
+      ${cols.map(w=>{ const v=cellv(b,w), hit=(b!=="__geen"&&w!=="__onb"&&b===w);
+        return `<td style="${v?(hit?"background:var(--good-soft);color:var(--good);font-weight:700":"font-weight:600"):"color:var(--faint)"}">${v||"·"}</td>`;}).join("")}
+      <td style="font-weight:600">${rowTot}</td></tr>`;}).join("")}</tbody></table></div></div>
+    <div style="font-size:12px;color:var(--muted);margin:8px 0 0">Groen op de diagonaal = de bedoelde doelgroep kwam ook echt opdagen (match). Telt alle afspraken in de periode (gepland + geweest). Afspraken zonder ad-ICP of zonder ingevuld profiel vallen onder "— geen ICP —" / "Onbekend".</div>`
+    :`<div class="panel" style="padding:14px;color:var(--muted)">Nog geen afspraken met een ingevuld klantprofiel in deze periode. Zodra makelaars het Pipedrive-veld "Type klant" invullen, vult deze matrix zich vanzelf.</div>`;
+  const panelB=`<div class="sec" style="margin-top:26px">Bedoeld vs werkelijk · afspraken per doelgroep</div>${matrixTbl}`;
+
+  // Panel C: trefkans per advertentie
+  const perCode={}; m.forEach(x=>{ const c=perCode[x.code]=perCode[x.code]||{bedoeld:x.bedoeld,known:0,match:0,tot:0}; if(x.bedoeld) c.bedoeld=x.bedoeld;
+    c.tot+=x.afspraken; if(x.werkelijk){ c.known+=x.afspraken; if(x.werkelijk===x.bedoeld) c.match+=x.afspraken; } });
+  const trefRows=Object.entries(perCode).filter(([,c])=>c.bedoeld && c.known>0)
+    .map(([code,c])=>({code,bedoeld:c.bedoeld,known:c.known,match:c.match,pct:c.known>0?c.match/c.known:0}))
+    .sort((a,b)=>(b.pct-a.pct)||(b.known-a.known));
+  const panelC=`<div class="sec" style="margin-top:26px">Trefkans per advertentie · % afspraken dat matchte met de bedoelde ICP
+      <span class="info" tabindex="0">i<span class="tip">Van de afspraken met een ingevuld klantprofiel: welk deel had het profiel dat de advertentie bedoelde. Alleen advertenties met een ingestelde ICP en minstens één ingevuld profiel.</span></span>
+    </div>
+    ${trefRows.length?`<div class="panel"><div class="scroll"><table><thead><tr><th class="tl">Advertentie</th><th class="tl">Bedoelde ICP</th><th>Afspraken met profiel</th><th>Match</th><th>Trefkans</th></tr></thead>
+    <tbody>${trefRows.map(x=>`<tr><td class="tl" style="font-family:ui-monospace,monospace;font-size:12px">${esc(x.code)}</td><td class="tl">${icpPill(x.bedoeld)}</td><td>${x.known}</td><td>${x.match}</td>
+      <td style="font-weight:700;color:${x.pct>=0.6?"var(--good)":x.pct<0.34?"var(--bad)":"var(--ink)"}">${Math.round(x.pct*100)}%</td></tr>`).join("")}</tbody></table></div></div>`
+    :`<div class="panel" style="padding:14px;color:var(--muted)">Nog te weinig data. Dit vult zich zodra er afspraken zijn met een ingevuld "Type klant" op advertenties die een ICP hebben.</div>`}`;
+
+  body.innerHTML = panelA + panelB + panelC;
+}
 
 /* ---------- mini-donut voor % stat-kaarten + gradient chart-vullingen ---------- */
 function donutMini(pct, color){
@@ -1558,6 +1647,7 @@ async function applyRole(){
   // Campagnes (CBO/adset): zelfde publiek als Advertenties (niet de makelaar). Bevindingen: alleen eigenaar.
   document.querySelector('.tab[data-tab="campagnes"]').classList.toggle("hidden", agentV);
   document.querySelector('.tab[data-tab="bevindingen"]').classList.toggle("hidden", !owner);
+  document.querySelector('.tab[data-tab="icp"]').classList.toggle("hidden", !owner);   // ICP-matrix: alleen eigenaar
   document.querySelector('.tab[data-tab="financien"]').classList.toggle("hidden", parkV);
   // Bellen: makelaars + master-eigenaar, niet de parkeigenaar/park-gebonden eigenaar (Karl/Carl)
   // en niet een eigenaar zonder beldata-toegang (bv. Toine, echt óf testweergave)
@@ -1661,6 +1751,7 @@ function renderActieveTab(){
   else if(activeTab==="resale") renderResale();
   else if(activeTab==="campagnes") renderCampagnes();
   else if(activeTab==="bevindingen") renderBevindingen();
+  else if(activeTab==="icp") renderICP();
 }
 $("fPeriod").addEventListener("change", e=>{
   const show = e.target.value==="custom";
@@ -1719,8 +1810,9 @@ function toonTab(tab, opts){
   $("tabResale").classList.toggle("hidden", tab!=="resale");
   $("tabCampagnes").classList.toggle("hidden", tab!=="campagnes");
   $("tabBevindingen").classList.toggle("hidden", tab!=="bevindingen");
+  $("tabICP").classList.toggle("hidden", tab!=="icp");
   $("fAgent").classList.toggle("hidden", tab!=="resultaten" || !currentView || currentView().role!=="owner");
-  $("fPark").classList.toggle("hidden", (currentView && currentView().role==="park") || tab==="advertenties" || tab==="archief" || tab==="financien" || tab==="bellen" || tab==="mailflow" || tab==="resale" || tab==="campagnes" || tab==="bevindingen");
+  $("fPark").classList.toggle("hidden", (currentView && currentView().role==="park") || tab==="advertenties" || tab==="archief" || tab==="financien" || tab==="bellen" || tab==="mailflow" || tab==="resale" || tab==="campagnes" || tab==="bevindingen" || tab==="icp");
   if(!opts.silent) localStorage.setItem("activeTab", tab);
   if(tab==="advertenties") renderAds();
   if(tab==="archief") renderArchief();
@@ -1730,6 +1822,7 @@ function toonTab(tab, opts){
   if(tab==="resale") renderResale();
   if(tab==="campagnes") renderCampagnes();
   if(tab==="bevindingen") renderBevindingen();
+  if(tab==="icp") renderICP();
 }
 // een verborgen tab (niet beschikbaar voor deze rol) is geen geldige bestemming
 function tabBeschikbaar(tab){
