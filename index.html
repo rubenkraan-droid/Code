@@ -947,6 +947,24 @@ let ICP_BY_CODE = {};   // code -> icp, los opgehaald via ad_icp_map en gemerged
 const icpLabel = k => k ? ((ICP_BY[k]||{}).label || k) : "—";
 const ICP_AFK = { dga:"DGA", ervaren:"Ervaren", eerste:"Eerste", eigen:"Eigen", combinatie:"Combi", vastgoedpro:"Vastgoed", erfenis:"Erfenis", overig:"Overig" };
 const icpAfk = k => k ? (ICP_AFK[k]||k) : "Onbekend";
+let ICP_APPT = [];   // afspraak-profielen (klantniveau), voor de per-klant drilldown
+function icpToonKlanten(prof){
+  const rows = ICP_APPT.filter(a => (a.customer_profile||"__onb")===prof);
+  const lbl = prof==="__onb" ? "Onbekend (nog niet getagd)" : icpLabel(prof);
+  $("icpDrill").innerHTML = `
+    <div class="sec" style="margin-top:4px">Klanten · ${esc(lbl)} · ${rows.length}
+      <button onclick="$('icpDrill').innerHTML=''" class="mini-close">Sluiten ×</button></div>
+    <div class="panel"><div class="scroll"><table><thead><tr><th class="tl">Klant</th><th class="tl">Afspraak</th><th class="tl">Advertentie</th><th class="tl">Bedoelde ICP</th><th class="tl">Status</th><th></th></tr></thead>
+    <tbody>${rows.map(a=>`<tr>
+      <td class="tl">${a.naam?esc(a.naam):'<span style="color:var(--faint)">Deal #'+a.deal_id+'</span>'}</td>
+      <td class="tl" style="color:var(--muted)">${a.afspraak?fmtLaunch(a.afspraak):"—"}</td>
+      <td class="tl">${a.ad_code?'<span style="font-family:ui-monospace,monospace;font-size:12px">'+esc(a.ad_code)+'</span>':'<span style="color:var(--faint)">geen ad</span>'}</td>
+      <td class="tl">${a.ad_icp?icpPill(a.ad_icp):'<span style="color:var(--faint)">—</span>'}</td>
+      <td class="tl">${a.verkocht?'<span style="color:var(--good);font-weight:600">verkocht</span>':'<span style="color:var(--muted)">afspraak</span>'}</td>
+      <td class="tl">${a.pipedrive_url?'<a href="'+escAttr(a.pipedrive_url)+'" target="_blank" rel="noopener">↗</a>':""}</td>
+    </tr>`).join("")}</tbody></table></div></div>`;
+  $("icpDrill").scrollIntoView({behavior:"smooth",block:"nearest"});
+}
 
 /* ---------- ICP-tabblad: bedoeld (ad-ICP) vs werkelijk (customer_profile) ---------- */
 async function renderICP(){
@@ -954,12 +972,13 @@ async function renderICP(){
   const pp = ADPARK;   // volgt de parkkeuze van de Advertenties-tab; null = alle parken
   const r = periodRange();
   body.innerHTML = `<div style="color:var(--muted);padding:6px 0">Laden…</div>`;
-  let ov, icpRows, match;
+  let ov, icpRows, match, appt;
   try{
-    [ov, icpRows, match] = await Promise.all([
+    [ov, icpRows, match, appt] = await Promise.all([
       rpc("ad_overview", { ...r, p_park_id: pp }),
       rpc("ad_icp_map",  { p_park_id: pp }).catch(()=>[]),
       rpc("icp_match",   { ...r, p_park_id: pp }).catch(()=>[]),
+      rpc("afspraak_profielen", { ...r, p_park_id: pp }).catch(()=>[]),
     ]);
   }catch(e){ body.innerHTML = `<div style="color:var(--bad);padding:8px 0">Kon ICP-data niet laden: ${esc(String((e&&e.message)||e))}</div>`; return; }
 
@@ -1027,7 +1046,24 @@ async function renderICP(){
       <td style="font-weight:700;color:${x.pct>=0.6?"var(--good)":x.pct<0.34?"var(--bad)":"var(--ink)"}">${Math.round(x.pct*100)}%</td></tr>`).join("")}</tbody></table></div></div>`
     :`<div class="panel" style="padding:14px;color:var(--muted)">Nog te weinig data. Dit vult zich zodra er afspraken zijn met een ingevuld "Type klant" op advertenties die een ICP hebben.</div>`}`;
 
-  body.innerHTML = panelA + panelB + panelC;
+  // Panel D: verdeling werkelijke profielen onder afspraken (parkbreed, incl. niet-ad-leads)
+  ICP_APPT = (appt||[]);
+  const totAppt = ICP_APPT.length, taggedN = ICP_APPT.filter(a=>a.customer_profile).length;
+  const gP={}; ICP_APPT.forEach(a=>{ const k=a.customer_profile||"__onb"; (gP[k]=gP[k]||[]).push(a); });
+  const ordP=[...ICPS.map(i=>i.key).filter(k=>gP[k]), ...(gP["__onb"]?["__onb"]:[])];
+  const panelD = `
+    <div class="sec">Welke klanten kregen we op afspraak · verdeling profielen · ${esc(parkNaam)}
+      <span class="info" tabindex="0">i<span class="tip">Van alle afspraken in de periode (gepland + geweest): welk aandeel had welk Type klant. "Onbekend" = nog niet getagd in Pipedrive. Klik op een rij voor de klanten.</span></span>
+    </div>
+    <div class="panel"><div class="scroll"><table><thead><tr><th class="tl">Profiel</th><th>Afspraken</th><th>Aandeel</th></tr></thead>
+    <tbody>${ordP.map(k=>{ const g=gP[k], pct=totAppt>0?Math.round(g.length/totAppt*100):0;
+      return `<tr class="icp-prof-row" data-prof="${k}" style="cursor:pointer" title="Klik voor de klanten"><td class="tl">${k==="__onb"?'<span style="color:var(--faint)">Onbekend (nog niet getagd)</span>':icpPill(k)}</td><td>${g.length}</td><td>${pct}%</td></tr>`;}).join("")
+      || `<tr><td class="tl" colspan="3" style="color:var(--muted)">Geen afspraken in deze periode.</td></tr>`}
+    </tbody><tfoot><tr style="font-weight:700;border-top:2px solid var(--line-strong)"><td class="tl">Totaal</td><td>${totAppt}</td><td>${taggedN} getagd</td></tr></tfoot></table></div></div>
+    <div id="icpDrill" style="margin:10px 0 0"></div>`;
+
+  body.innerHTML = panelD + panelB + panelC + panelA;
+  document.querySelectorAll("#icpBody .icp-prof-row").forEach(el=>el.addEventListener("click", ()=> icpToonKlanten(el.dataset.prof)));
 }
 
 /* ---------- mini-donut voor % stat-kaarten + gradient chart-vullingen ---------- */
