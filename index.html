@@ -960,7 +960,7 @@ function icpToonKlanten(prof){
       <td class="tl" style="color:var(--muted)">${a.afspraak?fmtLaunch(a.afspraak):"—"}</td>
       <td class="tl">${a.ad_code?'<span style="font-family:ui-monospace,monospace;font-size:12px">'+esc(a.ad_code)+'</span>':'<span style="color:var(--faint)">geen ad</span>'}</td>
       <td class="tl">${a.ad_icp?icpPill(a.ad_icp):'<span style="color:var(--faint)">—</span>'}</td>
-      <td class="tl">${a.verkocht?'<span style="color:var(--good);font-weight:600">verkocht</span>':'<span style="color:var(--muted)">afspraak</span>'}</td>
+      <td class="tl">${a.verkocht?'<span style="color:var(--good);font-weight:600">verkocht'+(Number(a.bedrag)>0?' · '+eur(a.bedrag):'')+'</span>':'<span style="color:var(--muted)">afspraak</span>'}</td>
       <td class="tl">${a.pipedrive_url?'<a href="'+escAttr(a.pipedrive_url)+'" target="_blank" rel="noopener">↗</a>':""}</td>
     </tr>`).join("")}</tbody></table></div></div>`;
   $("icpDrill").scrollIntoView({behavior:"smooth",block:"nearest"});
@@ -1051,15 +1051,23 @@ async function renderICP(){
   const totAppt = ICP_APPT.length, taggedN = ICP_APPT.filter(a=>a.customer_profile).length;
   const gP={}; ICP_APPT.forEach(a=>{ const k=a.customer_profile||"__onb"; (gP[k]=gP[k]||[]).push(a); });
   const ordP=[...ICPS.map(i=>i.key).filter(k=>gP[k]), ...(gP["__onb"]?["__onb"]:[])];
+  const totVerk = ICP_APPT.filter(a=>a.verkocht).length;
+  const totOmz = ICP_APPT.filter(a=>a.verkocht).reduce((s,a)=>s+(Number(a.bedrag)||0),0);
   const panelD = `
-    <div class="sec">Welke klanten kregen we op afspraak · verdeling profielen · ${esc(parkNaam)}
-      <span class="info" tabindex="0">i<span class="tip">Van alle afspraken in de periode (gepland + geweest): welk aandeel had welk Type klant. "Onbekend" = nog niet getagd in Pipedrive. Klik op een rij voor de klanten.</span></span>
+    <div class="sec">Welke klanten kregen we op afspraak · verdeling + kosten per verkoop · ${esc(parkNaam)}
+      <span class="info" tabindex="0">i<span class="tip">Van alle afspraken in de periode (gepland + geweest): aandeel per Type klant, de verkopen, de omzet (verkoopsom) en de kosten per verkoop. Kosten per verkoop = de advertentiekosten verdeeld over de afspraken naar rato, gedeeld door de verkopen van dat profiel. "Onbekend" = nog niet getagd. Klik op een rij voor de klanten.</span></span>
     </div>
-    <div class="panel"><div class="scroll"><table><thead><tr><th class="tl">Profiel</th><th>Afspraken</th><th>Aandeel</th></tr></thead>
-    <tbody>${ordP.map(k=>{ const g=gP[k], pct=totAppt>0?Math.round(g.length/totAppt*100):0;
-      return `<tr class="icp-prof-row" data-prof="${k}" style="cursor:pointer" title="Klik voor de klanten"><td class="tl">${k==="__onb"?'<span style="color:var(--faint)">Onbekend (nog niet getagd)</span>':icpPill(k)}</td><td>${g.length}</td><td>${pct}%</td></tr>`;}).join("")
-      || `<tr><td class="tl" colspan="3" style="color:var(--muted)">Geen afspraken in deze periode.</td></tr>`}
-    </tbody><tfoot><tr style="font-weight:700;border-top:2px solid var(--line-strong)"><td class="tl">Totaal</td><td>${totAppt}</td><td>${taggedN} getagd</td></tr></tfoot></table></div></div>
+    <div class="panel"><div class="scroll"><table><thead><tr><th class="tl">Profiel</th><th>Afspraken</th><th>Aandeel</th><th>Verkopen</th><th>Omzet</th><th>Kosten / verkoop</th></tr></thead>
+    <tbody>${ordP.map(k=>{ const g=gP[k], pct=totAppt>0?Math.round(g.length/totAppt*100):0,
+        verk=g.filter(a=>a.verkocht).length, omz=g.filter(a=>a.verkocht).reduce((s,a)=>s+(Number(a.bedrag)||0),0),
+        alloc=totAppt>0?tA.spend*g.length/totAppt:0, kpv=verk>0?alloc/verk:null;
+      return `<tr class="icp-prof-row" data-prof="${k}" style="cursor:pointer" title="Klik voor de klanten">
+        <td class="tl">${k==="__onb"?'<span style="color:var(--faint)">Onbekend (nog niet getagd)</span>':icpPill(k)}</td>
+        <td>${g.length}</td><td>${pct}%</td><td>${verk||"—"}</td><td>${omz>0?eur(omz):"—"}</td><td>${kpv!=null?eur(kpv):"—"}</td></tr>`;}).join("")
+      || `<tr><td class="tl" colspan="6" style="color:var(--muted)">Geen afspraken in deze periode.</td></tr>`}
+    </tbody><tfoot><tr style="font-weight:700;border-top:2px solid var(--line-strong)">
+      <td class="tl">Totaal</td><td>${totAppt}</td><td>${taggedN} getagd</td><td>${totVerk}</td><td>${totOmz>0?eur(totOmz):"—"}</td><td>${totVerk>0?eur(tA.spend/totVerk):"—"}</td></tr></tfoot></table></div></div>
+    <div style="font-size:12px;color:var(--muted);margin:8px 0 0">Kosten per verkoop = de advertentie-spend (${eur(tA.spend)}) verdeeld over de afspraken naar rato, gedeeld door de verkopen van dat profiel. Een benadering: spend wordt per advertentie gemaakt, niet per profiel.</div>
     <div id="icpDrill" style="margin:10px 0 0"></div>`;
 
   body.innerHTML = panelD + panelB + panelC + panelA;
@@ -2315,7 +2323,7 @@ async function renderAdDetail(adId, naam){
 const ADCOLS = [
   ["advertentie","Advertentie"], ["kwaliteit","Kwaliteit"], ["gelanceerd","Gelanceerd"], ["status","Status"], ["awareness_stage","Fase"], ["icp","ICP"], ["spend","Uitgaven"], ["clicks","Clicks"],
   ["cpc","CPC"], ["leads","Leads"], ["cpl","CPL"], ["afspraken","Afspraken"], ["cpa","CPA"], ["conv_pct","Conv. %"], ["clos_pct","Closing %"],
-  ["ongekwalificeerd_pct","Ongekwalificeerd %"], ["sales","Sales"], ["omzet","Omzet"], ["roas","ROAS"], ["kanaal","Kanaal"],
+  ["ongekwalificeerd_pct","Ongekwalificeerd %"], ["sales","Sales"], ["omzet","Omzet"], ["kost_per_sale","Kosten/sale"], ["roas","ROAS"], ["kanaal","Kanaal"],
 ];
 // conversie lead -> afspraak (kwaliteitsmaat per advertentie); niet in de RPC, dus hier afgeleid
 const convPct = a => Number(a.leads)>0 ? Math.round((Number(a.afspraken)||0)/Number(a.leads)*100) : null;
@@ -2493,6 +2501,7 @@ function drawAdTable(){
          <td>${closPct(a)!=null ? closPct(a)+"%" : "—"}</td>
          <td class="${okCls}">${a.leads>0 ? ok+"%"+relMark : "—"}</td>
          <td>${adLink(a.sales,'verkopen',a.ad_id,a.advertentie)}</td><td>${a.omzet>0 ? eur(a.omzet) : "—"}</td>
+         <td>${Number(a.sales)>0 ? eur(a.kost_per_sale) : "—"}</td>
          <td>${Number(a.roas)>0 ? Math.min(ADROASCAP,Number(a.roas)).toFixed(2) : "—"}</td>
          <td class="tl kanaal-cell" data-code="${escAttr(a.code)}" style="cursor:pointer" title="Klik om het kanaal/notities te wijzigen">${esc(KANAAL_LABEL(a.kanaal))}</td></tr>`;
      }).join("") || `<tr><td colspan="${ADCOLS.length}" style="color:var(--muted);padding:14px">Geen advertenties in deze selectie.</td></tr>`; })()}</tbody>`;
