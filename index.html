@@ -931,7 +931,7 @@ const ICPS = [
   { key:"ervaren",     label:"Ervaren belegger" },
   { key:"eerste",      label:"Eerste belegger" },
   { key:"eigen",       label:"Eigengebruiker" },
-  { key:"combinatie",  label:"Combinatie" },
+  { key:"combinatie",  label:"Combinatie / breed" },
   { key:"vastgoedpro", label:"Vastgoedprofessional" },
   { key:"erfenis",     label:"Erfenis" },
   { key:"overig",      label:"Overig" },
@@ -1025,21 +1025,21 @@ async function renderICP(){
       ${cols.map(w=>`<th title="${w==="__onb"?"Nog geen profiel ingevuld":esc(icpLabel(w))}">${w==="__onb"?"Onbekend":esc(icpAfk(w))}</th>`).join("")}<th>Totaal</th></tr></thead>
     <tbody>${bedPresent.map(b=>{ const rowTot=sum(m.filter(x=>(x.bedoeld||"__geen")===b),'afspraken');
       return `<tr><td class="tl">${b==="__geen"?'<span style="color:var(--faint)">— geen ICP —</span>':icpPill(b)}</td>
-      ${cols.map(w=>{ const v=cellv(b,w), hit=(b!=="__geen"&&w!=="__onb"&&b===w);
+      ${cols.map(w=>{ const v=cellv(b,w), hit=(b!=="__geen"&&w!=="__onb"&&(b===w||b==="combinatie"));
         return `<td style="${v?(hit?"background:var(--good-soft);color:var(--good);font-weight:700":"font-weight:600"):"color:var(--faint)"}">${v||"·"}</td>`;}).join("")}
       <td style="font-weight:600">${rowTot}</td></tr>`;}).join("")}</tbody></table></div></div>
-    <div style="font-size:12px;color:var(--muted);margin:8px 0 0">Groen op de diagonaal = de bedoelde doelgroep kwam ook echt opdagen (match). Telt alle afspraken in de periode (gepland + geweest). Afspraken zonder ad-ICP of zonder ingevuld profiel vallen onder "— geen ICP —" / "Onbekend".</div>`
+    <div style="font-size:12px;color:var(--muted);margin:8px 0 0">Groen = de bedoelde doelgroep kwam ook echt opdagen (match). Een "Combinatie / breed"-rij is brede targeting en kleurt daarom bij elk profiel groen. Telt alle afspraken in de periode (gepland + geweest). Afspraken zonder ad-ICP of zonder ingevuld profiel vallen onder "— geen ICP —" / "Onbekend".</div>`
     :`<div class="panel" style="padding:14px;color:var(--muted)">Nog geen afspraken met een ingevuld klantprofiel in deze periode. Zodra makelaars het Pipedrive-veld "Type klant" invullen, vult deze matrix zich vanzelf.</div>`;
   const panelB=`<div class="sec" style="margin-top:26px">Bedoeld vs werkelijk · afspraken per doelgroep</div>${matrixTbl}`;
 
   // Panel C: trefkans per advertentie
   const perCode={}; m.forEach(x=>{ const c=perCode[x.code]=perCode[x.code]||{bedoeld:x.bedoeld,known:0,match:0,tot:0}; if(x.bedoeld) c.bedoeld=x.bedoeld;
-    c.tot+=x.afspraken; if(x.werkelijk){ c.known+=x.afspraken; if(x.werkelijk===x.bedoeld) c.match+=x.afspraken; } });
+    c.tot+=x.afspraken; if(x.werkelijk){ c.known+=x.afspraken; if(x.werkelijk===x.bedoeld || x.bedoeld==="combinatie") c.match+=x.afspraken; } });
   const trefRows=Object.entries(perCode).filter(([,c])=>c.bedoeld && c.known>0)
     .map(([code,c])=>({code,bedoeld:c.bedoeld,known:c.known,match:c.match,pct:c.known>0?c.match/c.known:0}))
     .sort((a,b)=>(b.pct-a.pct)||(b.known-a.known));
   const panelC=`<div class="sec" style="margin-top:26px">Trefkans per advertentie · % afspraken dat matchte met de bedoelde ICP
-      <span class="info" tabindex="0">i<span class="tip">Van de afspraken met een ingevuld klantprofiel: welk deel had het profiel dat de advertentie bedoelde. Alleen advertenties met een ingestelde ICP en minstens één ingevuld profiel.</span></span>
+      <span class="info" tabindex="0">i<span class="tip">Van de afspraken met een ingevuld klantprofiel: welk deel had het profiel dat de advertentie bedoelde. Alleen advertenties met een ingestelde ICP en minstens één ingevuld profiel. Een advertentie met ICP "Combinatie / breed" is brede targeting en telt daarom als match met elk profiel.</span></span>
     </div>
     ${trefRows.length?`<div class="panel"><div class="scroll"><table><thead><tr><th class="tl">Advertentie</th><th class="tl">Bedoelde ICP</th><th>Afspraken met profiel</th><th>Match</th><th>Trefkans</th></tr></thead>
     <tbody>${trefRows.map(x=>`<tr><td class="tl" style="font-family:ui-monospace,monospace;font-size:12px">${esc(x.code)}</td><td class="tl">${icpPill(x.bedoeld)}</td><td>${x.known}</td><td>${x.match}</td>
