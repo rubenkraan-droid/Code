@@ -1414,6 +1414,16 @@ function periodRange(){
   }
   return { p_from, p_to };
 }
+// Uitgerijpt: verkopen + omzet tellen door t/m vandaag (gerealiseerde resultaten),
+// terwijl leads/afspraken/uitgaven begrensd blijven op vandaag − RIJP_DAGEN.
+// volRange geeft hetzelfde bereik maar met einddatum = vandaag, voor een tweede (verkoop)call.
+function isUitgerijpt(){ return PERIODE_BRON==="uitgerijpt"; }
+function volRange(r){
+  if(!isUitgerijpt()) return r;
+  const d = new Date();
+  const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+  return { ...r, p_to: iso };
+}
 const metric  = (l,v,sub) => {
   const s = String(v).trim(), m = /^(-?\d+(?:[.,]\d+)?)\s*%$/.exec(s);
   if(m){
@@ -2181,7 +2191,8 @@ async function renderAds(){
   ADROASCAP = Infinity;   // ROAS wordt nergens meer gecapt (ook demopark rekent op echte cijfers)
   const r = periodRange();
   const rPrevAd = vorigePeriode(r);
-  const [k, daily, ov, mnd, unlinked, dsAds, kPrev, geplandAd, icpRows] = await Promise.all([
+  const rijpA = isUitgerijpt(), rVolA = volRange(r);
+  const [k, daily, ov, mnd, unlinked, dsAds, kPrev, geplandAd, icpRows, kVolA, ovVolA] = await Promise.all([
     rpc("ad_kpis",  { ...r, p_park_id: pp }).then(x=>x?.[0]||{}),
     rpc("ad_daily", { ...r, p_park_id: pp }),
     rpc("ad_overview", { ...r, p_park_id: pp }),
@@ -2191,8 +2202,12 @@ async function renderAds(){
     rPrevAd ? rpc("ad_kpis", { ...rPrevAd, p_park_id: pp }).then(x=>x?.[0]) : Promise.resolve(null),
     rpc("geplande_afspraken", { p_park_id: pp, p_agent_id: null }).then(x=>(x||[]).length),
     rpc("ad_icp_map", { p_park_id: pp }).catch(()=>[]),
+    rijpA ? rpc("ad_kpis", { ...rVolA, p_park_id: pp }).then(x=>x?.[0]||{}) : Promise.resolve(null),
+    rijpA ? rpc("ad_overview", { ...rVolA, p_park_id: pp }).catch(()=>[]) : Promise.resolve(null),
   ]);
   ICP_BY_CODE = Object.fromEntries((icpRows||[]).map(x=>[x.code, x.icp]));
+  // Uitgerijpt: verkopen + omzet (en dus ROAS) tellen t/m vandaag; uitgaven/leads/afspraken blijven rijp-begrensd
+  if(rijpA && kVolA){ k.sales=kVolA.sales; k.omzet=kVolA.omzet; k.sales_betaald=kVolA.sales_betaald; k.omzet_betaald=kVolA.omzet_betaald; }
   const heeftPrevAd = !!kPrev;
 
   const spend=Number(k.spend)||0, leads=Number(k.leads)||0, afspr=Number(k.afspraken)||0,
@@ -2233,6 +2248,14 @@ async function renderAds(){
   // hoort niet in de advertentietabellen; die leads staan onder "Niet gekoppeld" in de kanalen-tabel.
   ADROWS = (ov || []).filter(a => String(a.advertentie||"").trim().toLowerCase() !== "meta (facebook/instagram)");
   ADROWS.forEach(a => a.icp = ICP_BY_CODE[a.code] || null);
+  if(rijpA && ovVolA){
+    const vm = Object.fromEntries((ovVolA||[]).map(a=>[a.code, a]));
+    ADROWS.forEach(a=>{ const v=vm[a.code]; if(v){
+      a.sales = v.sales; a.omzet = v.omzet;
+      a.kost_per_sale = (Number(a.spend)>0 && Number(v.sales)>0) ? Math.round(Number(a.spend)/Number(v.sales)) : 0;
+      a.roas = Number(a.spend)>0 ? +(Number(v.omzet)/Number(a.spend)).toFixed(2) : 0;
+    }});
+  }
   ADUNLINKED = (unlinked && Number(unlinked.leads)>0) ? unlinked : null;   // regel 'Niet gekoppeld' in de kanalen-tabel
   // status-filter vullen met wat er in dit park voorkomt ("Actief" eerst, dan de rest)
   const adStatussen = [...new Set(ADROWS.map(a=>a.status).filter(Boolean))]
@@ -2840,16 +2863,22 @@ async function renderOwner(){
 
   const rPrev = vorigePeriode(r);
   const funnelRpc = rr => parkVal==="all" ? rpc("owner_total_funnel", rr) : rpc("client_park_funnel", {p_park_id:Number(parkVal), ...rr});
-  const [fRes, fpRes, dc] = await Promise.all([
+  const rijp = isUitgerijpt(), rVol = volRange(r);
+  const [fRes, fpRes, dc, fVol, dcVol] = await Promise.all([
     funnelRpc(r).then(x=>x?.[0]),
     rPrev ? funnelRpc(rPrev).then(x=>x?.[0]) : Promise.resolve(null),
     rpc("definitief_check", { ...r, p_park_id: parkVal==="all"?null:Number(parkVal) }).then(x=>x?.[0]||{}),
+    rijp ? funnelRpc(rVol).then(x=>x?.[0]) : Promise.resolve(null),
+    rijp ? rpc("definitief_check", { ...rVol, p_park_id: parkVal==="all"?null:Number(parkVal) }).then(x=>x?.[0]||{}) : Promise.resolve(null),
   ]);
   const f = fRes || {}, fp = fpRes, heeftPrev = !!fp;
+  // Uitgerijpt: verkopen + omzet + definitief tellen t/m vandaag; afspraken/shows/closing blijven rijp-begrensd
+  const salesVal = (rijp && fVol) ? (Number(fVol.sales)||0)   : (Number(f.sales)||0);
+  const omzetVal = (rijp && fVol) ? (Number(fVol.revenue)||0) : (Number(f.revenue)||0);
   const shows = Number(f.shows)||0;                 // alleen afspraken die geweest zijn (uit de RPC)
-  const closing = closingOpShows(f.sales, shows);   // closing telt op shows (afspraken die geweest zijn)
-  const perAppt = f.appointments ? Math.round(f.revenue/f.appointments) : 0;
-  const roasTxt = Number(f.spend)>0 ? (f.revenue/f.spend).toFixed(2) : "—";
+  const closing = closingOpShows(f.sales, shows);   // closing op rijpe shows, zodat 'ie niet boven 100% schiet
+  const perAppt = f.appointments ? Math.round(omzetVal/f.appointments) : 0;
+  const roasTxt = Number(f.spend)>0 ? (omzetVal/f.spend).toFixed(2) : "—";
   // Onder Optie (WD-tussenstap tussen Shows en Sales): periode-count voor de klikbare funnel-tegel
   const toonOptie = parkVal==="all" || Number(parkVal)===3;
   let optieAantal = 0;
@@ -2860,17 +2889,18 @@ async function renderOwner(){
   // aankomende afspraken (pijplijn) — telling vooraf zodat hij ook op de Afspraken-tegel past
   const geplandN = await renderGepland(parkVal==="all"?null:Number(parkVal), agentVal==="all"?null:Number(agentVal));
   $("cardsTop").className = "cards pairs2" + (toonOptie ? " met-optie" : "");
-  const defAant = Number(dc.definitief)||0;
+  const dcShow = (rijp && dcVol) ? dcVol : dc;
+  const defAant = Number(dcShow.definitief)||0;
   $("cardsTop").innerHTML =
     // bovenste rij: bron-KPI's (de trechter van uitgaven tot definitief)
     metric("Uitgaven",eur(f.spend),deltaSub(f.spend,fp&&fp.spend,heeftPrev,true)+sparkSlot("uitgaven")) +
-    (geenOmzet ? "" : metric("Omzet",eur(f.revenue),deltaSub(f.revenue,fp&&fp.revenue,heeftPrev)+sparkSlot("omzet"))) +
+    (geenOmzet ? "" : metric("Omzet",eur(omzetVal),deltaSub(omzetVal,fp&&fp.revenue,heeftPrev)+sparkSlot("omzet"))) +
     metricDeal("Leads",f.leads||0,'leads',null,'',false,parkVal==="all"?null:Number(parkVal),deltaSub(f.leads,fp&&fp.leads,heeftPrev)+sparkSlot("leads")) +
     metricDeal("Afspraken",(f.appointments||0)+(geplandN||0),'afspraken',null,'',false,parkVal==="all"?null:Number(parkVal),deltaSub((f.appointments||0)+(geplandN||0),fp&&fp.appointments,heeftPrev)+sparkSlot("afspraken")+geplandSubIn(geplandN)) +
     metric("Shows",shows,`<div class="l" style="margin:5px 0 0">afspraken die geweest zijn</div>`) +
     (toonOptie ? metricDeal("Onder Optie",optieAantal,'onder_optie',null,'',false,parkVal==="all"?3:Number(parkVal),`<div class="l" style="margin:5px 0 0">WD · klik voor de deals</div>`) : "") +
-    metricDeal("Sales",f.sales||0,'verkopen',null,'',false,parkVal==="all"?null:Number(parkVal),deltaSub(f.sales,fp&&fp.sales,heeftPrev)+sparkSlot("sales")) +
-    metric("Definitief",defAant,defSubKaart(dc)) +
+    metricDeal("Sales",salesVal,'verkopen',null,'',false,parkVal==="all"?null:Number(parkVal),deltaSub(salesVal,fp&&fp.sales,heeftPrev)+sparkSlot("sales")) +
+    metric("Definitief",defAant,defSubKaart(dcShow)) +
     // onderste rij: afgeleide KPI's — exact ónder hun bron-KPI
     metric(`ROAS <span class="info" tabindex="0">i<span class="tip">Omzet (verkoopsom) &divide; advertentiekosten van deze periode. Let op: dit zet de totale omzet af tegen de advertentie-uitgaven — ook omzet uit leads die niet via een advertentie binnenkwamen telt mee. Een lead van nu leidt bovendien vaak pas later tot omzet.</span></span>`, roasTxt) +
     (geenOmzet ? "" : metric("Omzet per afspraak",eur(perAppt))) +
