@@ -2207,7 +2207,7 @@ async function renderAds(){
   ]);
   ICP_BY_CODE = Object.fromEntries((icpRows||[]).map(x=>[x.code, x.icp]));
   // Uitgerijpt: verkopen + omzet (en dus ROAS) tellen t/m vandaag; uitgaven/leads/afspraken blijven rijp-begrensd
-  if(rijpA && kVolA){ k.sales=kVolA.sales; k.omzet=kVolA.omzet; k.sales_betaald=kVolA.sales_betaald; k.omzet_betaald=kVolA.omzet_betaald; }
+  if(rijpA && kVolA){ k.sales=kVolA.sales; k.omzet=kVolA.omzet; k.sales_betaald=kVolA.sales_betaald; k.omzet_betaald=kVolA.omzet_betaald; k.afspraken=kVolA.afspraken; k.afspraken_betaald=kVolA.afspraken_betaald; }
   const heeftPrevAd = !!kPrev;
 
   const spend=Number(k.spend)||0, leads=Number(k.leads)||0, afspr=Number(k.afspraken)||0,
@@ -2251,7 +2251,8 @@ async function renderAds(){
   if(rijpA && ovVolA){
     const vm = Object.fromEntries((ovVolA||[]).map(a=>[a.code, a]));
     ADROWS.forEach(a=>{ const v=vm[a.code]; if(v){
-      a.sales = v.sales; a.omzet = v.omzet;
+      a.sales = v.sales; a.omzet = v.omzet; a.afspraken = v.afspraken;
+      a.cpa = (Number(a.spend)>0 && Number(v.afspraken)>0) ? Math.round(Number(a.spend)/Number(v.afspraken)) : 0;
       a.kost_per_sale = (Number(a.spend)>0 && Number(v.sales)>0) ? Math.round(Number(a.spend)/Number(v.sales)) : 0;
       a.roas = Number(a.spend)>0 ? +(Number(v.omzet)/Number(a.spend)).toFixed(2) : 0;
     }});
@@ -2873,17 +2874,19 @@ async function renderOwner(){
   ]);
   const f = fRes || {}, fp = fpRes, heeftPrev = !!fp;
   // Uitgerijpt: verkopen + omzet + definitief tellen t/m vandaag; afspraken/shows/closing blijven rijp-begrensd
-  const salesVal = (rijp && fVol) ? (Number(fVol.sales)||0)   : (Number(f.sales)||0);
-  const omzetVal = (rijp && fVol) ? (Number(fVol.revenue)||0) : (Number(f.revenue)||0);
-  const shows = Number(f.shows)||0;                 // alleen afspraken die geweest zijn (uit de RPC)
-  const closing = closingOpShows(f.sales, shows);   // closing op rijpe shows, zodat 'ie niet boven 100% schiet
-  const perAppt = f.appointments ? Math.round(omzetVal/f.appointments) : 0;
+  // Uitgerijpt: alle uitkomsten (afspraken, shows, sales, omzet) tellen t/m vandaag; alleen leads + uitgaven blijven rijp-begrensd
+  const salesVal = (rijp && fVol) ? (Number(fVol.sales)||0)        : (Number(f.sales)||0);
+  const omzetVal = (rijp && fVol) ? (Number(fVol.revenue)||0)      : (Number(f.revenue)||0);
+  const apptVal  = (rijp && fVol) ? (Number(fVol.appointments)||0) : (Number(f.appointments)||0);
+  const shows    = (rijp && fVol) ? (Number(fVol.shows)||0)        : (Number(f.shows)||0);
+  const closing = closingOpShows(salesVal, shows);  // sales en shows nu uit hetzelfde venster
+  const perAppt = apptVal ? Math.round(omzetVal/apptVal) : 0;
   const roasTxt = Number(f.spend)>0 ? (omzetVal/f.spend).toFixed(2) : "—";
   // Onder Optie (WD-tussenstap tussen Shows en Sales): periode-count voor de klikbare funnel-tegel
   const toonOptie = parkVal==="all" || Number(parkVal)===3;
   let optieAantal = 0;
   if(toonOptie){
-    optieAantal = ((await rpc("agent_deals", { p_agent_id:null, ...r, p_kind:'onder_optie', p_park_id: parkVal==="all"?3:Number(parkVal) })) || []).length;
+    optieAantal = ((await rpc("agent_deals", { p_agent_id:null, ...(rijp?rVol:r), p_kind:'onder_optie', p_park_id: parkVal==="all"?3:Number(parkVal) })) || []).length;
   }
   const optiePct = shows>0 ? (optieAantal/shows*100).toFixed(1) : "0";
   // aankomende afspraken (pijplijn) — telling vooraf zodat hij ook op de Afspraken-tegel past
@@ -2896,7 +2899,7 @@ async function renderOwner(){
     metric("Uitgaven",eur(f.spend),deltaSub(f.spend,fp&&fp.spend,heeftPrev,true)+sparkSlot("uitgaven")) +
     (geenOmzet ? "" : metric("Omzet",eur(omzetVal),deltaSub(omzetVal,fp&&fp.revenue,heeftPrev)+sparkSlot("omzet"))) +
     metricDeal("Leads",f.leads||0,'leads',null,'',false,parkVal==="all"?null:Number(parkVal),deltaSub(f.leads,fp&&fp.leads,heeftPrev)+sparkSlot("leads")) +
-    metricDeal("Afspraken",(f.appointments||0)+(geplandN||0),'afspraken',null,'',false,parkVal==="all"?null:Number(parkVal),deltaSub((f.appointments||0)+(geplandN||0),fp&&fp.appointments,heeftPrev)+sparkSlot("afspraken")+geplandSubIn(geplandN)) +
+    metricDeal("Afspraken",apptVal+(geplandN||0),'afspraken',null,'',false,parkVal==="all"?null:Number(parkVal),deltaSub(apptVal+(geplandN||0),fp&&fp.appointments,heeftPrev)+sparkSlot("afspraken")+geplandSubIn(geplandN)) +
     metric("Shows",shows,`<div class="l" style="margin:5px 0 0">afspraken die geweest zijn</div>`) +
     (toonOptie ? metricDeal("Onder Optie",optieAantal,'onder_optie',null,'',false,parkVal==="all"?3:Number(parkVal),`<div class="l" style="margin:5px 0 0">WD · klik voor de deals</div>`) : "") +
     metricDeal("Sales",salesVal,'verkopen',null,'',false,parkVal==="all"?null:Number(parkVal),deltaSub(salesVal,fp&&fp.sales,heeftPrev)+sparkSlot("sales")) +
