@@ -2276,7 +2276,9 @@ async function renderAds(){
   renderBestAds();
   renderAdMonths(mnd || []);
   closeAdDetail();
-  const adIns = adInsightsBouw(ADROWS, dd);
+  // automatische inzichten negeren advertenties van vóór 17 juli (Superminds-tijd); gelanceerd = eerste spend/lead
+  const insRows = ADROWS.filter(a => !a.gelanceerd || String(a.gelanceerd) >= IMPACT_DATUM);
+  const adIns = adInsightsBouw(insRows, dd);
   $("adInsightsSec").classList.toggle("hidden", !adIns.length);
   $("adInsights").innerHTML = adIns.join("");
   $("adOverviewSec").classList.toggle("hidden", !ADROWS.length);
@@ -3935,9 +3937,11 @@ async function genereerRapport(){
   const ds = Number(dc.sales)||0, dd = Number(dc.definitief)||0;
   const showPct = Math.round((100-(Number(f.no_show_pct)||0))*10)/10;
   const adSpend = Number(adk.spend)||0, adLeads = Number(adk.leads)||0;
-  const besteAd = ads.filter(a=>Number(a.leads)>=5)
+  // advertentie-signalen negeren ads van vóór 17 juli (Superminds-tijd)
+  const adsRecent = ads.filter(a => !a.gelanceerd || String(a.gelanceerd) >= IMPACT_DATUM);
+  const besteAd = adsRecent.filter(a=>Number(a.leads)>=5)
     .map(a=>({a, c:(Number(a.afspraken)||0)/Number(a.leads)})).sort((x,y)=>y.c-x.c)[0];
-  const lekAd = ads.filter(a=>Number(a.spend)>=100 && Number(a.afspraken)===0)
+  const lekAd = adsRecent.filter(a=>Number(a.spend)>=100 && Number(a.afspraken)===0)
     .sort((x,y)=>Number(y.spend)-Number(x.spend))[0];
   const closer = agents.filter(a=>Number(a.shows)>=3 && Number(a.closing_rate_pct)>0)
     .sort((x,y)=>Number(y.closing_rate_pct)-Number(x.closing_rate_pct))[0];
