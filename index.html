@@ -537,7 +537,7 @@
 
   <div id="inventorySec" class="hidden">
     <div class="sec"><span id="inventoryTitel">Uitverkoop van het park</span>
-      <span class="info" tabindex="0">i<span class="tip">Verkocht / beschikbaar uit de kavelvoorraad. De prognose = beschikbaar ÷ het aantal mondelinge akkoorden van de laatste 30 dagen (rollend, ontbonden deals niet meegeteld).</span></span>
+      <span class="info" tabindex="0">i<span class="tip">Verkocht / beschikbaar uit de kavelvoorraad. De prognose = beschikbaar ÷ het gemiddelde aantal mondelinge akkoorden per 30 dagen over de afgelopen 3 maanden (90 dagen rollend, ontbonden deals niet meegeteld).</span></span>
     </div>
     <div class="cards" id="inventoryKpis"></div>
   </div>
@@ -3781,7 +3781,7 @@ async function renderInventory(parkId){
   $("inventoryKpis").innerHTML =
     metric("Verkocht", s.verkocht) +
     metric("Beschikbaar", beschikbaar) + metric("% verkocht", (s.verkocht_pct||0)+"%") +
-    metric(`Laatste 30 dagen verkocht <span class="info" tabindex="0">i<span class="tip">Aantal mondelinge akkoorden (vanaf stage &lsquo;Informeel akkoord ontvangen&rsquo;) in de afgelopen 30 dagen, rollend. Ontbonden deals tellen niet mee. De prognose rekent met dit tempo.</span></span>`, (Number(s.verkoop_per_maand)||0)) +
+    metric(`Gem. per 30 dagen (3 mnd) <span class="info" tabindex="0">i<span class="tip">Gemiddeld aantal mondelinge akkoorden (vanaf stage &lsquo;Informeel akkoord ontvangen&rsquo;) per 30 dagen, berekend over de afgelopen 3 maanden (90 dagen, rollend). Ontbonden deals tellen niet mee. De prognose rekent met dit gemiddelde tempo.</span></span>`, (Math.round((Number(s.verkoop_per_maand)||0)*10)/10).toLocaleString('nl-NL')) +
     metric("Prognose uitverkocht", progTxt);
 }
 
