@@ -612,7 +612,7 @@
 
   <div id="tabFinance" class="hidden">
     <div class="sec" id="finSecTop">Mondeling verkocht en verder
-      <span class="info" tabindex="0">i<span class="tip">Alle deals vanaf mondeling akkoord (Informeel akkoord ontvangen) tot en met notaris gepasseerd. Omzet = totale courtage die RecraVas factureert; de makelaar krijgt 1,5% (max €3.500), marge = de rest. De totale courtage verschilt per park: Wielsche Dreef 1,5%, Frankrijk 5,5%.</span></span>
+      <span class="info" tabindex="0">i<span class="tip">Alle deals vanaf mondeling akkoord (Informeel akkoord ontvangen) tot en met notaris gepasseerd. Omzet = totale courtage die RecraVas factureert; de makelaar krijgt 1,5% (max €3.500; Greenerwold max €2.500), marge = de rest. De totale courtage verschilt per park: Wielsche Dreef 1,5%, Frankrijk 5,5%, Greenerwold 2%.</span></span>
     </div>
     <div class="cards" id="finKpis"></div>
     <div class="sec" id="finSecMonth" style="margin-top:22px">Omzet en winst per maand
@@ -1969,8 +1969,8 @@ let finChart;
 async function renderFinance(){
   const v = currentView();
   const pp = v.role==="owner" ? ($("fPark").value==="all" ? null : Number($("fPark").value)) : v.id;
-  $("finSecTop").innerHTML = `Mondeling verkocht en verder <span class="info" tabindex="0">i<span class="tip">Alle deals vanaf mondeling akkoord (Informeel akkoord ontvangen) tot en met notaris gepasseerd. Omzet = totale courtage die RecraVas factureert; de makelaar krijgt 1,5% (max €3.500), marge = de rest. De totale courtage verschilt per park: Wielsche Dreef 1,5%, Frankrijk 5,5%.</span></span>`;
-  $("finSecMonth").innerHTML = `Omzet en winst per maand <span class="info" tabindex="0">i<span class="tip">Elke staaf is de courtage (omzet) van die maand, opgesplitst in het deel voor de makelaar en de marge (winst) voor RecraVas. Omzet = totale courtage die RecraVas factureert (percentage per park: Wielsche Dreef 1,5%, Frankrijk 5,5%). Winst = wat overblijft na uitbetaling aan de makelaar (1,5%, max €3.500 per verkoop). Verkoopsom staat bij de cijfers hierboven en in de tabel eronder.</span></span>`;
+  $("finSecTop").innerHTML = `Mondeling verkocht en verder <span class="info" tabindex="0">i<span class="tip">Alle deals vanaf mondeling akkoord (Informeel akkoord ontvangen) tot en met notaris gepasseerd. Omzet = totale courtage die RecraVas factureert; de makelaar krijgt 1,5% (max €3.500; Greenerwold max €2.500), marge = de rest. De totale courtage verschilt per park: Wielsche Dreef 1,5%, Frankrijk 5,5%, Greenerwold 2%.</span></span>`;
+  $("finSecMonth").innerHTML = `Omzet en winst per maand <span class="info" tabindex="0">i<span class="tip">Elke staaf is de courtage (omzet) van die maand, opgesplitst in het deel voor de makelaar en de marge (winst) voor RecraVas. Omzet = totale courtage die RecraVas factureert (percentage per park: Wielsche Dreef 1,5%, Frankrijk 5,5%, Greenerwold 2%). Winst = wat overblijft na uitbetaling aan de makelaar (1,5%, max €3.500 per verkoop; Greenerwold max €2.500). Verkoopsom staat bij de cijfers hierboven en in de tabel eronder.</span></span>`;
   const rows = await rpc("finance_deals", { p_park_id: pp }) || [];
 
   const mo = await rpc("finance_monthly", { p_park_id: pp }) || [];
