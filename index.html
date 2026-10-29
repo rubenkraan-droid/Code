@@ -615,6 +615,7 @@
       <span class="info" tabindex="0">i<span class="tip">Alle deals vanaf mondeling akkoord (Informeel akkoord ontvangen) tot en met notaris gepasseerd. Omzet = totale courtage die RecraVas factureert; de makelaar krijgt 1,5% (max €3.500; Greenerwold max €2.500), marge = de rest. De totale courtage verschilt per park: Wielsche Dreef 1,5%, Frankrijk 5,5%, Greenerwold 2%.</span></span>
     </div>
     <div class="cards" id="finKpis"></div>
+    <div id="finBonusWrap"></div>
     <div class="sec" id="finSecMonth" style="margin-top:22px">Omzet en winst per maand
       <span class="info" tabindex="0">i<span class="tip">Omzet = totale courtage die RecraVas factureert (percentage per park: Wielsche Dreef 1,5%, Frankrijk 5,5%). Winst = wat overblijft na uitbetaling aan de makelaar (1,5%, max €3.500 per verkoop). Gegroepeerd op de maand waarin de deal definitief werd.</span></span>
     </div>
@@ -1971,7 +1972,17 @@ async function renderFinance(){
   const pp = v.role==="owner" ? ($("fPark").value==="all" ? null : Number($("fPark").value)) : v.id;
   $("finSecTop").innerHTML = `Mondeling verkocht en verder <span class="info" tabindex="0">i<span class="tip">Alle deals vanaf mondeling akkoord (Informeel akkoord ontvangen) tot en met notaris gepasseerd. Omzet = totale courtage die RecraVas factureert; de makelaar krijgt 1,5% (max €3.500; Greenerwold max €2.500), marge = de rest. De totale courtage verschilt per park: Wielsche Dreef 1,5%, Frankrijk 5,5%, Greenerwold 2%.</span></span>`;
   $("finSecMonth").innerHTML = `Omzet en winst per maand <span class="info" tabindex="0">i<span class="tip">Elke staaf is de courtage (omzet) van die maand, opgesplitst in het deel voor de makelaar en de marge (winst) voor RecraVas. Omzet = totale courtage die RecraVas factureert (percentage per park: Wielsche Dreef 1,5%, Frankrijk 5,5%, Greenerwold 2%). Winst = wat overblijft na uitbetaling aan de makelaar (1,5%, max €3.500 per verkoop; Greenerwold max €2.500). Verkoopsom staat bij de cijfers hierboven en in de tabel eronder.</span></span>`;
-  const rows = await rpc("finance_deals", { p_park_id: pp }) || [];
+  // Periode-filter: tegels + "Per deal"-tabel bewegen mee met de periode-knop
+  // (op verkoopdatum = coalesce(sale_date, sale_date_derived)). De per-maand-grafiek
+  // hieronder blijft de volledige historie (trend), net als elders in het dashboard.
+  const rFin = volRange(periodRange());
+  const rows = await rpc("finance_deals_period", { p_park_id: pp, p_from: rFin.p_from, p_to: rFin.p_to }) || [];
+
+  // Opties-bonus (ALLEEN voor jou): server geeft leeg terug voor ieder ander.
+  const canBonus = (await rpc("can_see_bonus")) === true;
+  const bonusMap = {};
+  if(canBonus){ (await rpc("fin_bonus", { p_park_id: pp }) || []).forEach(b => bonusMap[b.deal_id] = b); }
+  const bonusVan = r2 => canBonus && bonusMap[r2.deal_id] ? Number(bonusMap[r2.deal_id].bonus||0) : 0;
 
   const mo = await rpc("finance_monthly", { p_park_id: pp }) || [];
   const mfmt = d => { const s=new Date(d).toLocaleDateString("nl-NL",{month:"long",year:"numeric"}); return s.charAt(0).toUpperCase()+s.slice(1); };
@@ -2006,6 +2017,8 @@ async function renderFinance(){
   const definitiefOmzet = somVan(definitief, "omzet");
   const totCourtage = somVan(lopend, "courtage_makelaar");
   const totMarge = somVan(lopend, "marge_recraparcs");
+  const totBonus = lopend.reduce((s,r2)=>s+bonusVan(r2),0);
+  const subAlleenJij = `<div style="font-size:11px;color:var(--muted);margin-top:3px">alleen voor jou</div>`;
 
   $("finKpis").innerHTML =
     metric("Mondeling verkocht (of verder)", lopend.length) +
@@ -2015,7 +2028,11 @@ async function renderFinance(){
     metric("Omzet definitief", eur(definitiefOmzet)) +
     metric("Courtage makelaar", eur(totCourtage)) +
     metric("Marge RecraVas", eur(totMarge)) +
+    (canBonus ? metric("Opties-bonus", eur(totBonus), subAlleenJij) : "") +
+    (canBonus ? metric("Totale verdienste", eur(totMarge+totBonus), subAlleenJij) : "") +
     metric("Afgevallen", rows.length - lopend.length);
+
+  renderBonusPanel(canBonus, lopend, bonusMap);
 
   const dt = d => d ? new Date(d).toLocaleDateString("nl-NL",{day:"2-digit",month:"short",year:"numeric"}) : "Nog niet bekend";
   const vandaag = new Date().toISOString().slice(0,10);
@@ -2046,8 +2063,61 @@ async function renderFinance(){
      </tr>`).join("") || `<tr><td colspan="10" style="color:var(--muted);padding:14px">Nog geen deals mondeling verkocht of verder in deze selectie.</td></tr>`}</tbody>`;
 }
 
+/* ---------- Opties-bonus Greenerwold — ALLEEN voor jou (see_bonus) ----------
+   Greenerwold (park 4): bovenop de courtage-marge.
+     opties verkocht + geen korting      -> +€1.000
+     opties verkocht + korting (t/m 2500) -> +€500
+     geen opties                          -> €0
+   De afscherming zit in Supabase: fin_bonus/set_deal_bonus geven/accepteren niets
+   zonder can_see_bonus(). Dit blok is enkel de invoer-UI en verschijnt nergens anders. */
+function bonusCalc(opt, kor){ return opt ? (Number(kor)>0 ? 500 : 1000) : 0; }
+function renderBonusPanel(canBonus, lopend, bonusMap){
+  const wrap = $("finBonusWrap");
+  if(!wrap) return;
+  if(!canBonus){ wrap.innerHTML = ""; return; }
+  const gw = lopend.filter(r => r.park === "Greenerwold");
+  if(!gw.length){ wrap.innerHTML = ""; return; }
+  const dtb = d => d ? new Date(d).toLocaleDateString("nl-NL",{day:"2-digit",month:"short",year:"numeric"}) : "—";
+  const naam = r => r.kavelnummer ? esc(r.kavelnummer) : (r.agent && r.agent!=="Onbekend" ? esc(r.agent) : ("deal "+r.deal_id));
+  wrap.innerHTML =
+    `<div class="sec" style="margin-top:22px">Opties-bonus Greenerwold
+       <span class="info" tabindex="0">i<span class="tip">Alleen voor jou zichtbaar. Bovenop de courtage-marge: opties verkocht én geen korting = +€1.000; opties verkocht mét korting (t/m €2.500) = +€500; geen opties = €0. Zet de toggle en eventueel het kortingsbedrag en klik Opslaan — dit schrijft naar Supabase en is voor niemand anders zichtbaar.</span></span>
+     </div>
+     <div class="panel"><div class="scroll"><table>
+       <thead><tr><th class="tl">Verkoop</th><th class="tl">Verkoopdatum</th><th>Opties verkocht</th><th>Korting (€)</th><th>Bonus</th><th></th></tr></thead>
+       <tbody>${gw.map(r=>{
+         const b = bonusMap[r.deal_id] || {};
+         const opt = b.opties_verkocht === true;
+         const kor = b.korting!=null ? Number(b.korting) : 0;
+         const bon = Number(b.bonus!=null ? b.bonus : bonusCalc(opt,kor));
+         return `<tr>
+           <td class="tl">${naam(r)}</td>
+           <td class="tl">${dtb(r.verkoopdatum)}</td>
+           <td style="text-align:center"><input type="checkbox" id="bopt_${r.deal_id}" ${opt?"checked":""} onchange="bonusPreview(${r.deal_id})"></td>
+           <td style="text-align:center"><input type="number" id="bkor_${r.deal_id}" value="${kor}" min="0" step="100" style="width:92px;padding:4px 6px" oninput="bonusPreview(${r.deal_id})"></td>
+           <td id="bval_${r.deal_id}" style="font-weight:600;color:var(--good)">${eur(bon)}</td>
+           <td><button class="btn" onclick="saveBonus(${r.deal_id}, this)">Opslaan</button></td>
+         </tr>`;
+       }).join("")}</tbody>
+     </table></div></div>`;
+}
+function bonusPreview(dealId){
+  const opt = $("bopt_"+dealId).checked;
+  const kor = Number($("bkor_"+dealId).value||0);
+  $("bval_"+dealId).textContent = eur(bonusCalc(opt, kor));
+}
+async function saveBonus(dealId, btn){
+  const opt = $("bopt_"+dealId).checked;
+  const kor = Number($("bkor_"+dealId).value||0);
+  if(btn){ btn.disabled = true; btn.textContent = "Opslaan…"; }
+  const res = await rpc("set_deal_bonus", { p_deal_id: dealId, p_opties: opt, p_korting: kor, p_bonus_override: null, p_note: null });
+  if(res === null){ if(btn){ btn.disabled = false; btn.textContent = "Opnieuw"; } return; }
+  renderFinance();
+}
+
 /* ---------- FINANCIEN per makelaar (eigen commissie; GEEN omzet-totaal/marge, AVG) ---------- */
 async function renderFinanceAgent(agentId){
+  const bw = $("finBonusWrap"); if(bw) bw.innerHTML = "";
   const pp = $("fPark").value==="all" ? null : Number($("fPark").value);
   $("finSecTop").innerHTML = `Mijn verkopen · mondeling akkoord en verder <span class="info" tabindex="0">i<span class="tip">Al jouw deals vanaf mondeling akkoord (Informeel akkoord ontvangen) tot en met notaris gepasseerd. Commissie = 1,5% van de verkoopsom, met een maximum van €3.500 per verkoop.</span></span>`;
   $("finSecMonth").innerHTML = `Mijn commissie per maand`;
