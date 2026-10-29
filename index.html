@@ -241,10 +241,10 @@
     padding:4px 10px;font-size:11.5px;font-weight:600;text-decoration:none;box-shadow:var(--shadow);backdrop-filter:blur(2px)}
   .arch-preview:hover{background:#fff;border-color:var(--accent)}
   /* advertentietabel: mini-thumbnail + preview-link in de naamkolom */
-  .ad-namecell{display:flex;align-items:center;gap:8px;min-width:0}
-  .ad-thumb-mini{width:34px;height:34px;border-radius:7px;object-fit:cover;flex:none;
+  .ad-namecell{display:flex;align-items:center;gap:7px;min-width:0;max-width:210px}
+  .ad-thumb-mini{width:26px;height:26px;border-radius:6px;object-fit:cover;flex:none;
     background:linear-gradient(135deg,var(--surface-2),var(--line))}
-  .ad-naam-txt{min-width:40px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ad-naam-txt{min-width:40px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .ad-prev-link{flex:none;color:var(--accent);text-decoration:none;font-weight:700;padding:1px 6px;border-radius:6px;font-size:13px}
   .ad-prev-link:hover{background:var(--accent-soft)}
   .arch-naam{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -2417,9 +2417,9 @@ async function renderAdDetail(adId, naam){
 }
 
 const ADCOLS = [
-  ["advertentie","Advertentie"], ["kwaliteit","Kwaliteit"], ["gelanceerd","Gelanceerd"], ["status","Status"], ["awareness_stage","Fase"], ["icp","ICP"], ["spend","Uitgaven"], ["clicks","Clicks"],
+  ["advertentie","Advertentie"], ["kwaliteit","Kwaliteit"], ["gelanceerd","Gelanceerd"], ["status","Status"], ["spend","Uitgaven"], ["clicks","Clicks"],
   ["cpc","CPC"], ["leads","Leads"], ["cpl","CPL"], ["afspraken","Afspraken"], ["cpa","CPA"], ["conv_pct","Conv. %"], ["clos_pct","Closing %"],
-  ["ongekwalificeerd_pct","Ongekwalificeerd %"], ["sales","Sales"], ["omzet","Omzet"], ["kost_per_sale","Kosten/sale"], ["roas","ROAS"], ["kanaal","Kanaal"],
+  ["ongekwalificeerd_pct","Ongekwalificeerd %"], ["sales","Sales"], ["omzet","Omzet"], ["kost_per_sale","Kosten/sale"], ["roas","ROAS"], ["kanaal","Kanaal"], ["awareness_stage","Fase"], ["icp","ICP"],
 ];
 // conversie lead -> afspraak (kwaliteitsmaat per advertentie); niet in de RPC, dus hier afgeleid
 const convPct = a => Number(a.leads)>0 ? Math.round((Number(a.afspraken)||0)/Number(a.leads)*100) : null;
@@ -2579,7 +2579,7 @@ function drawAdTable(){
          ? ` <span class="info" tabindex="0" style="background:var(--bad-soft);color:var(--bad)">✕<span class="tip">Kill-reden: ${esc(a.kill_reason)}</span></span>` : "";
        return `<tr data-adid="${a.ad_id}" data-naam="${escAttr(a.advertentie)}" style="cursor:pointer"><td style="text-align:left"><div class="ad-namecell">
            ${a.thumbnail_url?`<img class="ad-thumb-mini" src="${escAttr(a.thumbnail_url)}" alt="" loading="lazy" onerror="this.remove()">`:""}
-           <span class="ad-naam-txt">${esc(a.advertentie)}</span>${icon}${kill}
+           <span class="ad-naam-txt" title="${escAttr(a.advertentie)}">${esc(a.advertentie)}</span>${icon}${kill}
            ${a.preview_link?`<a class="ad-prev-link" href="${escAttr(a.preview_link)}" target="_blank" rel="noopener" title="Advertentie bekijken op Facebook" onclick="event.stopPropagation()">↗</a>`:""}
          </div></td>
          <td class="tl">${a._kwal && a._kwal.score!=null
@@ -2587,8 +2587,6 @@ function drawAdTable(){
              : `<span style="color:var(--faint)" title="${escAttr(a._kwal ? a._kwal.uitleg : '')}">—</span>`}</td>
          <td class="tl" style="white-space:nowrap;color:var(--muted)">${fmtLaunch(a.gelanceerd)}</td>
          <td style="text-align:left"><span class="badge ${st[1]}">${st[0]}</span></td>
-         <td class="tl fase-cell" data-code="${escAttr(a.code)}" style="cursor:pointer" title="Klik om de fase/notities te wijzigen">${fasePill(a.awareness_stage)}</td>
-         <td class="tl icp-cell" data-code="${escAttr(a.code)}" style="cursor:pointer" title="Klik om de ICP te wijzigen">${icpPill(a.icp)}</td>
          <td style="font-weight:600">${eur(a.spend)}</td><td>${a.clicks}</td>
          <td>${a.cpc ? "€"+Number(a.cpc).toLocaleString("nl-NL",{minimumFractionDigits:2,maximumFractionDigits:2}) : "—"}</td>
          <td>${adLink(a.leads,'leads',a.ad_id,a.advertentie)}</td><td>${a.leads>0 ? eur(a.cpl) : "—"}</td>
@@ -2599,7 +2597,9 @@ function drawAdTable(){
          <td>${adLink(a.sales,'verkopen',a.ad_id,a.advertentie)}</td><td>${a.omzet>0 ? eur(a.omzet) : "—"}</td>
          <td>${Number(a.sales)>0 ? eur(a.kost_per_sale) : "—"}</td>
          <td>${Number(a.roas)>0 ? Math.min(ADROASCAP,Number(a.roas)).toFixed(2) : "—"}</td>
-         <td class="tl kanaal-cell" data-code="${escAttr(a.code)}" style="cursor:pointer" title="Klik om het kanaal/notities te wijzigen">${esc(KANAAL_LABEL(a.kanaal))}</td></tr>`;
+         <td class="tl kanaal-cell" data-code="${escAttr(a.code)}" style="cursor:pointer" title="Klik om het kanaal/notities te wijzigen">${esc(KANAAL_LABEL(a.kanaal))}</td>
+         <td class="tl fase-cell" data-code="${escAttr(a.code)}" style="cursor:pointer" title="Klik om de fase/notities te wijzigen">${fasePill(a.awareness_stage)}</td>
+         <td class="tl icp-cell" data-code="${escAttr(a.code)}" style="cursor:pointer" title="Klik om de ICP te wijzigen">${icpPill(a.icp)}</td></tr>`;
      }).join("") || `<tr><td colspan="${ADCOLS.length}" style="color:var(--muted);padding:14px">Geen advertenties in deze selectie.</td></tr>`; })()}</tbody>`;
   document.querySelectorAll("#adTable th").forEach(th => th.addEventListener("click", () => {
     const key = th.dataset.key;
