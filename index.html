@@ -392,6 +392,7 @@
     </nav>
     <div class="who">
       <button id="refreshBtn" class="btn hidden" title="Vernieuwen · verse Pipedrive-sync + data opnieuw ophalen" aria-label="Vernieuwen"><svg class="rico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v5h-5"/></svg></button>
+      <button id="financeBtn" class="btn hidden" onclick="toonTab('finance')" title="Finance · grootboek (alleen Willem en Ruben)" style="border-color:var(--accent);color:var(--accent);font-weight:600"><svg class="bico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/></svg><span class="blbl">Finance</span></button>
       <button id="themeBtn" class="btn" title="Thema: automatisch — donker van 20:00 tot 09:00">◐</button>
       <button id="rapportBtn" class="btn hidden" title="Kant-en-klare samenvatting van de gekozen periode — om te delen of te plakken in een bericht"><svg class="bico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2h8l4 4v16H6z"/><path d="M14 2v4h4M9 12h6M9 16h6"/></svg><span class="blbl">Rapport</span></button>
       <a id="helpBtn" class="btn" href="handleiding.html" target="_blank" rel="noopener" title="Handleiding & functie-overzicht"><svg class="bico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5a2 2 0 0 1 2-2h6v16H6a2 2 0 0 0-2 2zM20 3h-6v16h6a0 0 0 0 0 0 0z"/></svg><span class="blbl">Handleiding</span></a>
@@ -1726,6 +1727,7 @@ async function applyRole(){
   document.querySelector('.tab[data-tab="financien"]').classList.toggle("hidden", parkV);
   // Finance-grootboek: uitsluitend op de ingelogde identiteit (Ruben + Willem), niet op de bekeken rol
   document.querySelector('.tab[data-tab="finance"]').classList.toggle("hidden", !CAN_FINANCE);
+  $("financeBtn").classList.toggle("hidden", !CAN_FINANCE);   // vaste snelknop in de bovenbalk
   // Bellen: makelaars + master-eigenaar, niet de parkeigenaar/park-gebonden eigenaar (Karl/Carl)
   // en niet een eigenaar zonder beldata-toegang (bv. Toine, echt óf testweergave)
   const parkGebondenEig = owner && (SCOPED_PARK != null || v.park != null);
