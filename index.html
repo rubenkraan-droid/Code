@@ -636,6 +636,7 @@
       <button id="finTabGrootboek" onclick="setFinView('grootboek')" style="padding:8px 16px;border:1px solid var(--accent);border-radius:8px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer">Grootboek</button>
       <button id="finTabSplit" onclick="setFinView('split')" style="padding:8px 16px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--text);font-weight:600;cursor:pointer">Winstverdeling</button>
       <button id="finTabCash" onclick="setFinView('cash')" style="padding:8px 16px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--text);font-weight:600;cursor:pointer">Cashflow</button>
+      <button id="finTabPlan" onclick="setFinView('plan')" style="padding:8px 16px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--text);font-weight:600;cursor:pointer">Planning</button>
     </div>
 
     <div id="finViewGrootboek">
@@ -672,7 +673,22 @@
       <div style="margin:10px 0"><button id="finRecNew" style="padding:8px 16px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer">+ Nieuwe vaste last</button></div>
       <div id="finRecEdit" class="hidden"></div>
       <div class="panel"><div class="scroll"><table id="finRecTable"></table></div></div>
-      <p class="foot">Vooruit plannen: alle bedragen tellen inclusief btw mee; aan het eind van elk kwartaal gaat de geschatte btw-afdracht er als aparte uitgave af. De vooruit-tijdlijn per deal (notarisdatum + 3 dagen) en de scenario's volgen zodra er meer toekomstige passeerdatums in de pijplijn staan.</p>
+      <p class="foot">Vooruit plannen: alle bedragen tellen inclusief btw mee; aan het eind van elk kwartaal gaat de geschatte btw-afdracht er als aparte uitgave af. De vooruit-tijdlijn staat onder "Planning".</p>
+    </div>
+
+    <div id="finViewPlan" class="hidden">
+      <div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:16px">
+        <div><div style="font-size:11px;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">Scenario</div><div id="finScenBtns" style="display:flex;gap:6px"></div></div>
+        <div><div style="font-size:11px;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">Passeerdatums verschuiven</div><div id="finShiftBtns" style="display:flex;gap:6px"></div></div>
+      </div>
+      <div class="cards" id="finPlanKpis"></div>
+      <div class="sec" style="margin-top:20px">Maandprojectie (12 maanden)
+        <span class="info" tabindex="0">i<span class="tip">Startsaldo = huidig banksaldo. Per maand: + verwachte courtage (verkoopsom × park-percentage, incl btw, op passeerdatum + 3 dagen) − vaste lasten − (eind kwartaal) geschatte btw-afdracht. Scenario's: Basis = alle bekende passages; Alleen zeker = alleen getekende/definitieve; Droogstand = geen cash-in, puur de vaste lasten. "Verschuiven" schuift alle passeerdatums op.</span></span>
+      </div>
+      <div class="panel"><div class="scroll"><table id="finPlanTable"></table></div></div>
+      <div class="sec" style="margin-top:20px">Wat komt wanneer over de brug</div>
+      <div class="panel"><div class="scroll"><table id="finEventsTable"></table></div></div>
+      <p class="foot">Gevoed door toekomstige passeerdatums: Willems ledger en (zodra ingevuld) de notarisdatums in Pipedrive. Nu nog dun; dit vult zich vanzelf naarmate er meer passeerdatums bekend zijn.</p>
     </div>
   </div>
 
@@ -1969,12 +1985,54 @@ function setFinView(v){
   FINVIEW = v;
   const on  = "padding:8px 16px;border:1px solid var(--accent);border-radius:8px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer";
   const off = "padding:8px 16px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--text);font-weight:600;cursor:pointer";
-  [["grootboek","finTabGrootboek"],["split","finTabSplit"],["cash","finTabCash"]].forEach(([k,id])=>{ const b=$(id); if(b) b.style.cssText = v===k?on:off; });
+  [["grootboek","finTabGrootboek"],["split","finTabSplit"],["cash","finTabCash"],["plan","finTabPlan"]].forEach(([k,id])=>{ const b=$(id); if(b) b.style.cssText = v===k?on:off; });
   $("finViewGrootboek").classList.toggle("hidden", v!=="grootboek");
   $("finViewSplit").classList.toggle("hidden", v!=="split");
   $("finViewCash").classList.toggle("hidden", v!=="cash");
+  $("finViewPlan").classList.toggle("hidden", v!=="plan");
   if(v==="split") renderFinanceSplit();
   if(v==="cash")  renderFinanceCash();
+  if(v==="plan")  renderFinancePlan();
+}
+let FINPLAN_SCEN = "basis", FINPLAN_SHIFT = 0;
+async function renderFinancePlan(){
+  if(!CAN_FINANCE) return;
+  const on  = "padding:6px 12px;border:1px solid var(--accent);border-radius:7px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer;font-size:12.5px";
+  const off = "padding:6px 12px;border:1px solid var(--line-strong);border-radius:7px;background:var(--card);color:var(--text);cursor:pointer;font-size:12.5px";
+  $("finScenBtns").innerHTML = [["basis","Basis"],["zeker","Alleen zeker"],["droogstand","Droogstand"]]
+    .map(([k,l])=>`<button onclick="FINPLAN_SCEN='${k}';renderFinancePlan()" style="${FINPLAN_SCEN===k?on:off}">${l}</button>`).join("");
+  $("finShiftBtns").innerHTML = [[0,"0"],[2,"+2 wk"],[4,"+4 wk"],[8,"+8 wk"]]
+    .map(([k,l])=>`<button onclick="FINPLAN_SHIFT=${k};renderFinancePlan()" style="${FINPLAN_SHIFT===k?on:off}">${l}</button>`).join("");
+  const [plan, events] = await Promise.all([
+    rpc("fin_cash_plan",   { p_shift_weeks:FINPLAN_SHIFT, p_scenario:FINPLAN_SCEN }),
+    rpc("fin_cash_events", { p_shift_weeks:FINPLAN_SHIFT, p_scenario:FINPLAN_SCEN })
+  ]);
+  const P = plan||[], E = events||[];
+  const laag = P.reduce((a,r)=> (a==null||Number(r.saldo_eind)<Number(a.saldo_eind))?r:a, null);
+  const eind = P.length?P[P.length-1]:null;
+  const neg  = P.find(r=>Number(r.saldo_eind)<0);
+  const sub = t => `<div style="font-size:11px;color:var(--muted);margin-top:3px">${t}</div>`;
+  $("finPlanKpis").innerHTML =
+    metric("Saldo over 12 mnd", eind?eur(eind.saldo_eind):"—") +
+    metric("Laagste saldo", laag?eur(laag.saldo_eind):"—", sub(laag?laag.maand:"")) +
+    metric("Eerste negatieve maand", neg?neg.maand:"geen", sub(neg?"let op de cash":"blijft positief"));
+  $("finPlanTable").innerHTML =
+    `<thead><tr><th class="tl">Maand</th><th>Cash in</th><th>Vaste lasten</th><th>Btw</th><th>Netto</th><th>Saldo eind</th></tr></thead>
+     <tbody>${P.map(r=>`<tr>
+       <td class="tl">${r.maand}</td>
+       <td style="color:${Number(r.cash_in)>0?'var(--good)':'var(--muted)'}">${eur(r.cash_in)}</td>
+       <td style="color:var(--bad)">${eur(r.vaste_lasten)}</td>
+       <td>${Number(r.btw_afdracht)!=0?eur(r.btw_afdracht):'—'}</td>
+       <td>${eur(r.netto)}</td>
+       <td style="font-weight:600;color:${Number(r.saldo_eind)<0?'var(--bad)':'inherit'}">${eur(r.saldo_eind)}</td></tr>`).join("")}</tbody>`;
+  $("finEventsTable").innerHTML =
+    `<thead><tr><th class="tl">Datum</th><th class="tl">Deal</th><th>Verkoopsom</th><th>Courtage incl. btw</th><th class="tl">Bron</th></tr></thead>
+     <tbody>${E.map(r=>`<tr>
+       <td class="tl" style="white-space:nowrap">${new Date(r.cash_date).toLocaleDateString("nl-NL")}</td>
+       <td class="tl">${esc(r.label||"—")}${r.zeker?'':' <span style="font-size:11px;color:var(--warn)">onzeker</span>'}</td>
+       <td>${eur(r.omzet)}</td>
+       <td style="font-weight:600">${Number(r.courtage)>0?eur(r.courtage):'<span style="color:var(--faint)">geen config</span>'}</td>
+       <td class="tl">${esc(r.bron)}</td></tr>`).join("") || `<tr><td colspan="5" style="color:var(--muted);padding:14px">Nog geen aankomende passages bekend in dit scenario.</td></tr>`}</tbody>`;
 }
 async function renderFinanceCash(){
   if(!CAN_FINANCE) return;
