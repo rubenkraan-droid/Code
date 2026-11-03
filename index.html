@@ -638,6 +638,15 @@
       <button id="finTabCash" onclick="setFinView('cash')" style="padding:8px 16px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--text);font-weight:600;cursor:pointer">Cashflow</button>
       <button id="finTabPlan" onclick="setFinView('plan')" style="padding:8px 16px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--text);font-weight:600;cursor:pointer">Planning</button>
     </div>
+    <div style="margin-bottom:16px;display:flex;align-items:center;gap:8px">
+      <span style="font-size:12px;color:var(--muted)">Periode</span>
+      <select id="finPeriod" onchange="finPeriodChanged()" style="padding:6px 10px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--text);font-size:13px">
+        <option value="30">Laatste 30 dagen</option>
+        <option value="90">Laatste 90 dagen</option>
+        <option value="365">Laatste jaar</option>
+        <option value="all">Alles</option>
+      </select>
+    </div>
 
     <div id="finViewGrootboek">
       <div class="cards" id="finLedKpis"></div>
@@ -1968,9 +1977,23 @@ function herstelTab(){
 document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => toonTab(t.dataset.tab)));
 
 /* ========== FINANCE-TAB · grootboek (Willems "Map Credit Debit", alleen Ruben + Willem) ========== */
-let FINLED = [], FINLED_Q = "", FINVIEW = "grootboek", FINSPLIT = [], FINREC = [];
+let FINLED = [], FINLED_Q = "", FINVIEW = "grootboek", FINSPLIT = [], FINREC = [], FINPERIOD = "30";
 const fEur = n => (n==null||n==="") ? "—" : eur(n);
 const finJa = v => { const s=String(v==null?"":v).trim().toLowerCase(); return s==="ja"||s==="j"||s==="true"||s==="1"; };
+// Periode-filter: standaard max 30 dagen terug (op passeerdatum). Regels zonder datum blijven zichtbaar.
+function finInWin(d){
+  if(FINPERIOD==="all") return true;
+  if(!d) return true;
+  const dt = new Date(d); if(isNaN(dt)) return true;
+  return dt.getTime() >= Date.now() - Number(FINPERIOD)*86400000;
+}
+function finPeriodSet(){ return FINLED.filter(r=>finInWin(r.passeren_date)); }
+function finPeriodChanged(){
+  FINPERIOD = $("finPeriod").value;
+  if(FINVIEW==="grootboek"){ tekenFinKpis(); tekenFinTabel(); }
+  else if(FINVIEW==="split") renderFinanceSplit();
+  else if(FINVIEW==="cash")  renderFinanceCash();
+}
 
 async function renderFinancePage(){
   if(!CAN_FINANCE){ $("finLedTable").innerHTML = ""; return; }
@@ -2045,9 +2068,10 @@ async function renderFinanceCash(){
     metric("Saldo nu", laatste?eur(laatste.saldo_eind):"—", sub(laatste?("t/m "+laatste.maand):"")) +
     metric("Vaste lasten / maand", eur(vasteMaand), sub("terugkerend, incl. btw")) +
     metric("Btw lopend kwartaal", (btw&&btw.length)?eur(btw[btw.length-1].afdracht):"—", sub("schatting, af te dragen"));
+  const cfShown = (cf||[]).filter(r=>{ const p=String(r.maand).split('-').map(Number); return finInWin(new Date(p[0], p[1], 0)); });
   $("finCashTable").innerHTML =
     `<thead><tr><th class="tl">Maand</th><th>In</th><th>Uit</th><th>Netto</th><th>Saldo eind</th></tr></thead>
-     <tbody>${(cf||[]).map(r=>`<tr>
+     <tbody>${cfShown.map(r=>`<tr>
        <td class="tl">${r.maand}</td>
        <td style="color:var(--good)">${eur(r.inkomsten)}</td>
        <td style="color:var(--bad)">${eur(r.uitgaven)}</td>
@@ -2108,7 +2132,9 @@ async function verwijderRec(id){
 async function renderFinanceSplit(){
   if(!CAN_FINANCE){ $("finSplitTable").innerHTML=""; return; }
   FINSPLIT = await rpc("fin_split_list") || [];
-  const conf = FINSPLIT.filter(r=>r.park_key);
+  const dateById = {}; FINLED.forEach(r=>{ dateById[r.id] = r.passeren_date; });
+  const shown = FINSPLIT.filter(r=>finInWin(dateById[r.id]));
+  const conf = shown.filter(r=>r.park_key);
   const som = k => conf.reduce((s,r)=>s+(Number(r[k])||0),0);
   const sub = t => `<div style="font-size:11px;color:var(--muted);margin-top:3px">${t}</div>`;
   $("finSplitKpis").innerHTML =
@@ -2118,15 +2144,17 @@ async function renderFinanceSplit(){
     metric("Netto RP", eur(som("netto_rp")));
   const dash = `<span style="color:var(--faint)">—</span>`;
   const f  = n => (n==null) ? dash : eur(n);
+  const dt = d => d ? new Date(d).toLocaleDateString("nl-NL") : dash;
   $("finSplitTable").innerHTML =
-    `<thead><tr><th class="tl">Verkoper</th><th class="tl">Park + nr</th><th>Verkoopsom</th>
-      <th>Sales Z</th><th>Recr. Zij</th><th>Recr. Wij</th><th>Recraparcs</th><th>Makelaar</th><th>Inhouding</th><th>Netto RP</th><th>T&amp;K</th><th>Amigo's</th><th>Ruben</th></tr></thead>
-     <tbody>${FINSPLIT.map(r=>{
+    `<thead><tr><th class="tl">Verkoper</th><th class="tl">Park + nr</th><th class="tl">Verkoopdatum</th><th>Verkoopsom</th>
+      <th>Sales Z</th><th>Recr. Zij</th><th>Recr. Wij</th><th>Recraparcs</th><th>Makelaar</th><th>Inhouding</th><th>Netto RP</th><th>T&amp;K</th><th>Amigo's</th><th>Ruben</th><th></th></tr></thead>
+     <tbody>${shown.map(r=>{
        const geen = !r.park_key;
        const sc = v => geen ? dash : f(v);
-       return `<tr${geen?' style="opacity:.5"':''}>
+       return `<tr data-id="${r.id}" style="cursor:pointer${geen?';opacity:.5':''}">
        <td class="tl">${esc(r.verkoper||"—")}</td>
        <td class="tl">${esc(r.park_no||"—")}${geen?' <span style="font-size:11px;color:var(--faint)">geen config</span>':''}</td>
+       <td class="tl" style="white-space:nowrap">${dt(dateById[r.id])}</td>
        <td>${f(r.omzet)}</td>
        <td>${sc(r.sales_z)}</td><td>${sc(r.recravas_zij)}</td><td>${sc(r.recravas_wij)}</td><td>${sc(r.recraparcs)}</td>
        <td>${sc(r.makelaar)}</td>
@@ -2134,10 +2162,13 @@ async function renderFinanceSplit(){
        <td>${sc(r.netto_rp)}</td><td>${sc(r.tk)}</td>
        <td style="font-weight:600">${sc(r.amigos)}</td>
        <td>${geen?dash:(Number(r.ruben)>0?eur(r.ruben):dash)}</td>
-     </tr>`;}).join("") || `<tr><td colspan="13" style="color:var(--muted);padding:14px">Geen regels.</td></tr>`}</tbody>`;
+       <td style="color:var(--accent);white-space:nowrap">bewerken ›</td>
+     </tr>`;}).join("") || `<tr><td colspan="15" style="color:var(--muted);padding:14px">Geen regels in deze periode.</td></tr>`}</tbody>`;
+  document.querySelectorAll("#finSplitTable tbody tr[data-id]").forEach(tr=>
+    tr.addEventListener("click", ()=>{ setFinView("grootboek"); openFinEdit(Number(tr.dataset.id)); }));
 }
 function tekenFinKpis(){
-  const r = FINLED;
+  const r = finPeriodSet();
   const omzet = r.reduce((s,x)=>s+(Number(x.omzet)||0),0);
   const rp    = r.reduce((s,x)=>s+(Number(x.rp_incl)||0),0);
   const betaald = r.filter(x=>finJa(x.betaald_x)).length;
@@ -2150,8 +2181,9 @@ function tekenFinKpis(){
     metric("Betaald", String(betaald), sub((r.length-betaald)+" openstaand"));
 }
 function finFilter(){
+  const base = finPeriodSet();
   const q = FINLED_Q.trim().toLowerCase();
-  return q ? FINLED.filter(r=>(`${r.verkoper||""} ${r.park_no||""}`).toLowerCase().includes(q)) : FINLED;
+  return q ? base.filter(r=>(`${r.verkoper||""} ${r.park_no||""}`).toLowerCase().includes(q)) : base;
 }
 function tekenFinTabel(){
   const rows = finFilter();
