@@ -635,6 +635,7 @@
     <div style="display:flex;gap:8px;margin-bottom:16px">
       <button id="finTabGrootboek" onclick="setFinView('grootboek')" style="padding:8px 16px;border:1px solid var(--accent);border-radius:8px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer">Grootboek</button>
       <button id="finTabSplit" onclick="setFinView('split')" style="padding:8px 16px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--text);font-weight:600;cursor:pointer">Winstverdeling</button>
+      <button id="finTabCash" onclick="setFinView('cash')" style="padding:8px 16px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--text);font-weight:600;cursor:pointer">Cashflow</button>
     </div>
 
     <div id="finViewGrootboek">
@@ -653,6 +654,25 @@
       <div class="cards" id="finSplitKpis"></div>
       <div class="panel" style="margin-top:16px"><div class="scroll"><table id="finSplitTable"></table></div></div>
       <p class="foot">Winstverdeling berekend uit de parkconfig (verkoopsom × percentage). Nu ingesteld voor Wielsche Dreef en Greenerwold (Greenerwold-makelaar gecapt op €2.500). Makelaar = 0 waar Willem dat zo invulde. "Geen opties" houdt €500 in op de makelaar; "Bardo" geeft €1.000 aan Ruben. Parken zonder config tonen "—" tot de percentages zijn ingesteld. Marketingfee (€2.000 WD + €1.000 GW per maand) komt in de kostenlaag, niet per deal.</p>
+    </div>
+
+    <div id="finViewCash" class="hidden">
+      <div class="cards" id="finCashKpis"></div>
+      <div class="sec" style="margin-top:22px">Cashflow per maand
+        <span class="info" tabindex="0">i<span class="tip">Werkelijke bij- en afschrijvingen op de ING-zakelijkrekening van Reck-It B.V., per maand, met doorlopend saldo (opening €10,11). Alle bedragen inclusief btw.</span></span>
+      </div>
+      <div class="panel"><div class="scroll"><table id="finCashTable"></table></div></div>
+      <div class="sec" style="margin-top:22px">Btw-schatting per kwartaal
+        <span class="info" tabindex="0">i<span class="tip">Schatting: btw over de inkomsten (21/121) min de voorbelasting over de kosten (21/121). Belasting, verzekering, bankkosten en interne potjes tellen niet mee (geen btw). Indicatief, verfijnbaar zodra de categorieën kloppen.</span></span>
+      </div>
+      <div class="panel"><div class="scroll"><table id="finBtwTable"></table></div></div>
+      <div class="sec" style="margin-top:22px">Vaste lasten (maandelijks)
+        <span class="info" tabindex="0">i<span class="tip">Terugkerende lasten voor de cashplanning. Vul hier de auto en straks de rente in. De huur hoort hier niet (die gaat naar de potjes).</span></span>
+      </div>
+      <div style="margin:10px 0"><button id="finRecNew" style="padding:8px 16px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer">+ Nieuwe vaste last</button></div>
+      <div id="finRecEdit" class="hidden"></div>
+      <div class="panel"><div class="scroll"><table id="finRecTable"></table></div></div>
+      <p class="foot">Vooruit plannen: alle bedragen tellen inclusief btw mee; aan het eind van elk kwartaal gaat de geschatte btw-afdracht er als aparte uitgave af. De vooruit-tijdlijn per deal (notarisdatum + 3 dagen) en de scenario's volgen zodra er meer toekomstige passeerdatums in de pijplijn staan.</p>
     </div>
   </div>
 
@@ -1932,7 +1952,7 @@ function herstelTab(){
 document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => toonTab(t.dataset.tab)));
 
 /* ========== FINANCE-TAB · grootboek (Willems "Map Credit Debit", alleen Ruben + Willem) ========== */
-let FINLED = [], FINLED_Q = "", FINVIEW = "grootboek", FINSPLIT = [];
+let FINLED = [], FINLED_Q = "", FINVIEW = "grootboek", FINSPLIT = [], FINREC = [];
 const fEur = n => (n==null||n==="") ? "—" : eur(n);
 const finJa = v => { const s=String(v==null?"":v).trim().toLowerCase(); return s==="ja"||s==="j"||s==="true"||s==="1"; };
 
@@ -1949,11 +1969,83 @@ function setFinView(v){
   FINVIEW = v;
   const on  = "padding:8px 16px;border:1px solid var(--accent);border-radius:8px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer";
   const off = "padding:8px 16px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--text);font-weight:600;cursor:pointer";
-  $("finTabGrootboek").style.cssText = v==="grootboek"?on:off;
-  $("finTabSplit").style.cssText     = v==="split"?on:off;
+  [["grootboek","finTabGrootboek"],["split","finTabSplit"],["cash","finTabCash"]].forEach(([k,id])=>{ const b=$(id); if(b) b.style.cssText = v===k?on:off; });
   $("finViewGrootboek").classList.toggle("hidden", v!=="grootboek");
   $("finViewSplit").classList.toggle("hidden", v!=="split");
+  $("finViewCash").classList.toggle("hidden", v!=="cash");
   if(v==="split") renderFinanceSplit();
+  if(v==="cash")  renderFinanceCash();
+}
+async function renderFinanceCash(){
+  if(!CAN_FINANCE) return;
+  const [cf, btw, rec] = await Promise.all([rpc("fin_cashflow"), rpc("fin_btw"), rpc("fin_recurring_list")]);
+  FINREC = rec || [];
+  const laatste = (cf && cf.length) ? cf[cf.length-1] : null;
+  const vasteMaand = FINREC.filter(r=>r.actief).reduce((s,r)=>s+(Number(r.amount)||0),0);
+  const sub = t => `<div style="font-size:11px;color:var(--muted);margin-top:3px">${t}</div>`;
+  $("finCashKpis").innerHTML =
+    metric("Saldo nu", laatste?eur(laatste.saldo_eind):"—", sub(laatste?("t/m "+laatste.maand):"")) +
+    metric("Vaste lasten / maand", eur(vasteMaand), sub("terugkerend, incl. btw")) +
+    metric("Btw lopend kwartaal", (btw&&btw.length)?eur(btw[btw.length-1].afdracht):"—", sub("schatting, af te dragen"));
+  $("finCashTable").innerHTML =
+    `<thead><tr><th class="tl">Maand</th><th>In</th><th>Uit</th><th>Netto</th><th>Saldo eind</th></tr></thead>
+     <tbody>${(cf||[]).map(r=>`<tr>
+       <td class="tl">${r.maand}</td>
+       <td style="color:var(--good)">${eur(r.inkomsten)}</td>
+       <td style="color:var(--bad)">${eur(r.uitgaven)}</td>
+       <td>${eur(r.netto)}</td>
+       <td style="font-weight:600">${eur(r.saldo_eind)}</td></tr>`).join("")}</tbody>`;
+  $("finBtwTable").innerHTML =
+    `<thead><tr><th class="tl">Kwartaal</th><th>Omzet incl.</th><th>Kosten incl.</th><th>Btw omzet</th><th>Btw voor</th><th>Af te dragen</th></tr></thead>
+     <tbody>${(btw||[]).map(r=>`<tr>
+       <td class="tl">${r.kwartaal}</td>
+       <td>${eur(r.omzet_incl)}</td><td>${eur(r.kosten_incl)}</td>
+       <td>${eur(r.btw_omzet)}</td><td>${eur(r.btw_voor)}</td>
+       <td style="font-weight:600">${eur(r.afdracht)}</td></tr>`).join("")}</tbody>`;
+  tekenRecTable();
+  const nb = $("finRecNew"); if(nb && !nb._bound){ nb._bound = true; nb.addEventListener("click", ()=>openRecEdit(null)); }
+}
+function tekenRecTable(){
+  $("finRecTable").innerHTML =
+    `<thead><tr><th class="tl">Post</th><th class="tl">Categorie</th><th>Per maand</th><th class="tl">Actief</th><th></th></tr></thead>
+     <tbody>${FINREC.map(r=>`<tr data-id="${r.id}" style="cursor:pointer">
+       <td class="tl">${esc(r.label||"—")}</td>
+       <td class="tl">${esc(r.categorie||"—")}</td>
+       <td>${r.amount!=null?eur(r.amount):"—"}</td>
+       <td class="tl">${r.actief?`<span class="badge sale">aan</span>`:`<span class="badge held">uit</span>`}</td>
+       <td style="color:var(--accent)">bewerken ›</td></tr>`).join("") || `<tr><td colspan="5" style="color:var(--muted);padding:14px">Nog geen vaste lasten.</td></tr>`}</tbody>`;
+  document.querySelectorAll("#finRecTable tbody tr[data-id]").forEach(tr=>tr.addEventListener("click", ()=>openRecEdit(Number(tr.dataset.id))));
+}
+function openRecEdit(id){
+  const r = id ? (FINREC.find(x=>x.id===id)||{}) : { actief:true };
+  const f = (k,l,t) => `<label style="display:flex;flex-direction:column;gap:3px;font-size:11.5px;color:var(--muted)">${l}<input data-k="${k}" type="${t}" ${t==='number'?'step="any"':''} value="${escAttr(r[k]==null?'':String(r[k]))}" style="padding:7px 9px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--text);font-size:13px"></label>`;
+  $("finRecEdit").innerHTML =
+    `<div class="panel" style="padding:16px;margin-bottom:12px;border:1px solid var(--accent-soft)">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;align-items:end">
+        ${f('label','Post','text')}${f('amount','Per maand (− = kost)','number')}${f('categorie','Categorie','text')}
+        <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text);padding:7px 0"><input data-k="actief" type="checkbox" ${r.actief!==false?'checked':''} style="width:16px;height:16px">Actief</label>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:12px;align-items:center">
+        <button onclick="bewaarRec(${id||'null'})" style="padding:8px 16px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer">Opslaan</button>
+        ${id?`<button onclick="verwijderRec(${id})" style="padding:8px 14px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--bad);cursor:pointer">Verwijderen</button>`:""}
+        <span style="cursor:pointer;color:var(--muted)" onclick="document.getElementById('finRecEdit').classList.add('hidden')">sluiten ✕</span>
+      </div>
+    </div>`;
+  $("finRecEdit").classList.remove("hidden");
+  $("finRecEdit").scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+async function bewaarRec(id){
+  const p = {}; if(id) p.id = String(id);
+  document.querySelectorAll("#finRecEdit [data-k]").forEach(i=>{ p[i.dataset.k] = (i.type==="checkbox") ? (i.checked?"ja":"nee") : i.value; });
+  await rpc("fin_recurring_save", { p });
+  $("finRecEdit").classList.add("hidden");
+  renderFinanceCash();
+}
+async function verwijderRec(id){
+  if(!confirm("Deze vaste last verwijderen?")) return;
+  await rpc("fin_recurring_delete", { p_id: id });
+  $("finRecEdit").classList.add("hidden");
+  renderFinanceCash();
 }
 async function renderFinanceSplit(){
   if(!CAN_FINANCE){ $("finSplitTable").innerHTML=""; return; }
