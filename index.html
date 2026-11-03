@@ -695,6 +695,7 @@
         <span class="info" tabindex="0">i<span class="tip">Startsaldo = huidig banksaldo. Per week: Cash In (bruto courtage = verkoopsom × park-percentage, incl btw, op passeerdatum + 3 dagen) − Agents Out (makelaarsvergoeding per woning uit de parkconfig) + Terugkerend + btw (maandelijkse vaste lasten en inkomsten; btw-afdracht in de week van de maand ná het kwartaaleinde). Scenario's: Alles = getekend + potentieel; Alleen getekend = definitief/koopcontract-definitief; Droogstand = geen cash-in. "Verschuiven" schuift alle passeerdatums op.</span></span>
       </div>
       <div class="panel"><div class="scroll"><table id="finPlanTable"></table></div></div>
+      <div id="finPlanDetail" class="hidden"></div>
       <div class="sec" style="margin-top:20px">Wat komt wanneer over de brug</div>
       <div class="panel"><div class="scroll"><table id="finEventsTable"></table></div></div>
       <p class="foot">Gevoed door toekomstige passeerdatums: Willems ledger en (zodra ingevuld) de notarisdatums in Pipedrive. Nu nog dun; dit vult zich vanzelf naarmate er meer passeerdatums bekend zijn.</p>
@@ -2017,7 +2018,7 @@ function setFinView(v){
   if(v==="cash")  renderFinanceCash();
   if(v==="plan")  renderFinancePlan();
 }
-let FINPLAN_SCEN = "basis", FINPLAN_SHIFT = 0;
+let FINPLAN_SCEN = "basis", FINPLAN_SHIFT = 0, FINPLAN_P = [], FINPLAN_E = [];
 async function renderFinancePlan(){
   if(!CAN_FINANCE) return;
   const on  = "padding:6px 12px;border:1px solid var(--accent);border-radius:7px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer;font-size:12.5px";
@@ -2026,11 +2027,13 @@ async function renderFinancePlan(){
     .map(([k,l])=>`<button onclick="FINPLAN_SCEN='${k}';renderFinancePlan()" style="${FINPLAN_SCEN===k?on:off}">${l}</button>`).join("");
   $("finShiftBtns").innerHTML = [[0,"0"],[2,"+2 wk"],[4,"+4 wk"],[8,"+8 wk"]]
     .map(([k,l])=>`<button onclick="FINPLAN_SHIFT=${k};renderFinancePlan()" style="${FINPLAN_SHIFT===k?on:off}">${l}</button>`).join("");
-  const [plan, events] = await Promise.all([
+  const [plan, events, rec] = await Promise.all([
     rpc("fin_cash_plan",   { p_shift_weeks:FINPLAN_SHIFT, p_scenario:FINPLAN_SCEN }),
-    rpc("fin_cash_events", { p_shift_weeks:FINPLAN_SHIFT, p_scenario:FINPLAN_SCEN })
+    rpc("fin_cash_events", { p_shift_weeks:FINPLAN_SHIFT, p_scenario:FINPLAN_SCEN }),
+    rpc("fin_recurring_list")
   ]);
   const P = plan||[], E = events||[];
+  FINREC = rec||FINREC||[]; FINPLAN_P = P; FINPLAN_E = E;
   const laag = P.reduce((a,r)=> (a==null||Number(r.saldo_eind)<Number(a.saldo_eind))?r:a, null);
   const neg  = P.find(r=>Number(r.saldo_eind)<0);
   const start = P.length ? (Number(P[0].saldo_eind)-Number(P[0].netto)) : null;
@@ -2042,7 +2045,7 @@ async function renderFinancePlan(){
     metric("Eerste negatieve week", neg?wk(neg.week_start):"geen", sub(neg?"let op de cash":"blijft positief"));
   $("finPlanTable").innerHTML =
     `<thead><tr><th class="tl">Week</th><th>Cash In</th><th>Agents Out</th><th>Terugkerend + btw</th><th>Netto</th><th>Saldo Eind</th></tr></thead>
-     <tbody>${P.map(r=>`<tr>
+     <tbody>${P.map(r=>`<tr data-ws="${r.week_start}" style="cursor:pointer">
        <td class="tl" style="white-space:nowrap">${wk(r.week_start)}</td>
        <td style="color:${Number(r.cash_in)>0?'var(--good)':'var(--muted)'}">${Number(r.cash_in)>0?eur(r.cash_in):"—"}</td>
        <td style="color:${Number(r.agents_out)>0?'var(--bad)':'var(--muted)'}">${Number(r.agents_out)>0?"−"+eur(r.agents_out):"—"}</td>
@@ -2059,6 +2062,38 @@ async function renderFinancePlan(){
        <td>${eur(r.omzet)}</td>
        <td style="font-weight:600">${Number(r.courtage)>0?eur(r.courtage):'<span style="color:var(--faint)">geen config</span>'}</td>
        <td class="tl">${esc(r.bron)}</td></tr>`;}).join("") || `<tr><td colspan="6" style="color:var(--muted);padding:14px">Nog geen aankomende passages bekend in dit scenario.</td></tr>`}</tbody>`;
+  document.querySelectorAll("#finPlanTable tbody tr[data-ws]").forEach(tr=>
+    tr.addEventListener("click", ()=>openPlanBreakdown(tr.dataset.ws)));
+}
+function openPlanBreakdown(ws){
+  const key = String(ws).slice(0,10);
+  const row = FINPLAN_P.find(r=>String(r.week_start).slice(0,10)===key);
+  const wsD = new Date(key), wkEnd = new Date(wsD.getTime()+7*86400000);
+  const deals = FINPLAN_E.filter(e=>{ const d=new Date(e.cash_date); return d>=wsD && d<wkEnd; });
+  const recs = (row && Number(row.rec_deel)!=0) ? FINREC.filter(x=>x.actief) : [];
+  const btw  = row ? Number(row.btw_deel) : 0;
+  const li = (lbl,val,neg) => `<div style="display:flex;justify-content:space-between;gap:16px;padding:5px 0;border-bottom:1px solid var(--line)"><span>${lbl}</span><span style="font-weight:600;color:${neg?'var(--bad)':'var(--good)'}">${neg?"−":""}${eur(Math.abs(val))}</span></div>`;
+  let html = `<div class="panel" style="padding:16px 18px;margin-top:12px;border:1px solid var(--accent-soft)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b>Opbouw week ${wsD.toLocaleDateString("nl-NL")}</b><span style="cursor:pointer;color:var(--muted)" onclick="document.getElementById('finPlanDetail').classList.add('hidden')">sluiten ✕</span></div>`;
+  if(deals.length){
+    html += `<div style="font-size:12px;color:var(--muted);margin:8px 0 2px">Deals (courtage in, makelaar eruit)</div>`;
+    deals.forEach(e=>{
+      html += li(esc(e.label||"—")+(e.fase==="zeker"?"":' <span style="color:var(--warn);font-size:11px">potentieel</span>'), Number(e.courtage||0), false);
+      if(Number(e.makelaar)>0) html += li('<span style="color:var(--muted)">&nbsp;&nbsp;↳ makelaar</span>', Number(e.makelaar), true);
+    });
+  }
+  if(recs.length){
+    html += `<div style="font-size:12px;color:var(--muted);margin:10px 0 2px">Terugkerend (einde maand)</div>`;
+    recs.forEach(x=> html += li(esc(x.label||"—"), Math.abs(Number(x.amount)||0), Number(x.amount)<0));
+  }
+  if(btw!==0){
+    html += `<div style="font-size:12px;color:var(--muted);margin:10px 0 2px">Btw-afdracht kwartaal</div>` + li("Btw", Math.abs(btw), btw<0);
+  }
+  if(!deals.length && !recs.length && btw===0) html += `<div style="color:var(--muted);padding:6px 0">Geen posten in deze week.</div>`;
+  html += `</div>`;
+  $("finPlanDetail").innerHTML = html;
+  $("finPlanDetail").classList.remove("hidden");
+  $("finPlanDetail").scrollIntoView({behavior:"smooth",block:"nearest"});
 }
 async function renderFinanceCash(){
   if(!CAN_FINANCE) return;
@@ -2191,29 +2226,31 @@ function finFilter(){
 function tekenFinTabel(){
   const rows = finFilter();
   $("finLedCount").textContent = `${rows.length} van ${FINLED.length} regels`;
-  const vv  = r => r.vast_variabel ? `<span class="badge held">${esc(r.vast_variabel)}</span>` : "";
-  const bet = r => finJa(r.betaald_x)
-    ? `<span class="badge sale">betaald</span>`
-    : `<span class="badge held" style="background:var(--warn-soft);color:var(--warn)">open</span>`;
-  const pas = r => r.passeren_date ? new Date(r.passeren_date).toLocaleDateString("nl-NL")
-                 : (r.passeren_raw ? esc(r.passeren_raw) : "—");
-  const pd  = r => r.deal_id
-    ? `${fEur(r.pd_amount)}${r.pd_marge!=null?` · marge ${fEur(r.pd_marge)}`:""}`
-    : `<span style="color:var(--faint)">niet gekoppeld</span>`;
+  // Ja/Nee-cel met groen/rood, zoals Willems Excel
+  const jc = v => {
+    const s = String(v==null?"":v).trim().toLowerCase();
+    const t = (v==null||v==="") ? "" : esc(String(v));
+    if(s==="ja"||s==="j")  return `<td style="background:rgba(34,197,94,.16);white-space:nowrap">${t||"Ja"}</td>`;
+    if(s==="nee"||s==="n") return `<td style="background:rgba(239,68,68,.18);white-space:nowrap">${t||"Nee"}</td>`;
+    return `<td class="tl" style="white-space:nowrap">${t||'<span style="color:var(--faint)">—</span>'}</td>`;
+  };
+  const pc = r => r.passeren_date
+      ? `<td style="background:rgba(34,197,94,.16);white-space:nowrap">${new Date(r.passeren_date).toLocaleDateString("nl-NL")}</td>`
+      : (r.passeren_raw ? `<td class="tl" style="white-space:nowrap">${esc(r.passeren_raw)}</td>`
+                        : `<td style="background:rgba(239,68,68,.18)"></td>`);
   $("finLedTable").innerHTML =
-    `<thead><tr><th class="tl">Verkoper</th><th class="tl">Park + nr</th><th>Omzet</th><th class="tl">Soort</th>
-      <th>Courtage RV incl.</th><th class="tl">Passeren</th><th class="tl">Status</th><th class="tl">Pipedrive</th><th></th></tr></thead>
+    `<thead><tr><th class="tl">Verkoper</th><th class="tl">Park + nr</th><th>Courtage incl. btw RP</th>
+      <th class="tl">Getekend</th><th class="tl">Passeren</th><th class="tl">Getekend</th><th class="tl">Definitief</th>
+      <th class="tl">Verzonden</th><th class="tl">Ontvangen</th><th class="tl">Eigen afspraak</th><th class="tl">Betaald</th>
+      <th class="tl">Optie</th><th>Prijs</th><th></th></tr></thead>
      <tbody>${rows.map(r=>`<tr data-id="${r.id}" style="cursor:pointer">
-       <td class="tl">${esc(r.verkoper||"—")}</td>
-       <td class="tl">${esc(r.park_no||"—")}</td>
-       <td>${fEur(r.omzet)}</td>
-       <td class="tl">${vv(r)}</td>
-       <td>${fEur(r.rp_incl)}</td>
-       <td class="tl" style="white-space:nowrap">${pas(r)}</td>
-       <td class="tl">${bet(r)}</td>
-       <td class="tl" style="white-space:nowrap;font-size:12px">${pd(r)}</td>
+       <td class="tl" style="white-space:nowrap">${esc(r.verkoper||"—")}</td>
+       <td class="tl" style="white-space:nowrap">${esc(r.park_no||"—")}</td>
+       <td style="white-space:nowrap">${fEur(r.rp_incl)}</td>
+       ${jc(r.getekend_q)}${pc(r)}${jc(r.getekend_s)}${jc(r.definitief)}${jc(r.verzonden)}${jc(r.ontvangen)}${jc(r.eigen_afspraak)}${jc(r.betaald_x)}${jc(r.optie)}
+       <td style="white-space:nowrap">${fEur(r.prijs)}</td>
        <td style="color:var(--accent);white-space:nowrap">bewerken ›</td>
-     </tr>`).join("") || `<tr><td colspan="9" style="color:var(--muted);padding:14px">Geen regels in deze selectie.</td></tr>`}</tbody>`;
+     </tr>`).join("") || `<tr><td colspan="14" style="color:var(--muted);padding:14px">Geen regels in deze selectie.</td></tr>`}</tbody>`;
   document.querySelectorAll("#finLedTable tbody tr[data-id]").forEach(tr =>
     tr.addEventListener("click", ()=>openFinEdit(Number(tr.dataset.id))));
 }
