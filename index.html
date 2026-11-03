@@ -2022,7 +2022,7 @@ async function renderFinancePlan(){
   if(!CAN_FINANCE) return;
   const on  = "padding:6px 12px;border:1px solid var(--accent);border-radius:7px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer;font-size:12.5px";
   const off = "padding:6px 12px;border:1px solid var(--line-strong);border-radius:7px;background:var(--card);color:var(--text);cursor:pointer;font-size:12.5px";
-  $("finScenBtns").innerHTML = [["basis","Basis"],["zeker","Alleen zeker"],["droogstand","Droogstand"]]
+  $("finScenBtns").innerHTML = [["basis","Alles"],["zeker","Alleen getekend"],["droogstand","Droogstand"]]
     .map(([k,l])=>`<button onclick="FINPLAN_SCEN='${k}';renderFinancePlan()" style="${FINPLAN_SCEN===k?on:off}">${l}</button>`).join("");
   $("finShiftBtns").innerHTML = [[0,"0"],[2,"+2 wk"],[4,"+4 wk"],[8,"+8 wk"]]
     .map(([k,l])=>`<button onclick="FINPLAN_SHIFT=${k};renderFinancePlan()" style="${FINPLAN_SHIFT===k?on:off}">${l}</button>`).join("");
@@ -2049,13 +2049,15 @@ async function renderFinancePlan(){
        <td>${eur(r.netto)}</td>
        <td style="font-weight:600;color:${Number(r.saldo_eind)<0?'var(--bad)':'inherit'}">${eur(r.saldo_eind)}</td></tr>`).join("")}</tbody>`;
   $("finEventsTable").innerHTML =
-    `<thead><tr><th class="tl">Datum</th><th class="tl">Deal</th><th>Verkoopsom</th><th>Courtage incl. btw</th><th class="tl">Bron</th></tr></thead>
-     <tbody>${E.map(r=>`<tr>
+    `<thead><tr><th class="tl">Verwachte datum</th><th class="tl">Deal</th><th class="tl">Fase</th><th>Verkoopsom</th><th>Courtage incl. btw</th><th class="tl">Datumbron</th></tr></thead>
+     <tbody>${E.map(r=>{ const zeker = r.fase==="zeker";
+       return `<tr>
        <td class="tl" style="white-space:nowrap">${new Date(r.cash_date).toLocaleDateString("nl-NL")}</td>
-       <td class="tl">${esc(r.label||"—")}${r.zeker?'':' <span style="font-size:11px;color:var(--warn)">onzeker</span>'}</td>
+       <td class="tl">${esc(r.label||"—")}</td>
+       <td class="tl"><span class="badge ${zeker?'sale':'held'}"${zeker?'':' style="background:var(--warn-soft);color:var(--warn)"'}>${zeker?'getekend':'potentieel'}</span></td>
        <td>${eur(r.omzet)}</td>
        <td style="font-weight:600">${Number(r.courtage)>0?eur(r.courtage):'<span style="color:var(--faint)">geen config</span>'}</td>
-       <td class="tl">${esc(r.bron)}</td></tr>`).join("") || `<tr><td colspan="5" style="color:var(--muted);padding:14px">Nog geen aankomende passages bekend in dit scenario.</td></tr>`}</tbody>`;
+       <td class="tl">${esc(r.bron)}</td></tr>`;}).join("") || `<tr><td colspan="6" style="color:var(--muted);padding:14px">Nog geen aankomende passages bekend in dit scenario.</td></tr>`}</tbody>`;
 }
 async function renderFinanceCash(){
   if(!CAN_FINANCE) return;
