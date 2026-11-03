@@ -691,8 +691,8 @@
         <div><div style="font-size:11px;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">Passeerdatums verschuiven</div><div id="finShiftBtns" style="display:flex;gap:6px"></div></div>
       </div>
       <div class="cards" id="finPlanKpis"></div>
-      <div class="sec" style="margin-top:20px">Maandprojectie (12 maanden)
-        <span class="info" tabindex="0">i<span class="tip">Startsaldo = huidig banksaldo. Per maand: + verwachte courtage (verkoopsom × park-percentage, incl btw, op passeerdatum + 3 dagen) − vaste lasten − (eind kwartaal) geschatte btw-afdracht. Scenario's: Basis = alle bekende passages; Alleen zeker = alleen getekende/definitieve; Droogstand = geen cash-in, puur de vaste lasten. "Verschuiven" schuift alle passeerdatums op.</span></span>
+      <div class="sec" style="margin-top:20px">Weekprojectie (26 weken)
+        <span class="info" tabindex="0">i<span class="tip">Startsaldo = huidig banksaldo. Per week: Cash In (bruto courtage = verkoopsom × park-percentage, incl btw, op passeerdatum + 3 dagen) − Agents Out (makelaarsvergoeding per woning uit de parkconfig) + Terugkerend + btw (maandelijkse vaste lasten en inkomsten; btw-afdracht in de week van de maand ná het kwartaaleinde). Scenario's: Alles = getekend + potentieel; Alleen getekend = definitief/koopcontract-definitief; Droogstand = geen cash-in. "Verschuiven" schuift alle passeerdatums op.</span></span>
       </div>
       <div class="panel"><div class="scroll"><table id="finPlanTable"></table></div></div>
       <div class="sec" style="margin-top:20px">Wat komt wanneer over de brug</div>
@@ -2032,21 +2032,22 @@ async function renderFinancePlan(){
   ]);
   const P = plan||[], E = events||[];
   const laag = P.reduce((a,r)=> (a==null||Number(r.saldo_eind)<Number(a.saldo_eind))?r:a, null);
-  const eind = P.length?P[P.length-1]:null;
   const neg  = P.find(r=>Number(r.saldo_eind)<0);
+  const start = P.length ? (Number(P[0].saldo_eind)-Number(P[0].netto)) : null;
+  const wk = d => new Date(d).toLocaleDateString("nl-NL",{day:"2-digit",month:"2-digit"});
   const sub = t => `<div style="font-size:11px;color:var(--muted);margin-top:3px">${t}</div>`;
   $("finPlanKpis").innerHTML =
-    metric("Saldo over 12 mnd", eind?eur(eind.saldo_eind):"—") +
-    metric("Laagste saldo", laag?eur(laag.saldo_eind):"—", sub(laag?laag.maand:"")) +
-    metric("Eerste negatieve maand", neg?neg.maand:"geen", sub(neg?"let op de cash":"blijft positief"));
+    metric("Saldo nu", start!=null?eur(start):"—", sub("startpunt uit de bank")) +
+    metric("Laagste saldo", laag?eur(laag.saldo_eind):"—", sub(laag?("week "+wk(laag.week_start)):"")) +
+    metric("Eerste negatieve week", neg?wk(neg.week_start):"geen", sub(neg?"let op de cash":"blijft positief"));
   $("finPlanTable").innerHTML =
-    `<thead><tr><th class="tl">Maand</th><th>Cash in</th><th>Terugkerend</th><th>Btw</th><th>Netto</th><th>Saldo eind</th></tr></thead>
+    `<thead><tr><th class="tl">Week</th><th>Cash In</th><th>Agents Out</th><th>Terugkerend + btw</th><th>Netto</th><th>Saldo Eind</th></tr></thead>
      <tbody>${P.map(r=>`<tr>
-       <td class="tl">${r.maand}</td>
-       <td style="color:${Number(r.cash_in)>0?'var(--good)':'var(--muted)'}">${eur(r.cash_in)}</td>
-       <td style="color:${Number(r.vaste_lasten)>=0?'var(--good)':'var(--bad)'}">${eur(r.vaste_lasten)}</td>
-       <td>${Number(r.btw_afdracht)!=0?eur(r.btw_afdracht):'—'}</td>
-       <td>${eur(r.netto)}</td>
+       <td class="tl" style="white-space:nowrap">${wk(r.week_start)}</td>
+       <td style="color:${Number(r.cash_in)>0?'var(--good)':'var(--muted)'}">${Number(r.cash_in)>0?eur(r.cash_in):"—"}</td>
+       <td style="color:${Number(r.agents_out)>0?'var(--bad)':'var(--muted)'}">${Number(r.agents_out)>0?"−"+eur(r.agents_out):"—"}</td>
+       <td style="color:${Number(r.vast_btw)>=0?'var(--good)':'var(--bad)'}">${Number(r.vast_btw)!=0?eur(r.vast_btw):"—"}</td>
+       <td style="font-weight:600">${eur(r.netto)}</td>
        <td style="font-weight:600;color:${Number(r.saldo_eind)<0?'var(--bad)':'inherit'}">${eur(r.saldo_eind)}</td></tr>`).join("")}</tbody>`;
   $("finEventsTable").innerHTML =
     `<thead><tr><th class="tl">Verwachte datum</th><th class="tl">Deal</th><th class="tl">Fase</th><th>Verkoopsom</th><th>Courtage incl. btw</th><th class="tl">Datumbron</th></tr></thead>
