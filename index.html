@@ -629,18 +629,31 @@
   </div>
 
   <div id="tabFinanceLedger" class="hidden">
-    <div class="sec">Finance · grootboek
-      <span class="info" tabindex="0">i<span class="tip">Willems grootboek "Map Credit Debit", 1-op-1 overgenomen en volledig bewerkbaar. Alleen zichtbaar voor Willem en Ruben (server-side afgeschermd). Per regel kun je het Pipedrive-deal koppelen; dan verschijnt het live cijfer ernaast. Zo schuift de bron langzaam van handmatig naar automatisch.</span></span>
+    <div class="sec">Finance
+      <span class="info" tabindex="0">i<span class="tip">Willems grootboek "Map Credit Debit", 1-op-1 overgenomen en volledig bewerkbaar. Alleen zichtbaar voor Willem en Ruben (server-side afgeschermd). Per regel kun je het Pipedrive-deal koppelen; dan verschijnt het live cijfer ernaast. De winstverdeling rekent de courtage door naar Amigo's, Ruben en T&K.</span></span>
     </div>
-    <div class="cards" id="finLedKpis"></div>
-    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:16px 0 10px">
-      <button id="finLedNew" style="padding:8px 16px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer">+ Nieuwe regel</button>
-      <input id="finLedZoek" placeholder="Zoek verkoper of park…" style="padding:8px 11px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--text);font-size:13px;min-width:200px">
-      <span id="finLedCount" style="font-size:12px;color:var(--muted)"></span>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button id="finTabGrootboek" onclick="setFinView('grootboek')" style="padding:8px 16px;border:1px solid var(--accent);border-radius:8px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer">Grootboek</button>
+      <button id="finTabSplit" onclick="setFinView('split')" style="padding:8px 16px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--text);font-weight:600;cursor:pointer">Winstverdeling</button>
     </div>
-    <div id="finLedEdit" class="hidden"></div>
-    <div class="panel"><div class="scroll"><table id="finLedTable"></table></div></div>
-    <p class="foot">Alles wat Willem in Excel bijhield, staat hier. Wijzigingen worden direct in de database opgeslagen. De "Pipedrive"-kolom vult zich zodra je een regel aan een deal koppelt (deal-id in het bewerkpaneel).</p>
+
+    <div id="finViewGrootboek">
+      <div class="cards" id="finLedKpis"></div>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:16px 0 10px">
+        <button id="finLedNew" style="padding:8px 16px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer">+ Nieuwe regel</button>
+        <input id="finLedZoek" placeholder="Zoek verkoper of park…" style="padding:8px 11px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--text);font-size:13px;min-width:200px">
+        <span id="finLedCount" style="font-size:12px;color:var(--muted)"></span>
+      </div>
+      <div id="finLedEdit" class="hidden"></div>
+      <div class="panel"><div class="scroll"><table id="finLedTable"></table></div></div>
+      <p class="foot">Alles wat Willem in Excel bijhield, staat hier. Wijzigingen worden direct in de database opgeslagen. De "Pipedrive"-kolom vult zich zodra je een regel aan een deal koppelt (deal-id in het bewerkpaneel).</p>
+    </div>
+
+    <div id="finViewSplit" class="hidden">
+      <div class="cards" id="finSplitKpis"></div>
+      <div class="panel" style="margin-top:16px"><div class="scroll"><table id="finSplitTable"></table></div></div>
+      <p class="foot">Winstverdeling berekend uit de parkconfig (verkoopsom × percentage). Nu ingesteld voor Wielsche Dreef en Greenerwold (Greenerwold-makelaar gecapt op €2.500). Makelaar = 0 waar Willem dat zo invulde. "Geen opties" houdt €500 in op de makelaar; "Bardo" geeft €1.000 aan Ruben. Parken zonder config tonen "—" tot de percentages zijn ingesteld. Marketingfee (€2.000 WD + €1.000 GW per maand) komt in de kostenlaag, niet per deal.</p>
+    </div>
   </div>
 
   <div id="tabBellen" class="hidden">
@@ -1919,7 +1932,7 @@ function herstelTab(){
 document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => toonTab(t.dataset.tab)));
 
 /* ========== FINANCE-TAB · grootboek (Willems "Map Credit Debit", alleen Ruben + Willem) ========== */
-let FINLED = [], FINLED_Q = "";
+let FINLED = [], FINLED_Q = "", FINVIEW = "grootboek", FINSPLIT = [];
 const fEur = n => (n==null||n==="") ? "—" : eur(n);
 const finJa = v => { const s=String(v==null?"":v).trim().toLowerCase(); return s==="ja"||s==="j"||s==="true"||s==="1"; };
 
@@ -1930,6 +1943,48 @@ async function renderFinancePage(){
   tekenFinTabel();
   const nb = $("finLedNew"); if(nb && !nb._bound){ nb._bound = true; nb.addEventListener("click", ()=>openFinEdit(null)); }
   const zk = $("finLedZoek"); if(zk && !zk._bound){ zk._bound = true; zk.addEventListener("input", e=>{ FINLED_Q = e.target.value; tekenFinTabel(); }); }
+  if(FINVIEW==="split") renderFinanceSplit();
+}
+function setFinView(v){
+  FINVIEW = v;
+  const on  = "padding:8px 16px;border:1px solid var(--accent);border-radius:8px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer";
+  const off = "padding:8px 16px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--text);font-weight:600;cursor:pointer";
+  $("finTabGrootboek").style.cssText = v==="grootboek"?on:off;
+  $("finTabSplit").style.cssText     = v==="split"?on:off;
+  $("finViewGrootboek").classList.toggle("hidden", v!=="grootboek");
+  $("finViewSplit").classList.toggle("hidden", v!=="split");
+  if(v==="split") renderFinanceSplit();
+}
+async function renderFinanceSplit(){
+  if(!CAN_FINANCE){ $("finSplitTable").innerHTML=""; return; }
+  FINSPLIT = await rpc("fin_split_list") || [];
+  const conf = FINSPLIT.filter(r=>r.park_key);
+  const som = k => conf.reduce((s,r)=>s+(Number(r[k])||0),0);
+  const sub = t => `<div style="font-size:11px;color:var(--muted);margin-top:3px">${t}</div>`;
+  $("finSplitKpis").innerHTML =
+    metric("Totaal Amigo's", eur(som("amigos")), sub(conf.length+" deals met config")) +
+    metric("Ruben", eur(som("ruben"))) +
+    metric("Totaal T&K", eur(som("tk"))) +
+    metric("Netto RP", eur(som("netto_rp")));
+  const dash = `<span style="color:var(--faint)">—</span>`;
+  const f  = n => (n==null) ? dash : eur(n);
+  $("finSplitTable").innerHTML =
+    `<thead><tr><th class="tl">Verkoper</th><th class="tl">Park + nr</th><th>Verkoopsom</th>
+      <th>Sales Z</th><th>Recr. Zij</th><th>Recr. Wij</th><th>Recraparcs</th><th>Makelaar</th><th>Inhouding</th><th>Netto RP</th><th>T&amp;K</th><th>Amigo's</th><th>Ruben</th></tr></thead>
+     <tbody>${FINSPLIT.map(r=>{
+       const geen = !r.park_key;
+       const sc = v => geen ? dash : f(v);
+       return `<tr${geen?' style="opacity:.5"':''}>
+       <td class="tl">${esc(r.verkoper||"—")}</td>
+       <td class="tl">${esc(r.park_no||"—")}${geen?' <span style="font-size:11px;color:var(--faint)">geen config</span>':''}</td>
+       <td>${f(r.omzet)}</td>
+       <td>${sc(r.sales_z)}</td><td>${sc(r.recravas_zij)}</td><td>${sc(r.recravas_wij)}</td><td>${sc(r.recraparcs)}</td>
+       <td>${sc(r.makelaar)}</td>
+       <td>${geen?dash:(Number(r.inhouding)>0?`<span style="color:var(--bad)">−${eur(r.inhouding)}</span>`:dash)}</td>
+       <td>${sc(r.netto_rp)}</td><td>${sc(r.tk)}</td>
+       <td style="font-weight:600">${sc(r.amigos)}</td>
+       <td>${geen?dash:(Number(r.ruben)>0?eur(r.ruben):dash)}</td>
+     </tr>`;}).join("") || `<tr><td colspan="13" style="color:var(--muted);padding:14px">Geen regels.</td></tr>`}</tbody>`;
 }
 function tekenFinKpis(){
   const r = FINLED;
@@ -1985,12 +2040,15 @@ const FIN_FIELDS = [
   ["rp_excl","RP excl. btw","num"],["btw_o","Btw RP","num"],["rp_incl","RP incl. btw","num"],
   ["getekend_q","Getekend","text"],["getekend_s","Getekend 2","text"],["definitief","Definitief","text"],["verzonden","Verzonden","text"],["ontvangen","Ontvangen","text"],["eigen_afspraak","Eigen afspraak","text"],
   ["optie","Optie","text"],["prijs","Optie prijs","num"],["pct_aa","Optie %","num"],["rv","RV","num"],["btw_rv","Btw RV","num"],["totaal_ex","Totaal ex","num"],["totaal_in","Totaal in","num"],
-  ["deal_id","Pipedrive deal-id","num"],["note","Notitie","text"]
+  ["deal_id","Pipedrive deal-id","num"],["note","Notitie","text"],
+  ["geen_opties","Geen opties verkocht (−€500 makelaar)","bool"],["bardo","Bardo plande de afspraak (+€1.000 Ruben)","bool"]
 ];
 function openFinEdit(id){
   const r = id ? (FINLED.find(x=>x.id===id)||{}) : {};
   const val = k => r[k]==null ? "" : r[k];
-  const inp = ([k,label,type]) => `<label style="display:flex;flex-direction:column;gap:3px;font-size:11.5px;color:var(--muted)">${esc(label)}
+  const inp = ([k,label,type]) => type==='bool'
+    ? `<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text);grid-column:1/-1;padding:5px 0"><input data-k="${k}" type="checkbox" ${r[k]?"checked":""} style="width:16px;height:16px;flex:none">${esc(label)}</label>`
+    : `<label style="display:flex;flex-direction:column;gap:3px;font-size:11.5px;color:var(--muted)">${esc(label)}
     <input data-k="${k}" type="${type==='num'?'number':(type==='date'?'date':'text')}" ${type==='num'?'step="any"':''} value="${escAttr(String(val(k)))}" style="padding:7px 9px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--text);font-size:13px"></label>`;
   const pdLine = r.deal_id
     ? `<div style="font-size:12px;color:var(--muted);margin-top:8px">Pipedrive-deal ${r.deal_id}: verkoopsom ${fEur(r.pd_amount)}${r.pd_marge!=null?`, marge ${fEur(r.pd_marge)}`:""}${r.pd_stage?`, stage ${esc(r.pd_stage)}`:""}</div>`
@@ -2015,7 +2073,7 @@ function openFinEdit(id){
 async function bewaarFin(id){
   const p = {};
   if(id) p.id = String(id);
-  document.querySelectorAll("#finLedEdit input[data-k]").forEach(i=>{ p[i.dataset.k] = i.value; });
+  document.querySelectorAll("#finLedEdit input[data-k]").forEach(i=>{ p[i.dataset.k] = (i.type==="checkbox") ? (i.checked?"ja":"nee") : i.value; });
   $("finEditMsg").textContent = "Opslaan…";
   const res = await rpc("fin_ledger_save", { p });
   if(res==null){ $("finEditMsg").style.color="var(--bad)"; $("finEditMsg").textContent = "Mislukt — geen rechten of fout."; return; }
