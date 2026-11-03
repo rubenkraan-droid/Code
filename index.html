@@ -385,6 +385,7 @@
       <button class="tab" data-tab="mailflow" title="Mailflow · mailattributie"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg><span class="lbl">Mailflow</span></button>
       <button class="tab" data-tab="archief" title="Archief · creative-library"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></svg><span class="lbl">Archief</span></button>
       <button class="tab" data-tab="financien" title="Financiën"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5c0-1.4 1.2-2 2.5-2s2.5.7 2.5 1.8c0 2.4-5 1.3-5 3.7 0 1.1 1.2 1.8 2.5 1.8s2.5-.6 2.5-2"/></svg><span class="lbl">Financiën</span></button>
+      <button class="tab hidden" data-tab="finance" title="Finance · grootboek (alleen Willem en Ruben)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v2"/></svg><span class="lbl">Finance</span></button>
       <button class="tab" data-tab="resale" title="Resale"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-7 9 7M5 10v9h5v-6h4v6h5v-9"/></svg><span class="lbl">Resale</span></button>
       <button class="tab" data-tab="campagnes" title="Campagnes · CBO / adset"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18M7 15l4-5 3 3 5-7"/></svg><span class="lbl">Campagnes</span></button>
       <button class="tab" data-tab="bevindingen" title="Bevindingen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.2 1 2.5h6c0-1.3.3-1.8 1-2.5A6 6 0 0 0 12 3z"/></svg><span class="lbl">Bevindingen</span></button>
@@ -624,6 +625,21 @@
     <div class="sec">Per deal</div>
     <div class="panel"><div class="scroll"><table id="finTable"></table></div></div>
     <p class="foot">Notarisdatum en ontbindende voorwaarden komen uit de handmatige Pipedrive-velden; staat daar niets, dan toont het dashboard "Nog niet bekend".</p>
+  </div>
+
+  <div id="tabFinanceLedger" class="hidden">
+    <div class="sec">Finance · grootboek
+      <span class="info" tabindex="0">i<span class="tip">Willems grootboek "Map Credit Debit", 1-op-1 overgenomen en volledig bewerkbaar. Alleen zichtbaar voor Willem en Ruben (server-side afgeschermd). Per regel kun je het Pipedrive-deal koppelen; dan verschijnt het live cijfer ernaast. Zo schuift de bron langzaam van handmatig naar automatisch.</span></span>
+    </div>
+    <div class="cards" id="finLedKpis"></div>
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:16px 0 10px">
+      <button id="finLedNew" style="padding:8px 16px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer">+ Nieuwe regel</button>
+      <input id="finLedZoek" placeholder="Zoek verkoper of park…" style="padding:8px 11px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--text);font-size:13px;min-width:200px">
+      <span id="finLedCount" style="font-size:12px;color:var(--muted)"></span>
+    </div>
+    <div id="finLedEdit" class="hidden"></div>
+    <div class="panel"><div class="scroll"><table id="finLedTable"></table></div></div>
+    <p class="foot">Alles wat Willem in Excel bijhield, staat hier. Wijzigingen worden direct in de database opgeslagen. De "Pipedrive"-kolom vult zich zodra je een regel aan een deal koppelt (deal-id in het bewerkpaneel).</p>
   </div>
 
   <div id="tabBellen" class="hidden">
@@ -1570,6 +1586,7 @@ async function afschermGeenToegang(email){
 }
 let LOGIN_NO_FINANCE = false;   // eigenaar zonder financiën-toegang (login-modus)
 let LOGIN_NO_CALLS = false;     // eigenaar zonder beldata-toegang (bv. Toine: wel advertenties, geen Bellen-tab)
+let CAN_FINANCE = false;        // Finance-grootboek: alleen Ruben + Willem (server-side gated op can_see_finance())
 let SCOPED_PARK = null;         // park-gebonden eigenaar (bv. Carl = alleen Wielsche Dreef); null = alle parken
 let LOGIN_EMAIL = "";           // ingelogde gebruiker (voor knoppen die maar voor 1 persoon zijn)
 const MAG_SYNCEN = () => LOGIN_EMAIL.toLowerCase() === "ruben.kraan@gmail.com";
@@ -1581,6 +1598,7 @@ async function startAsUser(email){
   if(!row || !row.role) return afschermGeenToegang(email);   // ingelogd maar geen rol
   LOGIN_NO_FINANCE = !!row.no_finance;
   LOGIN_NO_CALLS = !!row.no_calls;
+  CAN_FINANCE = (await rpc("can_see_finance")) === true;   // Finance-tab alleen voor Ruben + Willem
   AD_PARKS = await rpc("my_ad_parks") || [];   // Carl: WD + Frankrijk op de ad-tabs; leeg voor volledige eigenaar/makelaar/park
   $("gate").classList.add("hidden");
   $("app").classList.remove("hidden");
@@ -1637,6 +1655,8 @@ async function startAsUser(email){
     $("viewAs").classList.add("hidden");               // op slot: geen andere rollen kiesbaar
   }
   await applyRole();
+  // dieplink dashboard.recraparcs.nl/#finance opent meteen de Finance-tab (als je toegang hebt)
+  if(CAN_FINANCE && location.hash.replace(/^#/,"")==="finance" && tabBeschikbaar("finance")) toonTab("finance");
 }
 async function loginBoot(){
   $("app").classList.add("hidden");
@@ -1704,6 +1724,8 @@ async function applyRole(){
   document.querySelector('.tab[data-tab="bevindingen"]').classList.toggle("hidden", !owner);
   document.querySelector('.tab[data-tab="icp"]').classList.toggle("hidden", !owner);   // ICP-matrix: alleen eigenaar
   document.querySelector('.tab[data-tab="financien"]').classList.toggle("hidden", parkV);
+  // Finance-grootboek: uitsluitend op de ingelogde identiteit (Ruben + Willem), niet op de bekeken rol
+  document.querySelector('.tab[data-tab="finance"]').classList.toggle("hidden", !CAN_FINANCE);
   // Bellen: makelaars + master-eigenaar, niet de parkeigenaar/park-gebonden eigenaar (Karl/Carl)
   // en niet een eigenaar zonder beldata-toegang (bv. Toine, echt óf testweergave)
   const parkGebondenEig = owner && (SCOPED_PARK != null || v.park != null);
@@ -1866,8 +1888,9 @@ function toonTab(tab, opts){
   $("tabCampagnes").classList.toggle("hidden", tab!=="campagnes");
   $("tabBevindingen").classList.toggle("hidden", tab!=="bevindingen");
   $("tabICP").classList.toggle("hidden", tab!=="icp");
+  $("tabFinanceLedger").classList.toggle("hidden", tab!=="finance");
   $("fAgent").classList.toggle("hidden", tab!=="resultaten" || !currentView || currentView().role!=="owner");
-  $("fPark").classList.toggle("hidden", (currentView && currentView().role==="park") || tab==="advertenties" || tab==="archief" || tab==="financien" || tab==="bellen" || tab==="mailflow" || tab==="resale" || tab==="campagnes" || tab==="bevindingen" || tab==="icp");
+  $("fPark").classList.toggle("hidden", (currentView && currentView().role==="park") || tab==="advertenties" || tab==="archief" || tab==="financien" || tab==="bellen" || tab==="mailflow" || tab==="resale" || tab==="campagnes" || tab==="bevindingen" || tab==="icp" || tab==="finance");
   if(!opts.silent) localStorage.setItem("activeTab", tab);
   if(tab==="advertenties") renderAds();
   if(tab==="archief") renderArchief();
@@ -1878,6 +1901,8 @@ function toonTab(tab, opts){
   if(tab==="campagnes") renderCampagnes();
   if(tab==="bevindingen") renderBevindingen();
   if(tab==="icp") renderICP();
+  if(tab==="finance"){ renderFinancePage(); if(location.hash!=="#finance") history.replaceState(null,"","#finance"); }
+  else if(location.hash==="#finance"){ history.replaceState(null,"",location.pathname+location.search); }
 }
 // een verborgen tab (niet beschikbaar voor deze rol) is geen geldige bestemming
 function tabBeschikbaar(tab){
@@ -1890,6 +1915,117 @@ function herstelTab(){
   if(saved && saved!=="resultaten" && tabBeschikbaar(saved)) toonTab(saved, {silent:true});
 }
 document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => toonTab(t.dataset.tab)));
+
+/* ========== FINANCE-TAB · grootboek (Willems "Map Credit Debit", alleen Ruben + Willem) ========== */
+let FINLED = [], FINLED_Q = "";
+const fEur = n => (n==null||n==="") ? "—" : eur(n);
+const finJa = v => { const s=String(v==null?"":v).trim().toLowerCase(); return s==="ja"||s==="j"||s==="true"||s==="1"; };
+
+async function renderFinancePage(){
+  if(!CAN_FINANCE){ $("finLedTable").innerHTML = ""; return; }
+  FINLED = await rpc("fin_ledger_list") || [];
+  tekenFinKpis();
+  tekenFinTabel();
+  const nb = $("finLedNew"); if(nb && !nb._bound){ nb._bound = true; nb.addEventListener("click", ()=>openFinEdit(null)); }
+  const zk = $("finLedZoek"); if(zk && !zk._bound){ zk._bound = true; zk.addEventListener("input", e=>{ FINLED_Q = e.target.value; tekenFinTabel(); }); }
+}
+function tekenFinKpis(){
+  const r = FINLED;
+  const omzet = r.reduce((s,x)=>s+(Number(x.omzet)||0),0);
+  const rp    = r.reduce((s,x)=>s+(Number(x.rp_incl)||0),0);
+  const betaald = r.filter(x=>finJa(x.betaald_x)).length;
+  const gekoppeld = r.filter(x=>x.deal_id!=null).length;
+  const sub = t => `<div style="font-size:11px;color:var(--muted);margin-top:3px">${t}</div>`;
+  $("finLedKpis").innerHTML =
+    metric("Regels", String(r.length), sub(gekoppeld+" aan Pipedrive gekoppeld")) +
+    metric("Omzet (verkoopsom)", eur(omzet)) +
+    metric("Courtage RecraVas incl.", eur(rp)) +
+    metric("Betaald", String(betaald), sub((r.length-betaald)+" openstaand"));
+}
+function finFilter(){
+  const q = FINLED_Q.trim().toLowerCase();
+  return q ? FINLED.filter(r=>(`${r.verkoper||""} ${r.park_no||""}`).toLowerCase().includes(q)) : FINLED;
+}
+function tekenFinTabel(){
+  const rows = finFilter();
+  $("finLedCount").textContent = `${rows.length} van ${FINLED.length} regels`;
+  const vv  = r => r.vast_variabel ? `<span class="badge held">${esc(r.vast_variabel)}</span>` : "";
+  const bet = r => finJa(r.betaald_x)
+    ? `<span class="badge sale">betaald</span>`
+    : `<span class="badge held" style="background:var(--warn-soft);color:var(--warn)">open</span>`;
+  const pas = r => r.passeren_date ? new Date(r.passeren_date).toLocaleDateString("nl-NL")
+                 : (r.passeren_raw ? esc(r.passeren_raw) : "—");
+  const pd  = r => r.deal_id
+    ? `${fEur(r.pd_amount)}${r.pd_marge!=null?` · marge ${fEur(r.pd_marge)}`:""}`
+    : `<span style="color:var(--faint)">niet gekoppeld</span>`;
+  $("finLedTable").innerHTML =
+    `<thead><tr><th class="tl">Verkoper</th><th class="tl">Park + nr</th><th>Omzet</th><th class="tl">Soort</th>
+      <th>Courtage RV incl.</th><th class="tl">Passeren</th><th class="tl">Status</th><th class="tl">Pipedrive</th><th></th></tr></thead>
+     <tbody>${rows.map(r=>`<tr data-id="${r.id}" style="cursor:pointer">
+       <td class="tl">${esc(r.verkoper||"—")}</td>
+       <td class="tl">${esc(r.park_no||"—")}</td>
+       <td>${fEur(r.omzet)}</td>
+       <td class="tl">${vv(r)}</td>
+       <td>${fEur(r.rp_incl)}</td>
+       <td class="tl" style="white-space:nowrap">${pas(r)}</td>
+       <td class="tl">${bet(r)}</td>
+       <td class="tl" style="white-space:nowrap;font-size:12px">${pd(r)}</td>
+       <td style="color:var(--accent);white-space:nowrap">bewerken ›</td>
+     </tr>`).join("") || `<tr><td colspan="9" style="color:var(--muted);padding:14px">Geen regels in deze selectie.</td></tr>`}</tbody>`;
+  document.querySelectorAll("#finLedTable tbody tr[data-id]").forEach(tr =>
+    tr.addEventListener("click", ()=>openFinEdit(Number(tr.dataset.id))));
+}
+const FIN_FIELDS = [
+  ["verkoper","Verkoper","text"],["park_no","Park + nr","text"],["omzet","Omzet (verkoopsom)","num"],
+  ["vast_variabel","Vast/Variabel","text"],["betaald_x","Betaald","text"],["passeren_date","Passeerdatum","date"],["passeren_raw","Passeren (tekst)","text"],
+  ["pct","Courtage %","num"],["pct_ml","Courtage % ML","num"],["ml_excl","ML excl. btw","num"],["ml_incl","ML incl. btw","num"],
+  ["pct_rp","Courtage % RP","num"],["cour_excl","Courtage excl.","num"],["btw_l","Btw","num"],["cour_incl","Courtage incl.","num"],
+  ["rp_excl","RP excl. btw","num"],["btw_o","Btw RP","num"],["rp_incl","RP incl. btw","num"],
+  ["getekend_q","Getekend","text"],["getekend_s","Getekend 2","text"],["definitief","Definitief","text"],["verzonden","Verzonden","text"],["ontvangen","Ontvangen","text"],["eigen_afspraak","Eigen afspraak","text"],
+  ["optie","Optie","text"],["prijs","Optie prijs","num"],["pct_aa","Optie %","num"],["rv","RV","num"],["btw_rv","Btw RV","num"],["totaal_ex","Totaal ex","num"],["totaal_in","Totaal in","num"],
+  ["deal_id","Pipedrive deal-id","num"],["note","Notitie","text"]
+];
+function openFinEdit(id){
+  const r = id ? (FINLED.find(x=>x.id===id)||{}) : {};
+  const val = k => r[k]==null ? "" : r[k];
+  const inp = ([k,label,type]) => `<label style="display:flex;flex-direction:column;gap:3px;font-size:11.5px;color:var(--muted)">${esc(label)}
+    <input data-k="${k}" type="${type==='num'?'number':(type==='date'?'date':'text')}" ${type==='num'?'step="any"':''} value="${escAttr(String(val(k)))}" style="padding:7px 9px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--text);font-size:13px"></label>`;
+  const pdLine = r.deal_id
+    ? `<div style="font-size:12px;color:var(--muted);margin-top:8px">Pipedrive-deal ${r.deal_id}: verkoopsom ${fEur(r.pd_amount)}${r.pd_marge!=null?`, marge ${fEur(r.pd_marge)}`:""}${r.pd_stage?`, stage ${esc(r.pd_stage)}`:""}</div>`
+    : `<div style="font-size:12px;color:var(--faint);margin-top:8px">Nog niet aan een Pipedrive-deal gekoppeld. Vul hierboven een deal-id in om het live cijfer ernaast te tonen.</div>`;
+  $("finLedEdit").innerHTML =
+    `<div class="panel" style="padding:16px 18px;margin-bottom:14px;border:1px solid var(--accent-soft)">
+       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+         <b>${id?`Regel bewerken · ${esc(r.verkoper||"")} ${esc(r.park_no||"")}`:"Nieuwe regel"}</b>
+         <span style="cursor:pointer;color:var(--muted)" onclick="document.getElementById('finLedEdit').classList.add('hidden')">sluiten ✕</span>
+       </div>
+       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px">${FIN_FIELDS.map(inp).join("")}</div>
+       ${pdLine}
+       <div style="display:flex;gap:10px;margin-top:14px;align-items:center;flex-wrap:wrap">
+         <button onclick="bewaarFin(${id||'null'})" style="padding:8px 16px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer">Opslaan</button>
+         ${id?`<button onclick="verwijderFin(${id})" style="padding:8px 14px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--bad);cursor:pointer">Verwijderen</button>`:""}
+         <span id="finEditMsg" style="font-size:12px;color:var(--muted)"></span>
+       </div>
+     </div>`;
+  $("finLedEdit").classList.remove("hidden");
+  $("finLedEdit").scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+async function bewaarFin(id){
+  const p = {};
+  if(id) p.id = String(id);
+  document.querySelectorAll("#finLedEdit input[data-k]").forEach(i=>{ p[i.dataset.k] = i.value; });
+  $("finEditMsg").textContent = "Opslaan…";
+  const res = await rpc("fin_ledger_save", { p });
+  if(res==null){ $("finEditMsg").style.color="var(--bad)"; $("finEditMsg").textContent = "Mislukt — geen rechten of fout."; return; }
+  $("finLedEdit").classList.add("hidden");
+  await renderFinancePage();
+}
+async function verwijderFin(id){
+  if(!confirm("Deze regel definitief verwijderen?")) return;
+  await rpc("fin_ledger_delete", { p_id: id });
+  $("finLedEdit").classList.add("hidden");
+  await renderFinancePage();
+}
 
 /* ---------- CAMPAGNES (CBO / adset) ---------- */
 async function renderCampagnes(){
