@@ -2236,26 +2236,55 @@ function tekenFinTabel(){
     const txt = ja ? "Ja" : (nee ? "Nee" : '<span style="color:var(--faint)">—</span>');
     return `<td onclick="event.stopPropagation();toggleFinJa(${id},'${field}',this)" title="Klik om Ja/Nee te wisselen" style="cursor:pointer;background:${bg};white-space:nowrap">${txt}</td>`;
   };
-  const pc = r => r.passeren_date
-      ? `<td style="background:rgba(34,197,94,.16);white-space:nowrap">${new Date(r.passeren_date).toLocaleDateString("nl-NL")}</td>`
-      : (r.passeren_raw ? `<td class="tl" style="white-space:nowrap">${esc(r.passeren_raw)}</td>`
-                        : `<td style="background:rgba(239,68,68,.18)"></td>`);
+  const pc = r => {
+    const oc = `onclick="event.stopPropagation();editFinCell(${r.id},'passeren_date',this,'date')"`;
+    return r.passeren_date
+      ? `<td ${oc} style="cursor:pointer;background:rgba(34,197,94,.16);white-space:nowrap">${new Date(r.passeren_date).toLocaleDateString("nl-NL")}</td>`
+      : (r.passeren_raw ? `<td ${oc} class="tl" style="cursor:pointer;white-space:nowrap">${esc(r.passeren_raw)}</td>`
+                        : `<td ${oc} style="cursor:pointer;background:rgba(239,68,68,.18)"></td>`);
+  };
+  const _p = v => (v==null||v==="") ? '<span style="color:var(--faint)">—</span>' : (Number(v)*100).toLocaleString("nl-NL",{maximumFractionDigits:3})+"%";
+  const m    = (id,f,v) => `<td onclick="event.stopPropagation();editFinCell(${id},'${f}',this,'num')"  style="cursor:pointer;white-space:nowrap">${fEur(v)}</td>`;
+  const pcol = (id,f,v) => `<td onclick="event.stopPropagation();editFinCell(${id},'${f}',this,'num')"  style="cursor:pointer;white-space:nowrap">${_p(v)}</td>`;
+  const t    = (id,f,v) => `<td onclick="event.stopPropagation();editFinCell(${id},'${f}',this,'text')" class="tl" style="cursor:pointer;white-space:nowrap">${(v==null||v==="")?'<span style="color:var(--faint)">—</span>':esc(String(v))}</td>`;
   $("finLedTable").innerHTML =
-    `<thead><tr><th class="tl">Verkoper</th><th class="tl">Park + nr</th><th>Courtage ML incl.</th><th>Courtage RP incl.</th>
-      <th class="tl">Getekend</th><th class="tl">Passeren</th><th class="tl">Getekend</th><th class="tl">Definitief</th>
-      <th class="tl">Verzonden</th><th class="tl">Ontvangen</th><th class="tl">Eigen afspraak</th><th class="tl">Betaald</th>
-      <th class="tl">Optie</th><th>Prijs</th><th></th></tr></thead>
-     <tbody>${rows.map(r=>`<tr data-id="${r.id}" style="cursor:pointer">
-       <td class="tl" style="white-space:nowrap">${esc(r.verkoper||"—")}</td>
-       <td class="tl" style="white-space:nowrap">${esc(r.park_no||"—")}</td>
-       <td style="white-space:nowrap">${fEur(r.ml_incl)}</td>
-       <td style="white-space:nowrap">${fEur(r.rp_incl)}</td>
-       ${jc(r.id,'getekend_q',r.getekend_q)}${pc(r)}${jc(r.id,'getekend_s',r.getekend_s)}${jc(r.id,'definitief',r.definitief)}${jc(r.id,'verzonden',r.verzonden)}${jc(r.id,'ontvangen',r.ontvangen)}${jc(r.id,'eigen_afspraak',r.eigen_afspraak)}${jc(r.id,'betaald_x',r.betaald_x)}${jc(r.id,'optie',r.optie)}
-       <td style="white-space:nowrap">${fEur(r.prijs)}</td>
-       <td style="color:var(--accent);white-space:nowrap">bewerken ›</td>
-     </tr>`).join("") || `<tr><td colspan="15" style="color:var(--muted);padding:14px">Geen regels in deze selectie.</td></tr>`}</tbody>`;
-  document.querySelectorAll("#finLedTable tbody tr[data-id]").forEach(tr =>
-    tr.addEventListener("click", ()=>openFinEdit(Number(tr.dataset.id))));
+    `<thead><tr><th class="tl">Verkoper</th><th class="tl">Park + no</th><th class="tl">Betaald</th><th>Omzet</th><th class="tl">Vast/Var</th>
+      <th>Cour. %</th><th>% ML</th><th>Cour. excl. ML</th><th>Cour. incl. ML</th><th>Cour. % RP</th>
+      <th>Cour. excl.</th><th>Btw</th><th>Cour. incl.</th><th>RP excl.</th><th>Btw RP</th><th>RP incl.</th>
+      <th class="tl">Getekend</th><th class="tl">Passeren</th><th class="tl">Getekend</th><th class="tl">Definitief</th><th class="tl">Verzonden</th><th class="tl">Ontvangen</th><th class="tl">Eigen afspraak</th><th class="tl">Betaald</th>
+      <th class="tl">Optie</th><th>Prijs</th><th>%</th><th>RV</th><th>Btw RV</th><th>Totaal ex</th><th>Totaal in</th><th></th></tr></thead>
+     <tbody>${rows.map(r=>`<tr data-id="${r.id}">
+       ${t(r.id,'verkoper',r.verkoper)}${t(r.id,'park_no',r.park_no)}${jc(r.id,'betaald_c',r.betaald_c)}${m(r.id,'omzet',r.omzet)}${t(r.id,'vast_variabel',r.vast_variabel)}
+       ${pcol(r.id,'pct',r.pct)}${pcol(r.id,'pct_ml',r.pct_ml)}${m(r.id,'ml_excl',r.ml_excl)}${m(r.id,'ml_incl',r.ml_incl)}${pcol(r.id,'pct_rp',r.pct_rp)}
+       ${m(r.id,'cour_excl',r.cour_excl)}${m(r.id,'btw_l',r.btw_l)}${m(r.id,'cour_incl',r.cour_incl)}${m(r.id,'rp_excl',r.rp_excl)}${m(r.id,'btw_o',r.btw_o)}${m(r.id,'rp_incl',r.rp_incl)}
+       ${jc(r.id,'getekend_q',r.getekend_q)}${pc(r)}${jc(r.id,'getekend_s',r.getekend_s)}${jc(r.id,'definitief',r.definitief)}${jc(r.id,'verzonden',r.verzonden)}${jc(r.id,'ontvangen',r.ontvangen)}${jc(r.id,'eigen_afspraak',r.eigen_afspraak)}${jc(r.id,'betaald_x',r.betaald_x)}
+       ${jc(r.id,'optie',r.optie)}${m(r.id,'prijs',r.prijs)}${pcol(r.id,'pct_aa',r.pct_aa)}${m(r.id,'rv',r.rv)}${m(r.id,'btw_rv',r.btw_rv)}${m(r.id,'totaal_ex',r.totaal_ex)}${m(r.id,'totaal_in',r.totaal_in)}
+       <td onclick="event.stopPropagation();openFinEdit(${r.id})" title="Volledig formulier" style="cursor:pointer;color:var(--accent);white-space:nowrap">openen ›</td>
+     </tr>`).join("") || `<tr><td colspan="32" style="color:var(--muted);padding:14px">Geen regels in deze selectie.</td></tr>`}</tbody>`;
+}
+async function editFinCell(id, field, cell, type){
+  if(cell.querySelector("input")) return;
+  const row = FINLED.find(x=>x.id===id) || {};
+  const cur = row[field];
+  const inp = document.createElement("input");
+  inp.type = type==="date" ? "date" : (type==="num" ? "number" : "text");
+  if(type==="num") inp.step = "any";
+  inp.value = (cur==null) ? "" : (type==="date" ? String(cur).slice(0,10) : String(cur));
+  inp.style.cssText = "width:100%;min-width:70px;box-sizing:border-box;padding:4px 6px;border:1px solid var(--accent);border-radius:6px;background:var(--card);color:var(--text);font-size:12px";
+  cell.innerHTML = ""; cell.style.background = "transparent"; cell.appendChild(inp); inp.focus(); if(type!=="date") inp.select();
+  let done = false;
+  const save = async () => {
+    if(done) return; done = true;
+    const val = inp.value;
+    row[field] = (val==="") ? null : (type==="num" ? Number(val) : val);
+    await rpc("fin_ledger_save", { p: { id:String(id), [field]: val } });
+    tekenFinTabel();
+  };
+  inp.addEventListener("blur", save);
+  inp.addEventListener("keydown", e => {
+    if(e.key==="Enter"){ inp.blur(); }
+    else if(e.key==="Escape"){ done = true; tekenFinTabel(); }
+  });
 }
 async function toggleFinJa(id, field, cell){
   const cur = cell.textContent.trim().toLowerCase();
