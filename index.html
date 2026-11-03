@@ -2061,6 +2061,10 @@ function openFinEdit(id){
        </div>
        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px">${FIN_FIELDS.map(inp).join("")}</div>
        ${pdLine}
+       <div style="margin-top:10px">
+         <button type="button" onclick="toonFinDeals(this)" data-park="${escAttr(r.park_no||'')}" style="padding:6px 12px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--accent);cursor:pointer;font-size:12.5px;font-weight:600">Toon matchende Pipedrive-deals</button>
+         <div id="finDealOpts" style="margin-top:8px"></div>
+       </div>
        <div style="display:flex;gap:10px;margin-top:14px;align-items:center;flex-wrap:wrap">
          <button onclick="bewaarFin(${id||'null'})" style="padding:8px 16px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer">Opslaan</button>
          ${id?`<button onclick="verwijderFin(${id})" style="padding:8px 14px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--bad);cursor:pointer">Verwijderen</button>`:""}
@@ -2069,6 +2073,23 @@ function openFinEdit(id){
      </div>`;
   $("finLedEdit").classList.remove("hidden");
   $("finLedEdit").scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+async function toonFinDeals(btn){
+  const parkNo = btn.dataset.park || "";
+  const box = $("finDealOpts");
+  box.innerHTML = `<span style="font-size:12px;color:var(--muted)">Zoeken…</span>`;
+  const opts = await rpc("fin_deal_options", { p_park_no: parkNo }) || [];
+  if(!opts.length){ box.innerHTML = `<span style="font-size:12px;color:var(--muted)">Geen matchende Pipedrive-deals voor dit park (bv. oude Kleen-deals zijn niet meer koppelbaar).</span>`; return; }
+  box.innerHTML = `<div style="max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:6px">` + opts.map(o=>{
+    const lbl = (o.kavelnummer?("kavel "+o.kavelnummer):"") + (o.title?(" "+o.title):"");
+    const d = o.datum ? " · "+new Date(o.datum).toLocaleDateString("nl-NL") : "";
+    return `<button type="button" onclick="kiesFinDeal(${o.deal_id})" style="display:block;width:100%;text-align:left;margin:2px 0;padding:7px 10px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--text);cursor:pointer;font-size:12.5px">${esc(lbl||("deal "+o.deal_id))} — ${o.amount!=null?eur(o.amount):"—"} <span style="color:var(--muted)">· ${esc(o.stage_name||"")}${d}</span></button>`;
+  }).join("") + `</div>`;
+}
+function kiesFinDeal(id){
+  const inp = document.querySelector('#finLedEdit input[data-k="deal_id"]');
+  if(inp){ inp.value = id; inp.style.borderColor = "var(--accent)"; }
+  $("finDealOpts").innerHTML = `<span style="font-size:12px;color:var(--good)">Gekozen: deal ${id}. Klik op <b>Opslaan</b> om te bevestigen.</span>`;
 }
 async function bewaarFin(id){
   const p = {};
