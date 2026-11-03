@@ -2040,11 +2040,11 @@ async function renderFinancePlan(){
     metric("Laagste saldo", laag?eur(laag.saldo_eind):"—", sub(laag?laag.maand:"")) +
     metric("Eerste negatieve maand", neg?neg.maand:"geen", sub(neg?"let op de cash":"blijft positief"));
   $("finPlanTable").innerHTML =
-    `<thead><tr><th class="tl">Maand</th><th>Cash in</th><th>Vaste lasten</th><th>Btw</th><th>Netto</th><th>Saldo eind</th></tr></thead>
+    `<thead><tr><th class="tl">Maand</th><th>Cash in</th><th>Terugkerend</th><th>Btw</th><th>Netto</th><th>Saldo eind</th></tr></thead>
      <tbody>${P.map(r=>`<tr>
        <td class="tl">${r.maand}</td>
        <td style="color:${Number(r.cash_in)>0?'var(--good)':'var(--muted)'}">${eur(r.cash_in)}</td>
-       <td style="color:var(--bad)">${eur(r.vaste_lasten)}</td>
+       <td style="color:${Number(r.vaste_lasten)>=0?'var(--good)':'var(--bad)'}">${eur(r.vaste_lasten)}</td>
        <td>${Number(r.btw_afdracht)!=0?eur(r.btw_afdracht):'—'}</td>
        <td>${eur(r.netto)}</td>
        <td style="font-weight:600;color:${Number(r.saldo_eind)<0?'var(--bad)':'inherit'}">${eur(r.saldo_eind)}</td></tr>`).join("")}</tbody>`;
@@ -2066,7 +2066,7 @@ async function renderFinanceCash(){
   const sub = t => `<div style="font-size:11px;color:var(--muted);margin-top:3px">${t}</div>`;
   $("finCashKpis").innerHTML =
     metric("Saldo nu", laatste?eur(laatste.saldo_eind):"—", sub(laatste?("t/m "+laatste.maand):"")) +
-    metric("Vaste lasten / maand", eur(vasteMaand), sub("terugkerend, incl. btw")) +
+    metric("Terugkerend / maand", eur(vasteMaand), sub("+ = inkomsten, − = kost")) +
     metric("Btw lopend kwartaal", (btw&&btw.length)?eur(btw[btw.length-1].afdracht):"—", sub("schatting, af te dragen"));
   const cfShown = (cf||[]).filter(r=>{ const p=String(r.maand).split('-').map(Number); return finInWin(new Date(p[0], p[1], 0)); });
   $("finCashTable").innerHTML =
