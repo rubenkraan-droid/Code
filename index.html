@@ -651,9 +651,13 @@
     <div id="finViewGrootboek">
       <div class="cards" id="finLedKpis"></div>
       <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:16px 0 10px">
-        <button id="finLedNew" style="padding:8px 16px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer">+ Nieuwe regel</button>
+        <button id="finLedNew" style="padding:8px 16px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer">+ Handmatige regel</button>
         <input id="finLedZoek" placeholder="Zoek verkoper of park…" style="padding:8px 11px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--text);font-size:13px;min-width:200px">
         <span id="finLedCount" style="font-size:12px;color:var(--muted)"></span>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin:-2px 0 10px;line-height:1.5">
+        Nieuwe verkopen uit Pipedrive verschijnen hier automatisch (met een <span style="color:var(--accent);font-weight:600">auto</span>-label). Gebruik <b>+ Handmatige regel</b> alleen als een deal niet gevonden wordt.
+        <span id="finSyncMsg" style="display:none;color:var(--good);font-weight:600;margin-left:4px"></span>
       </div>
       <div id="finLedEdit" class="hidden"></div>
       <div class="panel"><div class="scroll"><table id="finLedTable"></table></div></div>
@@ -1996,8 +2000,23 @@ function finPeriodChanged(){
   else if(FINVIEW==="cash")  renderFinanceCash();
 }
 
+let FIN_SYNCED = false;
 async function renderFinancePage(){
   if(!CAN_FINANCE){ $("finLedTable").innerHTML = ""; return; }
+  // Nieuwe verkopen uit Pipedrive automatisch oppikken (1x per paginabezoek)
+  if(!FIN_SYNCED){
+    FIN_SYNCED = true;
+    const s = await rpc("fin_ledger_sync");
+    if(s && (s.inserted || s.coupled)){
+      const msg = $("finSyncMsg");
+      if(msg){
+        const d=[]; if(s.inserted) d.push(s.inserted+" nieuwe verkoop"+(s.inserted===1?"":"en")+" toegevoegd");
+        if(s.coupled) d.push(s.coupled+" regel"+(s.coupled===1?"":"s")+" aan Pipedrive gekoppeld");
+        msg.textContent = "Automatisch bijgewerkt: "+d.join(" · ");
+        msg.style.display = "inline";
+      }
+    }
+  }
   FINLED = await rpc("fin_ledger_list") || [];
   tekenFinKpis();
   tekenFinTabel();
@@ -2247,6 +2266,11 @@ function tekenFinTabel(){
   const m    = (id,f,v) => `<td onclick="event.stopPropagation();editFinCell(${id},'${f}',this,'num')"  style="cursor:pointer;white-space:nowrap">${fEur(v)}</td>`;
   const pcol = (id,f,v) => `<td onclick="event.stopPropagation();editFinCell(${id},'${f}',this,'num')"  style="cursor:pointer;white-space:nowrap">${_p(v)}</td>`;
   const t    = (id,f,v) => `<td onclick="event.stopPropagation();editFinCell(${id},'${f}',this,'text')" class="tl" style="cursor:pointer;white-space:nowrap">${(v==null||v==="")?'<span style="color:var(--faint)">—</span>':esc(String(v))}</td>`;
+  const vc = r => {   // verkoper-cel met 'auto'-label voor automatisch uit Pipedrive toegevoegde regels
+    const badge = r.source==="pipedrive" ? ` <span title="Automatisch uit Pipedrive toegevoegd" style="font-size:9.5px;font-weight:700;color:#fff;background:var(--accent);border-radius:5px;padding:1px 5px;vertical-align:middle">auto</span>` : "";
+    const v = (r.verkoper==null||r.verkoper==="") ? '<span style="color:var(--faint)">—</span>' : esc(String(r.verkoper));
+    return `<td onclick="event.stopPropagation();editFinCell(${r.id},'verkoper',this,'text')" class="tl" style="cursor:pointer;white-space:nowrap">${v}${badge}</td>`;
+  };
   $("finLedTable").innerHTML =
     `<thead><tr><th class="tl">Verkoper</th><th class="tl">Park + no</th><th class="tl">Betaald</th><th>Omzet</th><th class="tl">Vast/Var</th>
       <th>Cour. %</th><th>% ML</th><th>Cour. excl. ML</th><th>Cour. incl. ML</th><th>Cour. % RP</th>
@@ -2254,7 +2278,7 @@ function tekenFinTabel(){
       <th class="tl">Getekend</th><th class="tl">Passeren</th><th class="tl">Getekend</th><th class="tl">Definitief</th><th class="tl">Verzonden</th><th class="tl">Ontvangen</th><th class="tl">Eigen afspraak</th><th class="tl">Betaald</th>
       <th class="tl">Optie</th><th>Prijs</th><th>%</th><th>RV</th><th>Btw RV</th><th>Totaal ex</th><th>Totaal in</th><th></th></tr></thead>
      <tbody>${rows.map(r=>`<tr data-id="${r.id}">
-       ${t(r.id,'verkoper',r.verkoper)}${t(r.id,'park_no',r.park_no)}${jc(r.id,'betaald_c',r.betaald_c)}${m(r.id,'omzet',r.omzet)}${t(r.id,'vast_variabel',r.vast_variabel)}
+       ${vc(r)}${t(r.id,'park_no',r.park_no)}${jc(r.id,'betaald_c',r.betaald_c)}${m(r.id,'omzet',r.omzet)}${t(r.id,'vast_variabel',r.vast_variabel)}
        ${pcol(r.id,'pct',r.pct)}${pcol(r.id,'pct_ml',r.pct_ml)}${m(r.id,'ml_excl',r.ml_excl)}${m(r.id,'ml_incl',r.ml_incl)}${pcol(r.id,'pct_rp',r.pct_rp)}
        ${m(r.id,'cour_excl',r.cour_excl)}${m(r.id,'btw_l',r.btw_l)}${m(r.id,'cour_incl',r.cour_incl)}${m(r.id,'rp_excl',r.rp_excl)}${m(r.id,'btw_o',r.btw_o)}${m(r.id,'rp_incl',r.rp_incl)}
        ${jc(r.id,'getekend_q',r.getekend_q)}${pc(r)}${jc(r.id,'getekend_s',r.getekend_s)}${jc(r.id,'definitief',r.definitief)}${jc(r.id,'verzonden',r.verzonden)}${jc(r.id,'ontvangen',r.ontvangen)}${jc(r.id,'eigen_afspraak',r.eigen_afspraak)}${jc(r.id,'betaald_x',r.betaald_x)}
