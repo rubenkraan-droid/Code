@@ -1856,9 +1856,9 @@ async function applyRole(){
   $("rapportBtn").classList.toggle("hidden", !owner);   // rapport bevat omzet/marge-context: alleen eigenaar
   // makelaar ziet Resultaten + Financiën (eigen commissie); geen advertenties/archief.
   document.querySelector('.tab[data-tab="advertenties"]').classList.toggle("hidden", agentV);
-  document.querySelector('.tab[data-tab="archief"]').classList.toggle("hidden", agentV);
+  document.querySelector('.tab[data-tab="archief"]').classList.toggle("hidden", agentV || parkV);   // Archief = interne creative-ops, niet voor de park-klant
   // Campagnes (CBO/adset): zelfde publiek als Advertenties (niet de makelaar). Bevindingen: alleen eigenaar.
-  document.querySelector('.tab[data-tab="campagnes"]').classList.toggle("hidden", agentV);
+  document.querySelector('.tab[data-tab="campagnes"]').classList.toggle("hidden", agentV || parkV);   // Campagnes (CBO/adset) = interne marketing-ops, niet voor de park-klant
   document.querySelector('.tab[data-tab="bevindingen"]').classList.toggle("hidden", !owner);
   document.querySelector('.tab[data-tab="icp"]').classList.toggle("hidden", !owner);   // ICP-matrix: alleen eigenaar
   document.querySelector('.tab[data-tab="financien"]').classList.toggle("hidden", parkV);
