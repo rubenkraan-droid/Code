@@ -1725,7 +1725,7 @@ async function startAsUser(email){
   }
   await applyRole();
   // dieplink dashboard.recraparcs.nl/#finance opent meteen de Finance-tab (als je toegang hebt)
-  if(CAN_FINANCE && location.hash.replace(/^#/,"")==="finance" && tabBeschikbaar("finance")) toonTab("finance");
+  if(finToegestaan() && location.hash.replace(/^#/,"")==="finance" && tabBeschikbaar("finance")) toonTab("finance");
 }
 async function loginBoot(){
   $("app").classList.add("hidden");
@@ -1793,9 +1793,15 @@ async function applyRole(){
   document.querySelector('.tab[data-tab="bevindingen"]').classList.toggle("hidden", !owner);
   document.querySelector('.tab[data-tab="icp"]').classList.toggle("hidden", !owner);   // ICP-matrix: alleen eigenaar
   document.querySelector('.tab[data-tab="financien"]').classList.toggle("hidden", parkV);
-  // Finance-grootboek: uitsluitend op de ingelogde identiteit (Ruben + Willem), niet op de bekeken rol
-  document.querySelector('.tab[data-tab="finance"]').classList.toggle("hidden", !CAN_FINANCE);
-  $("financeBtn").classList.toggle("hidden", !CAN_FINANCE);   // vaste snelknop in de bovenbalk
+  // Finance-grootboek: alleen als de ingelogde identiteit het mag (Ruben + Willem) ÉN de bekeken rol
+  // een volledige eigenaar met financiën is. Een testweergave (Karl, Toine, makelaar, park) toont het dus niet.
+  const finZichtbaar = CAN_FINANCE && owner && !v.nofinance;
+  document.querySelector('.tab[data-tab="finance"]').classList.toggle("hidden", !finZichtbaar);
+  $("financeBtn").classList.toggle("hidden", !finZichtbaar);   // vaste snelknop in de bovenbalk
+  if(!finZichtbaar){
+    $("tabFinanceLedger").classList.add("hidden");
+    if(activeTab==="finance") toonTab("resultaten", {silent:true});   // weg van Finance, terug naar Resultaten
+  }
   // Bellen: makelaars + master-eigenaar, niet de parkeigenaar/park-gebonden eigenaar (Karl/Carl)
   // en niet een eigenaar zonder beldata-toegang (bv. Toine, echt óf testweergave)
   const parkGebondenEig = owner && (SCOPED_PARK != null || v.park != null);
@@ -2006,8 +2012,9 @@ function finPeriodChanged(){
 }
 
 let FIN_SYNCED = false;
+function finToegestaan(){ const v=currentView(); return CAN_FINANCE && v.role==="owner" && !v.nofinance; }
 async function renderFinancePage(){
-  if(!CAN_FINANCE){ $("finLedTable").innerHTML = ""; return; }
+  if(!finToegestaan()){ $("finLedTable").innerHTML = ""; return; }
   // Nieuwe verkopen uit Pipedrive automatisch oppikken (1x per paginabezoek)
   if(!FIN_SYNCED){
     FIN_SYNCED = true;
@@ -2044,7 +2051,7 @@ function setFinView(v){
 }
 let FINPLAN_SCEN = "basis", FINPLAN_SHIFT = 0, FINPLAN_P = [], FINPLAN_E = [];
 async function renderFinancePlan(){
-  if(!CAN_FINANCE) return;
+  if(!finToegestaan()) return;
   const on  = "padding:6px 12px;border:1px solid var(--accent);border-radius:7px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer;font-size:12.5px";
   const off = "padding:6px 12px;border:1px solid var(--line-strong);border-radius:7px;background:var(--card);color:var(--text);cursor:pointer;font-size:12.5px";
   $("finScenBtns").innerHTML = [["basis","Alles"],["zeker","Alleen getekend"],["droogstand","Droogstand"]]
@@ -2126,7 +2133,7 @@ function openPlanBreakdown(ws){
   $("finPlanDetail").scrollIntoView({behavior:"smooth",block:"nearest"});
 }
 async function renderFinanceCash(){
-  if(!CAN_FINANCE) return;
+  if(!finToegestaan()) return;
   const [cf, btw, rec, nb] = await Promise.all([rpc("fin_cashflow"), rpc("fin_btw"), rpc("fin_recurring_list"), rpc("fin_nextbound_list")]);
   FINREC = rec || [];
   FINNB = nb || [];
@@ -2223,7 +2230,7 @@ async function verwijderRec(id){
   renderFinanceCash();
 }
 async function renderFinanceSplit(){
-  if(!CAN_FINANCE){ $("finSplitTable").innerHTML=""; return; }
+  if(!finToegestaan()){ $("finSplitTable").innerHTML=""; return; }
   FINSPLIT = await rpc("fin_split_list") || [];
   const dateById = {}; FINLED.forEach(r=>{ dateById[r.id] = r.passeren_date; });
   const shown = FINSPLIT.filter(r=>finInWin(dateById[r.id]));
