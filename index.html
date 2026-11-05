@@ -87,7 +87,7 @@
     box-shadow:0 4px 12px color-mix(in srgb,var(--accent) 30%, transparent)}
   .tab.active svg{opacity:1}
   /* ---------- mobiel hamburgermenu (één knop, schermvullend, koppen + subkoppen) ---------- */
-  .navburger{display:none;align-items:center;gap:8px;border:1px solid var(--line-strong);background:var(--card);
+  .navburger{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line-strong);background:var(--card);
     color:var(--ink);font:inherit;font-size:13px;font-weight:600;padding:8px 13px;border-radius:11px;cursor:pointer}
   .navburger svg{width:19px;height:19px;color:var(--accent)}
   .navsheet{position:fixed;top:0;left:0;right:0;bottom:0;height:100vh;height:100dvh;z-index:200;display:flex;flex-direction:column;background:var(--bg);overflow-y:auto}
@@ -109,7 +109,7 @@
   .navsheet-item.active{color:#fff;border-color:transparent;
     background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 62%, #000));box-shadow:var(--shadow-hover)}
   .navsheet-item.active svg{opacity:1}
-  @media(max-width:860px){ #tabs.tabs{display:none} .navburger{display:inline-flex} }
+  #tabs.tabs{display:none}   /* de grid-Menu-knop is overal de nav; de inline gegroepeerde balk is vervangen */
   .who{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:10px;flex:none;margin-left:auto}
   .who button,.who a.btn{border:1px solid var(--line-strong);background:var(--card);border-radius:10px;
     padding:7px 12px;font:inherit;font-size:13px;cursor:pointer;color:var(--ink);text-decoration:none}
@@ -2061,6 +2061,10 @@ function syncNavGroups(){
     g.classList.toggle('active-group', tabs.some(t=>t.dataset.tab===activeTab));
     g.classList.remove('open');
   });
+  // toon de actieve tab naast de Menu-knop zodat je altijd ziet waar je bent
+  const actLbl=document.querySelector(`.tab[data-tab="${activeTab}"] .lbl`);
+  const burgerLbl=document.querySelector('#navBurger span');
+  if(burgerLbl) burgerLbl.textContent = actLbl ? actLbl.textContent.trim() : 'Menu';
 }
 document.querySelectorAll('.navhead').forEach(h=>h.addEventListener('click', e=>{
   e.stopPropagation();
@@ -2102,7 +2106,6 @@ function sluitNavSheet(){ document.getElementById('navSheet')?.classList.add('hi
 document.getElementById('navBurger')?.addEventListener('click', openNavSheet);
 document.getElementById('navSheetClose')?.addEventListener('click', sluitNavSheet);
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') sluitNavSheet(); });
-window.addEventListener('resize', ()=>{ if(window.innerWidth>860) sluitNavSheet(); });
 // een verborgen tab (niet beschikbaar voor deze rol) is geen geldige bestemming
 function tabBeschikbaar(tab){
   const btn = document.querySelector(`.tab[data-tab="${tab}"]`);
