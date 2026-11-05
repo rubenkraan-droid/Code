@@ -2399,12 +2399,17 @@ function tekenFinKpis(){
   const rp    = r.reduce((s,x)=>s+(Number(x.rp_incl)||0),0);
   const betaald = r.filter(x=>finJa(x.betaald_x)).length;
   const gekoppeld = r.filter(x=>x.deal_id!=null).length;
+  // Openstaand naar makelaar = makelaarsdeel (incl. btw) van deals die wíj al ontvangen hebben,
+  // maar nog niet aan de makelaar hebben doorbetaald. Over ALLE regels (totale schuld, niet periode-gebonden).
+  const openRows = FINLED.filter(x=>finJa(x.ontvangen) && !finJa(x.betaald_x));
+  const openMak = openRows.reduce((s,x)=>s+(Number(x.ml_incl)||0),0);
   const sub = t => `<div style="font-size:11px;color:var(--muted);margin-top:3px">${t}</div>`;
   $("finLedKpis").innerHTML =
     metric("Regels", String(r.length), sub(gekoppeld+" aan Pipedrive gekoppeld")) +
     metric("Omzet (verkoopsom)", eur(omzet)) +
     metric("Courtage Recraparcs incl.", eur(rp)) +
-    metric("Betaald", String(betaald), sub((r.length-betaald)+" openstaand"));
+    metric("Betaald", String(betaald), sub((r.length-betaald)+" openstaand")) +
+    metric("Openstaand naar makelaar", eur(openMak), sub(openRows.length+" deals · door ons ontvangen, nog niet doorbetaald"));
 }
 function finFilter(){
   const base = finPeriodSet();
@@ -2441,19 +2446,19 @@ function tekenFinTabel(){
     return `<td onclick="event.stopPropagation();editFinCell(${r.id},'verkoper',this,'text')" class="tl" style="cursor:pointer;white-space:nowrap">${v}${badge}</td>`;
   };
   $("finLedTable").innerHTML =
-    `<thead><tr><th class="tl">Verkoper</th><th class="tl">Park + no</th><th class="tl">Betaald</th><th>Omzet</th><th class="tl">Vast/Var</th>
+    `<thead><tr><th class="tl">Verkoper</th><th class="tl">Park + no</th><th class="tl">Verkoopdatum</th><th>Omzet</th>
       <th>Cour. %</th><th>% ML</th><th>Cour. excl. ML</th><th>Cour. incl. ML</th><th>Cour. % RP</th>
       <th>Cour. excl.</th><th>Btw</th><th>Cour. incl.</th><th>RP excl.</th><th>Btw RP</th><th>RP incl.</th>
       <th class="tl">Getekend</th><th class="tl">Passeren</th><th class="tl">Getekend</th><th class="tl">Definitief</th><th class="tl">Verzonden</th><th class="tl">Ontvangen</th><th class="tl">Eigen afspraak</th><th class="tl">Betaald</th>
       <th class="tl">Optie</th><th>Prijs</th><th>%</th><th>RV</th><th>Btw RV</th><th>Totaal ex</th><th>Totaal in</th><th></th></tr></thead>
      <tbody>${rows.map(r=>`<tr data-id="${r.id}">
-       ${vc(r)}${t(r.id,'park_no',r.park_no)}${jc(r.id,'betaald_c',r.betaald_c)}${m(r.id,'omzet',r.omzet)}${t(r.id,'vast_variabel',r.vast_variabel)}
+       ${vc(r)}${t(r.id,'park_no',r.park_no)}<td class="tl" style="white-space:nowrap">${r.verkoopdatum ? new Date(r.verkoopdatum).toLocaleDateString("nl-NL") : '<span style="color:var(--faint)">—</span>'}</td>${m(r.id,'omzet',r.omzet)}
        ${pcol(r.id,'pct',r.pct)}${pcol(r.id,'pct_ml',r.pct_ml)}${m(r.id,'ml_excl',r.ml_excl)}${m(r.id,'ml_incl',r.ml_incl)}${pcol(r.id,'pct_rp',r.pct_rp)}
        ${m(r.id,'cour_excl',r.cour_excl)}${m(r.id,'btw_l',r.btw_l)}${m(r.id,'cour_incl',r.cour_incl)}${m(r.id,'rp_excl',r.rp_excl)}${m(r.id,'btw_o',r.btw_o)}${m(r.id,'rp_incl',r.rp_incl)}
        ${jc(r.id,'getekend_q',r.getekend_q)}${pc(r)}${jc(r.id,'getekend_s',r.getekend_s)}${jc(r.id,'definitief',r.definitief)}${jc(r.id,'verzonden',r.verzonden)}${jc(r.id,'ontvangen',r.ontvangen)}${jc(r.id,'eigen_afspraak',r.eigen_afspraak)}${jc(r.id,'betaald_x',r.betaald_x)}
        ${jc(r.id,'optie',r.optie)}${m(r.id,'prijs',r.prijs)}${pcol(r.id,'pct_aa',r.pct_aa)}${m(r.id,'rv',r.rv)}${m(r.id,'btw_rv',r.btw_rv)}${m(r.id,'totaal_ex',r.totaal_ex)}${m(r.id,'totaal_in',r.totaal_in)}
        <td onclick="event.stopPropagation();openFinEdit(${r.id})" title="Volledig formulier" style="cursor:pointer;color:var(--accent);white-space:nowrap">openen ›</td>
-     </tr>`).join("") || `<tr><td colspan="32" style="color:var(--muted);padding:14px">Geen regels in deze selectie.</td></tr>`}</tbody>`;
+     </tr>`).join("") || `<tr><td colspan="31" style="color:var(--muted);padding:14px">Geen regels in deze selectie.</td></tr>`}</tbody>`;
 }
 async function editFinCell(id, field, cell, type){
   if(cell.querySelector("input")) return;
