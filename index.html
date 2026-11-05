@@ -3,34 +3,38 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>RecraVas Dashboard</title>
+<title>Recraparcs Dashboard</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%233A7A69'/%3E%3Cstop offset='1' stop-color='%23204538'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='24' fill='url(%23g)'/%3E%3Cpath d='M50 27 79 51 79 76 21 76 21 51Z' fill='%23fff'/%3E%3Crect x='43' y='57' width='14' height='19' rx='1.5' fill='%23255145'/%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
   :root{
-    --bg:#EEF1F7; --card:#FFFFFF; --surface-2:#F5F7FB;
-    --ink:#242A36; --muted:#7A8598; --faint:#AAB3C4;
-    --line:#E7ECF4; --line-strong:#D9E0EC;
-    --accent:#2C5F52; --accent-ink:#173D33; --accent-soft:#E4ECE7; --accent-soft-ink:#1F4A3E;
-    --good:#3FA06B; --good-soft:#E4F4EB;
-    --bad:#E0654B; --bad-soft:#FBE9E4;
-    --warn:#E0A23A; --warn-soft:#FBF1DE;
+    --bg:#F4F6FA; --card:#FFFFFF; --surface-2:#EFF3F8;
+    --ink:#1A2130; --muted:#6C778A; --faint:#A2ABBC;
+    --line:#EAEEF5; --line-strong:#DBE2EC;
+    --accent:#2C5F52; --accent-2:#3E8A75; --accent-ink:#163A30; --accent-soft:#E8F1EC; --accent-soft-ink:#1F4A3E;
+    --good:#1FA971; --good-soft:#E3F6EC;
+    --bad:#E2593F; --bad-soft:#FCE9E3;
+    --warn:#D7971F; --warn-soft:#FAF0DA;
     --blue:#5B8DEF; --teal:#33C2C0; --violet:#8B7CF0; --pink:#F16D9A; --amber:#F4A63B;
     --serif: ui-serif, Charter, "Iowan Old Style", Georgia, "Times New Roman", serif;
-    --shadow:0 1px 2px rgba(20,40,80,.04), 0 6px 20px rgba(20,40,80,.05);
-    --shadow-hover:0 2px 6px rgba(20,40,80,.06), 0 14px 34px rgba(20,40,80,.10);
-    --r:16px;
+    --num: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --shadow:0 1px 2px rgba(16,30,60,.04), 0 12px 30px -10px rgba(16,30,60,.10);
+    --shadow-hover:0 2px 8px rgba(16,30,60,.06), 0 22px 46px -12px rgba(16,30,60,.17);
+    --r:18px;
   }
   /* ---------- donker thema (automatisch 's avonds, of via de knop) ---------- */
   :root[data-theme="dark"]{
     --bg:#141922; --card:#1C232E; --surface-2:#222B38;
     --ink:#E8ECF4; --muted:#94A1B5; --faint:#5F6B80;
     --line:#2A3342; --line-strong:#3A4557;
-    --accent-ink:#A9CDC0; --accent-soft:#22352E; --accent-soft-ink:#9CC3B5;
+    --accent-2:#4C9E86; --accent-ink:#A9CDC0; --accent-soft:#22352E; --accent-soft-ink:#9CC3B5;
     --good:#4FBF83; --good-soft:#1E332A;
     --bad:#F07B60; --bad-soft:#3A231E;
     --warn:#E8B45C; --warn-soft:#37301E;
-    --shadow:0 1px 2px rgba(0,0,0,.35), 0 6px 20px rgba(0,0,0,.35);
-    --shadow-hover:0 2px 6px rgba(0,0,0,.4), 0 14px 34px rgba(0,0,0,.5);
+    --shadow:0 1px 2px rgba(0,0,0,.35), 0 14px 34px -10px rgba(0,0,0,.5);
+    --shadow-hover:0 2px 8px rgba(0,0,0,.4), 0 24px 48px -12px rgba(0,0,0,.6);
   }
   :root[data-theme="dark"] .fase-onbewust{background:#2A3140;color:#9DA9BE}
   :root[data-theme="dark"] .fase-probleembewust{background:#1F2C45;color:#8FADE8}
@@ -41,16 +45,17 @@
   :root[data-theme="dark"] .info .tip{background:#0C0F14}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,Inter,Roboto,Arial,sans-serif;line-height:1.5;
+    font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,Roboto,Arial,sans-serif;line-height:1.5;
     -webkit-font-smoothing:antialiased;transition:background .25s}
   h1{font-weight:700;font-size:21px;margin:0;letter-spacing:-.01em}
   .shell{min-height:100vh;display:flex;flex-direction:column}
   /* ---------- bovenbalk met icoon-navigatie ---------- */
-  .topbar{position:sticky;top:0;z-index:30;background:var(--card);border-bottom:1px solid var(--line);
-    box-shadow:0 1px 0 rgba(20,40,80,.02);display:flex;align-items:center;gap:18px;padding:11px 26px}
+  .topbar{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--card) 85%, transparent);
+    backdrop-filter:saturate(1.4) blur(10px);-webkit-backdrop-filter:saturate(1.4) blur(10px);
+    border-bottom:1px solid var(--line);box-shadow:0 1px 0 rgba(20,40,80,.02);display:flex;align-items:center;gap:18px;padding:11px 26px}
   .brand{display:flex;align-items:center;gap:11px;flex:none}
-  .brand .mark{width:34px;height:34px;border-radius:10px;
-    background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 55%, #000 0%));
+  .brand .mark{width:34px;height:34px;border-radius:11px;
+    background:linear-gradient(135deg,var(--accent-2),var(--accent));
     color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:17px;flex:none;
     box-shadow:0 4px 10px color-mix(in srgb,var(--accent) 35%, transparent)}
   .brand .name{font-size:14.5px;font-weight:700;line-height:1.15;white-space:nowrap}
@@ -129,12 +134,12 @@
   @media(max-width:1180px){.cards.pairs2.met-optie{grid-template-columns:repeat(4,1fr)}}
   @media(max-width:860px){.cards.pairs2.met-optie{grid-template-columns:1fr 1fr}}
   @media(max-width:340px){.cards.pairs2.met-optie{grid-template-columns:1fr}}
-  .metric{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px 17px;box-shadow:var(--shadow)}
+  .metric{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px 17px;box-shadow:var(--shadow)}
   .metric.hasdonut{display:flex;align-items:center;gap:13px}
   .metric .mtxt{min-width:0}
   .metric.team{background:linear-gradient(135deg,var(--accent-soft),color-mix(in srgb,var(--accent-soft) 55%, #fff));border-color:transparent}
-  .metric .l{font-size:12px;color:var(--muted);margin-bottom:5px;line-height:1.25}
-  .metric .v{font-family:var(--serif);font-size:25px;line-height:1.1;font-weight:500}
+  .metric .l{font-size:11.5px;color:var(--muted);margin-bottom:5px;line-height:1.25;letter-spacing:.005em}
+  .metric .v{font-family:var(--num);font-size:25px;line-height:1.1;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
   .metric.team .l,.metric.team .v{color:var(--accent-soft-ink)}
   .metric.deal-link{transition:box-shadow .15s,transform .1s}
   .metric.deal-link:hover{box-shadow:var(--shadow-hover);transform:translateY(-1px)}
@@ -144,7 +149,7 @@
   .sec{font-size:11px;font-weight:700;margin:0 0 12px;text-transform:uppercase;letter-spacing:.045em;color:var(--muted)}
   /* automatische inzichten */
   .insights{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-bottom:24px}
-  .insight{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px 15px;box-shadow:var(--shadow);
+  .insight{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:13px 15px;box-shadow:var(--shadow);
     display:flex;gap:11px;align-items:flex-start;font-size:13px;line-height:1.45;color:var(--muted)}
   .insight .ic{flex:none;width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;background:var(--surface-2)}
   .insight b{display:block;font-size:12.5px;margin-bottom:2px;color:var(--ink)}
@@ -193,7 +198,7 @@
   @media(max-width:720px){.hero{grid-template-columns:1fr}}
   .donuthero{position:relative;display:flex;align-items:center;justify-content:center;min-height:210px}
   .donutcenter{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
-  .donutcenter .big{font-family:var(--serif);font-size:34px;line-height:1;font-weight:500}
+  .donutcenter .big{font-family:var(--num);font-size:34px;line-height:1;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
   .donutcenter .cap{font-size:12px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.04em}
   .herostats{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-content:stretch}
   @media(max-width:520px){.herostats{grid-template-columns:1fr}}
@@ -216,14 +221,14 @@
   .adbest-card:hover{box-shadow:var(--shadow-hover);transform:translateY(-2px)}
   .adbest-rank{position:absolute;top:19px;left:20px;z-index:1;background:rgba(20,28,42,.66);color:#fff;
     min-width:24px;height:24px;padding:0 7px;border-radius:12px;display:flex;align-items:center;justify-content:center;
-    font-family:var(--serif);font-size:14px}
+    font-family:var(--num);font-weight:600;font-size:14px;font-variant-numeric:tabular-nums}
   .adbest-thumb{width:100%;aspect-ratio:1/1;border-radius:12px;overflow:hidden;flex:none;
     background:linear-gradient(135deg,var(--surface-2),var(--line));display:flex;align-items:center;justify-content:center;position:relative}
   .adbest-thumb img{width:100%;height:100%;object-fit:cover;display:block}
   .adbest-thumb.leeg::after{content:"▦";color:var(--faint);font-size:38px}
   .adbest-info{min-width:0}
   .adbest-naam{font-size:14px;color:var(--ink);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .adbest-hoofd{font-family:var(--serif);font-size:21px;margin:3px 0;line-height:1.15;color:var(--ink)}
+  .adbest-hoofd{font-family:var(--num);font-weight:600;letter-spacing:-.02em;font-size:21px;margin:3px 0;line-height:1.15;color:var(--ink);font-variant-numeric:tabular-nums}
   .adbest-sub{font-size:12px;color:var(--muted)}
   /* thema-veilige mini-sluitknop */
   .mini-close{margin-left:10px;border:1px solid var(--line-strong);background:var(--card);color:var(--ink);
@@ -372,7 +377,7 @@
 <body>
 
 <div id="gate" class="hidden">
-  <h2>RecraVas Dashboard</h2>
+  <h2>Recraparcs Dashboard</h2>
   <p>Log in met je e-mailadres en wachtwoord.</p>
   <input type="email" id="email" placeholder="jij@recravas.nl" autocomplete="username" />
   <input type="password" id="password" placeholder="Wachtwoord" autocomplete="current-password" />
@@ -388,7 +393,7 @@
     </button>
     <div class="brand">
       <div class="mark">R</div>
-      <div class="name">RecraVas<small>Dashboard</small></div>
+      <div class="name">Recraparcs<small>Dashboard</small></div>
     </div>
     <nav id="tabs" class="tabs">
       <button class="tab topitem active" data-tab="resultaten" title="Resultaten"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19h16M7 15v4M12 10v9M17 6v13"/></svg><span class="lbl">Resultaten</span></button>
@@ -462,7 +467,7 @@
     <input type="date" id="fTo" class="hidden" />
     <select id="fPark"></select>
     <select id="fAgent"></select>
-    <button id="recravasBtn" class="btn impact" title="Toon alleen resultaten vanaf 17 juli: het werk van RecraVas.">RecraVas <small>vanaf 17 juli</small></button>
+    <button id="recravasBtn" class="btn impact" title="Toon alleen resultaten vanaf 17 juli: het werk van Recraparcs.">Recraparcs <small>vanaf 17 juli</small></button>
     <button id="supermindsBtn" class="btn impact" title="Toon alleen resultaten tot 17 juli: het werk van de vorige marketingpartij Superminds.">Superminds <small>tot 17 juli</small></button>
     <button id="uitgerijptBtn" class="btn impact" title="Toon alleen leads van 17 juli tot 25 dagen geleden — oud genoeg om (bij een cyclus van ~25 dagen) te zijn omgeslagen. De einddatum rolt automatisch mee met vandaag.">Uitgerijpt <small>17 jul &ndash; 25 dgn geleden</small></button>
   </div>
@@ -646,12 +651,12 @@
 
   <div id="tabFinance" class="hidden">
     <div class="sec" id="finSecTop">Mondeling verkocht en verder
-      <span class="info" tabindex="0">i<span class="tip">Alle deals vanaf mondeling akkoord (Informeel akkoord ontvangen) tot en met notaris gepasseerd. Omzet = totale courtage die RecraVas factureert; de makelaar krijgt 1,5% (max €3.500; Greenerwold max €2.500), marge = de rest. De totale courtage verschilt per park: Wielsche Dreef 1,5%, Frankrijk 5,5%, Greenerwold 2%.</span></span>
+      <span class="info" tabindex="0">i<span class="tip">Alle deals vanaf mondeling akkoord (Informeel akkoord ontvangen) tot en met notaris gepasseerd. Omzet = totale courtage die Recraparcs factureert; de makelaar krijgt 1,5% (max €3.500; Greenerwold max €2.500), marge = de rest. De totale courtage verschilt per park: Wielsche Dreef 1,5%, Frankrijk 5,5%, Greenerwold 2%.</span></span>
     </div>
     <div class="cards" id="finKpis"></div>
     <div id="finBonusWrap"></div>
     <div class="sec" id="finSecMonth" style="margin-top:22px">Omzet en winst per maand
-      <span class="info" tabindex="0">i<span class="tip">Omzet = totale courtage die RecraVas factureert (percentage per park: Wielsche Dreef 1,5%, Frankrijk 5,5%). Winst = wat overblijft na uitbetaling aan de makelaar (1,5%, max €3.500 per verkoop). Gegroepeerd op de maand waarin de deal definitief werd.</span></span>
+      <span class="info" tabindex="0">i<span class="tip">Omzet = totale courtage die Recraparcs factureert (percentage per park: Wielsche Dreef 1,5%, Frankrijk 5,5%). Winst = wat overblijft na uitbetaling aan de makelaar (1,5%, max €3.500 per verkoop). Gegroepeerd op de maand waarin de deal definitief werd.</span></span>
     </div>
     <div class="chartbox" style="margin-bottom:14px"><canvas id="finChart" height="220"></canvas></div>
     <div class="panel" style="margin-bottom:26px"><table id="finMonthTable"></table></div>
@@ -1485,7 +1490,7 @@ function pasImpactToggleToe(){
   $("supermindsBtn").classList.toggle("aan", PERIODE_BRON==="superminds");
   $("uitgerijptBtn").classList.toggle("aan", PERIODE_BRON==="uitgerijpt");
   $("impactBanner").classList.toggle("aan", PERIODE_BRON!=="alles");
-  if(PERIODE_BRON==="recravas") $("impactBannerTxt").textContent = "RecraVas · resultaten vanaf 17 juli. Alles daarvóór is buiten beschouwing gelaten.";
+  if(PERIODE_BRON==="recravas") $("impactBannerTxt").textContent = "Recraparcs · resultaten vanaf 17 juli. Alles daarvóór is buiten beschouwing gelaten.";
   else if(PERIODE_BRON==="superminds") $("impactBannerTxt").textContent = "Superminds · resultaten tot 17 juli (vorige marketingpartij). Alles daarna is buiten beschouwing gelaten.";
   else if(PERIODE_BRON==="uitgerijpt") $("impactBannerTxt").textContent = "Uitgerijpt · leads van 17 juli tot " + RIJP_DAGEN + " dagen geleden — oud genoeg om (bij een cyclus van ~" + RIJP_DAGEN + " dagen) te zijn omgeslagen. De einddatum rolt mee met vandaag; recentere leads blijven buiten beschouwing.";
 }
@@ -2328,7 +2333,7 @@ function tekenFinKpis(){
   $("finLedKpis").innerHTML =
     metric("Regels", String(r.length), sub(gekoppeld+" aan Pipedrive gekoppeld")) +
     metric("Omzet (verkoopsom)", eur(omzet)) +
-    metric("Courtage RecraVas incl.", eur(rp)) +
+    metric("Courtage Recraparcs incl.", eur(rp)) +
     metric("Betaald", String(betaald), sub((r.length-betaald)+" openstaand"));
 }
 function finFilter(){
@@ -2567,8 +2572,8 @@ let finChart;
 async function renderFinance(){
   const v = currentView();
   const pp = v.role==="owner" ? ($("fPark").value==="all" ? null : Number($("fPark").value)) : v.id;
-  $("finSecTop").innerHTML = `Mondeling verkocht en verder <span class="info" tabindex="0">i<span class="tip">Alle deals vanaf mondeling akkoord (Informeel akkoord ontvangen) tot en met notaris gepasseerd. Omzet = totale courtage die RecraVas factureert; de makelaar krijgt 1,5% (max €3.500; Greenerwold max €2.500), marge = de rest. De totale courtage verschilt per park: Wielsche Dreef 1,5%, Frankrijk 5,5%, Greenerwold 2%.</span></span>`;
-  $("finSecMonth").innerHTML = `Omzet en winst per maand <span class="info" tabindex="0">i<span class="tip">Elke staaf is de courtage (omzet) van die maand, opgesplitst in het deel voor de makelaar en de marge (winst) voor RecraVas. Omzet = totale courtage die RecraVas factureert (percentage per park: Wielsche Dreef 1,5%, Frankrijk 5,5%, Greenerwold 2%). Winst = wat overblijft na uitbetaling aan de makelaar (1,5%, max €3.500 per verkoop; Greenerwold max €2.500). Verkoopsom staat bij de cijfers hierboven en in de tabel eronder.</span></span>`;
+  $("finSecTop").innerHTML = `Mondeling verkocht en verder <span class="info" tabindex="0">i<span class="tip">Alle deals vanaf mondeling akkoord (Informeel akkoord ontvangen) tot en met notaris gepasseerd. Omzet = totale courtage die Recraparcs factureert; de makelaar krijgt 1,5% (max €3.500; Greenerwold max €2.500), marge = de rest. De totale courtage verschilt per park: Wielsche Dreef 1,5%, Frankrijk 5,5%, Greenerwold 2%.</span></span>`;
+  $("finSecMonth").innerHTML = `Omzet en winst per maand <span class="info" tabindex="0">i<span class="tip">Elke staaf is de courtage (omzet) van die maand, opgesplitst in het deel voor de makelaar en de marge (winst) voor Recraparcs. Omzet = totale courtage die Recraparcs factureert (percentage per park: Wielsche Dreef 1,5%, Frankrijk 5,5%, Greenerwold 2%). Winst = wat overblijft na uitbetaling aan de makelaar (1,5%, max €3.500 per verkoop; Greenerwold max €2.500). Verkoopsom staat bij de cijfers hierboven en in de tabel eronder.</span></span>`;
   // Periode-filter: tegels + "Per deal"-tabel bewegen mee met de periode-knop
   // (op verkoopdatum = coalesce(sale_date, sale_date_derived)). De per-maand-grafiek
   // hieronder blijft de volledige historie (trend), net als elders in het dashboard.
@@ -2590,7 +2595,7 @@ async function renderFinance(){
   finChart = new Chart($("finChart"), {
     data:{ labels: mo.map(x=>mfmt(x.maand)), datasets:[
       { type:"bar", label:"Courtage makelaar", data:mo.map(x=>Number(x.courtage_makelaar)||0), backgroundColor:areaGrad("#B7C0D2",.95,.5), borderRadius:5, borderSkipped:false, stack:"courtage", order:2 },
-      { type:"bar", label:"Marge RecraVas (winst)", data:mo.map(x=>Number(x.marge_recraparcs)||0), backgroundColor:areaGrad(accent(),.95,.45), borderRadius:5, borderSkipped:false, stack:"courtage", order:1 } ]},
+      { type:"bar", label:"Marge Recraparcs (winst)", data:mo.map(x=>Number(x.marge_recraparcs)||0), backgroundColor:areaGrad(accent(),.95,.45), borderRadius:5, borderSkipped:false, stack:"courtage", order:1 } ]},
     options:{ responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{ position:"bottom", labels:{ boxWidth:10, font:{size:11} } },
         tooltip:{ callbacks:{
@@ -2600,7 +2605,7 @@ async function renderFinance(){
                y:{ stacked:true, beginAtZero:true, ticks:{ callback:v=>eur(v) }, grid:{display:false} } } }
   });
   $("finMonthTable").innerHTML =
-    `<thead><tr><th>Maand</th><th>Verkopen</th><th>Verkoopsom</th><th>Omzet</th><th>Courtage makelaar</th><th>Marge RecraVas</th></tr></thead>
+    `<thead><tr><th>Maand</th><th>Verkopen</th><th>Verkoopsom</th><th>Omzet</th><th>Courtage makelaar</th><th>Marge Recraparcs</th></tr></thead>
      <tbody>${mo.map(x=>`<tr><td>${mfmt(x.maand)}</td><td>${x.verkopen}</td><td>${eur(x.verkoopsom)}</td>
        <td style="font-weight:600">${eur(x.omzet)}</td><td>${eur(x.courtage_makelaar)}</td><td style="font-weight:600;color:var(--good)">${eur(x.marge_recraparcs)}</td></tr>`).join("")
        || `<tr><td colspan="6" style="color:var(--muted);padding:14px">Nog geen definitieve verkopen om per maand te tonen.</td></tr>`}</tbody>`;
@@ -2624,7 +2629,7 @@ async function renderFinance(){
     metric("Omzet totaal", eur(totOmzet)) +
     metric("Omzet definitief", eur(definitiefOmzet)) +
     metric("Courtage makelaar", eur(totCourtage)) +
-    metric("Marge RecraVas", eur(totMarge)) +
+    metric("Marge Recraparcs", eur(totMarge)) +
     (canBonus ? metric("Opties-bonus", eur(totBonus), subAlleenJij) : "") +
     (canBonus ? metric("Totale verdienste", eur(totMarge+totBonus), subAlleenJij) : "") +
     metric("Afgevallen", rows.length - lopend.length);
@@ -2644,7 +2649,7 @@ async function renderFinance(){
 
   $("finTable").innerHTML =
     `<thead><tr><th>Kavel</th><th class="tl">Park</th><th class="tl">Makelaar</th><th class="tl">Status</th>
-      <th>Verkoopsom</th><th>Omzet</th><th>Courtage</th><th>Marge RecraVas</th><th class="tl">Notarisdatum</th><th class="tl">Ontbindende Vw.</th><th></th></tr></thead>
+      <th>Verkoopsom</th><th>Omzet</th><th>Courtage</th><th>Marge Recraparcs</th><th class="tl">Notarisdatum</th><th class="tl">Ontbindende Vw.</th><th></th></tr></thead>
      <tbody>${rows.map(r=>`<tr>
        <td style="text-align:left">${r.kavelnummer?esc(r.kavelnummer):"—"}</td>
        <td style="text-align:left">${esc(r.park)}</td>
@@ -4644,10 +4649,10 @@ async function genereerRapport(){
     `<div style="margin-bottom:14px"><div class="sec" style="margin-bottom:6px">${s.titel}</div>
      <ul style="margin:0;padding-left:18px">${s.regels.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`).join("");
 
-  const kop = `RecraVas rapportage · ${perLabel} · ${parkNaam} · ${dtNL(r.p_from)} t/m ${dtNL(r.p_to)}`;
+  const kop = `Recraparcs rapportage · ${perLabel} · ${parkNaam} · ${dtNL(r.p_from)} t/m ${dtNL(r.p_to)}`;
   RAPPORT_TEKST = kop + "\n" + "".padEnd(kop.length,"=") + "\n\n"
     + secties.map(s=>`${s.titel}\n${s.regels.map(x=>`- ${x}`).join("\n")}`).join("\n\n")
-    + `\n\nGegenereerd door het RecraVas-dashboard op ${new Date().toLocaleDateString("nl-NL")}.`;
+    + `\n\nGegenereerd door het Recraparcs-dashboard op ${new Date().toLocaleDateString("nl-NL")}.`;
 }
 $("rapportBtn").addEventListener("click", genereerRapport);
 $("rapportSluit").addEventListener("click", ()=>$("rapportOverlay").classList.add("hidden"));
@@ -4834,7 +4839,7 @@ function printDashboard(){
   $("printMeta").textContent = `${tabNaam} · periode: ${per} · afgedrukt op ${nu}`;
   const rol = ($("subtitle").textContent||"").split("·")[0].trim() || "dashboard";
   const oud = document.title;
-  document.title = `RecraVas · ${rol} · ${tabNaam} · ${new Date().toISOString().slice(0,10)}`;
+  document.title = `Recraparcs · ${rol} · ${tabNaam} · ${new Date().toISOString().slice(0,10)}`;
   window.addEventListener("afterprint", () => { document.title = oud; }, { once:true });
   window.print();
 }
