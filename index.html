@@ -57,11 +57,24 @@
   .brand .name small{display:block;font-size:11px;font-weight:500;color:var(--muted)}
   #sideToggle{border:none;background:none;color:var(--muted);cursor:pointer;padding:6px;border-radius:8px;flex:none;display:none}
   #sideToggle:hover{background:var(--surface-2);color:var(--ink)}
-  .tabs{display:flex;flex-direction:row;gap:3px;flex:1;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .tabs{display:flex;flex-direction:row;align-items:center;gap:2px;flex:1;overflow:visible;flex-wrap:wrap}
   .tabs::-webkit-scrollbar{display:none}
-  .tab{display:flex;align-items:center;gap:8px;border:none;background:none;font:inherit;font-size:13.5px;
-    padding:9px 13px;cursor:pointer;color:var(--muted);border-radius:10px;text-align:left;white-space:nowrap;
+  .navgroup{position:relative;flex:none}
+  .navhead{display:flex;align-items:center;gap:6px;border:none;background:none;font:inherit;font-size:12.5px;color:var(--muted);cursor:pointer;padding:6px 10px;border-radius:8px;white-space:nowrap;transition:background .15s,color .15s}
+  .navhead:hover{background:var(--surface-2);color:var(--ink)}
+  .navhead .chev{width:10px;height:10px;opacity:.5;transition:transform .18s}
+  .navgroup.open .navhead{background:var(--surface-2);color:var(--ink)}
+  .navgroup.open .navhead .chev{transform:rotate(180deg)}
+  .navgroup.active-group .navhead{color:var(--ink);font-weight:600}
+  .navgroup.active-group .navhead>svg:first-child{opacity:1}
+  .navmenu{position:absolute;top:calc(100% + 7px);left:0;z-index:70;display:none;flex-direction:column;gap:2px;min-width:215px;padding:6px;background:var(--card);border:1px solid var(--line);border-radius:13px;box-shadow:0 16px 38px rgba(0,0,0,.17)}
+  .navgroup.open .navmenu{display:flex}
+  .navmenu .tab{width:100%;font-size:13px}
+  .navmenu .tab:not(.active){color:var(--ink)}
+  .tab{display:flex;align-items:center;gap:6px;border:none;background:none;font:inherit;font-size:12.5px;
+    padding:6px 10px;cursor:pointer;color:var(--muted);border-radius:8px;text-align:left;white-space:nowrap;
     transition:background .15s,color .15s}
+  .tabs svg{width:14px;height:14px}
   .tab svg{opacity:.85}
   .tab:hover{background:var(--surface-2);color:var(--ink)}
   .tab.active{color:#fff;font-weight:600;
@@ -378,17 +391,36 @@
       <div class="name">RecraVas<small>Dashboard</small></div>
     </div>
     <nav id="tabs" class="tabs">
-      <button class="tab active" data-tab="resultaten" title="Resultaten"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19h16M7 15v4M12 10v9M17 6v13"/></svg><span class="lbl">Resultaten</span></button>
-      <button class="tab" data-tab="advertenties" title="Advertenties"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M7 13h4M7 16h7"/></svg><span class="lbl">Advertenties</span></button>
-      <button class="tab" data-tab="icp" title="ICP · bedoeld vs werkelijk"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg><span class="lbl">ICP</span></button>
-      <button class="tab" data-tab="bellen" title="Bellen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3h3l2 5-2.5 1.5a11 11 0 0 0 5 5L16 13l5 2v3a2 2 0 0 1-2.2 2A16 16 0 0 1 3 5.2 2 2 0 0 1 5 3z"/></svg><span class="lbl">Bellen</span></button>
-      <button class="tab" data-tab="mailflow" title="Mailflow · mailattributie"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg><span class="lbl">Mailflow</span></button>
-      <button class="tab" data-tab="archief" title="Archief · creative-library"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></svg><span class="lbl">Archief</span></button>
-      <button class="tab" data-tab="financien" title="Financiën"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5c0-1.4 1.2-2 2.5-2s2.5.7 2.5 1.8c0 2.4-5 1.3-5 3.7 0 1.1 1.2 1.8 2.5 1.8s2.5-.6 2.5-2"/></svg><span class="lbl">Financiën</span></button>
-      <button class="tab hidden" data-tab="finance" title="Finance · grootboek (alleen Willem en Ruben)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v2"/></svg><span class="lbl">Finance</span></button>
-      <button class="tab" data-tab="resale" title="Resale"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-7 9 7M5 10v9h5v-6h4v6h5v-9"/></svg><span class="lbl">Resale</span></button>
-      <button class="tab" data-tab="campagnes" title="Campagnes · CBO / adset"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18M7 15l4-5 3 3 5-7"/></svg><span class="lbl">Campagnes</span></button>
-      <button class="tab" data-tab="bevindingen" title="Bevindingen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.2 1 2.5h6c0-1.3.3-1.8 1-2.5A6 6 0 0 0 12 3z"/></svg><span class="lbl">Bevindingen</span></button>
+      <button class="tab topitem active" data-tab="resultaten" title="Resultaten"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19h16M7 15v4M12 10v9M17 6v13"/></svg><span class="lbl">Resultaten</span></button>
+
+      <div class="navgroup" data-group="marketing">
+        <button class="navhead" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M7 13h4M7 16h7"/></svg><span>Marketing</span><svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></button>
+        <div class="navmenu">
+          <button class="tab" data-tab="advertenties" title="Advertenties"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M7 13h4M7 16h7"/></svg><span class="lbl">Advertenties</span></button>
+          <button class="tab" data-tab="campagnes" title="Campagnes · CBO / adset"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18M7 15l4-5 3 3 5-7"/></svg><span class="lbl">Campagnes</span></button>
+          <button class="tab" data-tab="archief" title="Archief · creative-library"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></svg><span class="lbl">Archief</span></button>
+          <button class="tab" data-tab="icp" title="ICP · bedoeld vs werkelijk"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg><span class="lbl">ICP</span></button>
+          <button class="tab" data-tab="mailflow" title="Mailflow · mailattributie"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg><span class="lbl">Mailflow</span></button>
+        </div>
+      </div>
+
+      <div class="navgroup" data-group="sales">
+        <button class="navhead" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3h3l2 5-2.5 1.5a11 11 0 0 0 5 5L16 13l5 2v3a2 2 0 0 1-2.2 2A16 16 0 0 1 3 5.2 2 2 0 0 1 5 3z"/></svg><span>Sales</span><svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></button>
+        <div class="navmenu">
+          <button class="tab" data-tab="bellen" title="Bellen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3h3l2 5-2.5 1.5a11 11 0 0 0 5 5L16 13l5 2v3a2 2 0 0 1-2.2 2A16 16 0 0 1 3 5.2 2 2 0 0 1 5 3z"/></svg><span class="lbl">Bellen</span></button>
+          <button class="tab" data-tab="resale" title="Resale"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-7 9 7M5 10v9h5v-6h4v6h5v-9"/></svg><span class="lbl">Resale</span></button>
+        </div>
+      </div>
+
+      <div class="navgroup" data-group="geld">
+        <button class="navhead" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5c0-1.4 1.2-2 2.5-2s2.5.7 2.5 1.8c0 2.4-5 1.3-5 3.7 0 1.1 1.2 1.8 2.5 1.8s2.5-.6 2.5-2"/></svg><span>Geld</span><svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></button>
+        <div class="navmenu">
+          <button class="tab" data-tab="financien" title="Deals &amp; marge · omzet/winst per deal"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5c0-1.4 1.2-2 2.5-2s2.5.7 2.5 1.8c0 2.4-5 1.3-5 3.7 0 1.1 1.2 1.8 2.5 1.8s2.5-.6 2.5-2"/></svg><span class="lbl">Deals &amp; marge</span></button>
+          <button class="tab hidden" data-tab="finance" title="Finance · grootboek (alleen Willem en Ruben)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v2"/></svg><span class="lbl">Finance (grootboek)</span></button>
+        </div>
+      </div>
+
+      <button class="tab topitem" data-tab="bevindingen" title="Bevindingen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.2 1 2.5h6c0-1.3.3-1.8 1-2.5A6 6 0 0 0 12 3z"/></svg><span class="lbl">Bevindingen</span></button>
     </nav>
     <div class="who">
       <button id="refreshBtn" class="btn hidden" title="Vernieuwen · verse Pipedrive-sync + data opnieuw ophalen" aria-label="Vernieuwen"><svg class="rico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v5h-5"/></svg></button>
@@ -1884,6 +1916,7 @@ async function applyRole(){
     $("tabBellen").classList.remove("hidden");
     activeTab = "bellen";
   }
+  syncNavGroups();
   await refresh();
   herstelTab();
 }
@@ -1979,7 +2012,25 @@ function toonTab(tab, opts){
   if(tab==="icp") renderICP();
   if(tab==="finance"){ renderFinancePage(); if(location.hash!=="#finance") history.replaceState(null,"","#finance"); }
   else if(location.hash==="#finance"){ history.replaceState(null,"",location.pathname+location.search); }
+  syncNavGroups();
 }
+// uitklapmenu: welke groep is actief, lege groepen verbergen, open dropdowns sluiten
+function syncNavGroups(){
+  document.querySelectorAll('.navgroup').forEach(g=>{
+    const tabs=[...g.querySelectorAll('.tab')];
+    const allHidden = tabs.length>0 && tabs.every(t=>t.classList.contains('hidden'));
+    g.classList.toggle('hidden', allHidden);
+    g.classList.toggle('active-group', tabs.some(t=>t.dataset.tab===activeTab));
+    g.classList.remove('open');
+  });
+}
+document.querySelectorAll('.navhead').forEach(h=>h.addEventListener('click', e=>{
+  e.stopPropagation();
+  const g=h.closest('.navgroup'), willOpen=!g.classList.contains('open');
+  document.querySelectorAll('.navgroup.open').forEach(o=>o.classList.remove('open'));
+  g.classList.toggle('open', willOpen);
+}));
+document.addEventListener('click', ()=>document.querySelectorAll('.navgroup.open').forEach(o=>o.classList.remove('open')));
 // een verborgen tab (niet beschikbaar voor deze rol) is geen geldige bestemming
 function tabBeschikbaar(tab){
   const btn = document.querySelector(`.tab[data-tab="${tab}"]`);
