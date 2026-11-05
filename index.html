@@ -761,6 +761,13 @@
       <div id="finRecEdit" class="hidden"></div>
       <div class="panel"><div class="scroll"><table id="finRecTable"></table></div></div>
       <p class="foot">Vooruit plannen: alle bedragen tellen inclusief btw mee; de geschatte btw-afrekening per kwartaal valt op de aangifte-deadline (de maand ná het kwartaaleinde, voor Q4 dus eind januari). De vooruit-tijdlijn staat onder "Planning".</p>
+
+      <div class="sec" style="margin-top:22px">Eenmalige posten
+        <span class="info" tabindex="0">i<span class="tip">Eenmalige meevallers of tegenvallers die niet maandelijks terugkeren (bv. een keer minder salaris opnemen, een eenmalige kost of bijdrage). Netto verwerkt op het eind van de gekozen maand in de planning. + = cash erbij, − = cash eraf.</span></span>
+      </div>
+      <div style="margin:10px 0"><button id="finOoNew" style="padding:8px 16px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer">+ Nieuwe eenmalige post</button></div>
+      <div id="finOoEdit" class="hidden"></div>
+      <div class="panel"><div class="scroll"><table id="finOoTable"></table></div></div>
     </div>
 
     <div id="finViewPlan" class="hidden">
@@ -2119,7 +2126,7 @@ function herstelTab(){
 document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => toonTab(t.dataset.tab)));
 
 /* ========== FINANCE-TAB · grootboek (Willems "Map Credit Debit", alleen Ruben + Willem) ========== */
-let FINLED = [], FINLED_Q = "", FINVIEW = "grootboek", FINSPLIT = [], FINREC = [], FINNB = [], FINOO = [], FINPERIOD = "30";
+let FINLED = [], FINLED_Q = "", FINVIEW = "grootboek", FINSPLIT = [], FINREC = [], FINNB = [], FINOO = [], FINOA = [], FINPERIOD = "30";
 const fEur = n => (n==null||n==="") ? "—" : eur(n);
 const finJa = v => { const s=String(v==null?"":v).trim().toLowerCase(); return s==="ja"||s==="j"||s==="true"||s==="1"; };
 // Periode-filter: standaard max 30 dagen terug (op passeerdatum). Regels zonder datum blijven zichtbaar.
@@ -2184,15 +2191,16 @@ async function renderFinancePlan(){
     .map(([k,l])=>`<button onclick="FINPLAN_SCEN='${k}';renderFinancePlan()" style="${FINPLAN_SCEN===k?on:off}">${l}</button>`).join("");
   $("finShiftBtns").innerHTML = [[0,"0"],[2,"+2 wk"],[4,"+4 wk"],[8,"+8 wk"]]
     .map(([k,l])=>`<button onclick="FINPLAN_SHIFT=${k};renderFinancePlan()" style="${FINPLAN_SHIFT===k?on:off}">${l}</button>`).join("");
-  const [plan, events, rec, nb, oo] = await Promise.all([
+  const [plan, events, rec, nb, oo, oa] = await Promise.all([
     rpc("fin_cash_plan",   { p_shift_weeks:FINPLAN_SHIFT, p_scenario:FINPLAN_SCEN }),
     rpc("fin_cash_events", { p_shift_weeks:FINPLAN_SHIFT, p_scenario:FINPLAN_SCEN }),
     rpc("fin_recurring_list"),
     rpc("fin_nextbound_list"),
-    rpc("fin_oneoff_list")
+    rpc("fin_oneoff_list"),
+    rpc("fin_open_agents")
   ]);
   const P = plan||[], E = events||[];
-  FINREC = rec||FINREC||[]; FINNB = nb||FINNB||[]; FINOO = oo||FINOO||[]; FINPLAN_P = P; FINPLAN_E = E;
+  FINREC = rec||FINREC||[]; FINNB = nb||FINNB||[]; FINOO = oo||FINOO||[]; FINOA = oa||FINOA||[]; FINPLAN_P = P; FINPLAN_E = E;
   const laag = P.reduce((a,r)=> (a==null||Number(r.saldo_eind)<Number(a.saldo_eind))?r:a, null);
   const neg  = P.find(r=>Number(r.saldo_eind)<0);
   const start = P.length ? (Number(P[0].saldo_eind)-Number(P[0].netto)) : null;
@@ -2229,17 +2237,26 @@ function openPlanBreakdown(ws){
   const row = FINPLAN_P.find(r=>String(r.week_start).slice(0,10)===key);
   const wsD = new Date(key), wkEnd = new Date(wsD.getTime()+7*86400000);
   const deals = FINPLAN_E.filter(e=>{ const d=new Date(e.cash_date); return d>=wsD && d<wkEnd; });
+  const makDeals = FINPLAN_E.filter(e=>{ if(!(Number(e.makelaar)>0)) return false; const d=new Date(e.cash_date); d.setDate(d.getDate()+30); return d>=wsD && d<wkEnd; });
+  const oaHier = FINOA.filter(o=>String(o.due_week).slice(0,10)===key);
   const recs = (row && Number(row.rec_deel)!=0) ? FINREC.filter(x=>x.actief) : [];
   const btw  = row ? Number(row.btw_deel) : 0;
   const li = (lbl,val,neg) => `<div style="display:flex;justify-content:space-between;gap:16px;padding:5px 0;border-bottom:1px solid var(--line)"><span>${lbl}</span><span style="font-weight:600;color:${neg?'var(--bad)':'var(--good)'}">${neg?"−":""}${eur(Math.abs(val))}</span></div>`;
   let html = `<div class="panel" style="padding:16px 18px;margin-top:12px;border:1px solid var(--accent-soft)">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b>Opbouw week ${wsD.toLocaleDateString("nl-NL")}</b><span style="cursor:pointer;color:var(--muted)" onclick="document.getElementById('finPlanDetail').classList.add('hidden')">sluiten ✕</span></div>`;
   if(deals.length){
-    html += `<div style="font-size:12px;color:var(--muted);margin:8px 0 2px">Deals (courtage in, makelaar eruit)</div>`;
+    html += `<div style="font-size:12px;color:var(--muted);margin:8px 0 2px">Courtage binnen</div>`;
     deals.forEach(e=>{
       html += li(esc(e.label||"—")+(e.fase==="zeker"?"":' <span style="color:var(--warn);font-size:11px">potentieel</span>'), Number(e.courtage||0), false);
-      if(Number(e.makelaar)>0) html += li('<span style="color:var(--muted)">&nbsp;&nbsp;↳ makelaar</span>', Number(e.makelaar), true);
     });
+  }
+  if(makDeals.length){
+    html += `<div style="font-size:12px;color:var(--muted);margin:10px 0 2px">Makelaar betalen (30 dgn na courtage)</div>`;
+    makDeals.forEach(e=> html += li(esc(e.label||"—"), Number(e.makelaar), true));
+  }
+  if(oaHier.length){
+    html += `<div style="font-size:12px;color:var(--muted);margin:10px 0 2px">Makelaar openstaand (al ontvangen, nog te betalen)</div>`;
+    oaHier.forEach(o=> html += li(esc(o.label||"makelaar"), Math.abs(Number(o.bedrag)||0), true));
   }
   if(recs.length){
     html += `<div style="font-size:12px;color:var(--muted);margin:10px 0 2px">Terugkerend (einde maand)</div>`;
@@ -2258,7 +2275,7 @@ function openPlanBreakdown(ws){
   if(btw!==0){
     html += `<div style="font-size:12px;color:var(--muted);margin:10px 0 2px">Btw-afdracht kwartaal</div>` + li("Btw", Math.abs(btw), btw<0);
   }
-  if(!deals.length && !recs.length && !nbHier.length && !ooHier.length && btw===0) html += `<div style="color:var(--muted);padding:6px 0">Geen posten in deze week.</div>`;
+  if(!deals.length && !makDeals.length && !oaHier.length && !recs.length && !nbHier.length && !ooHier.length && btw===0) html += `<div style="color:var(--muted);padding:6px 0">Geen posten in deze week.</div>`;
   html += `</div>`;
   $("finPlanDetail").innerHTML = html;
   $("finPlanDetail").classList.remove("hidden");
@@ -2266,9 +2283,10 @@ function openPlanBreakdown(ws){
 }
 async function renderFinanceCash(){
   if(!finToegestaan()) return;
-  const [cf, btw, rec, nb] = await Promise.all([rpc("fin_cashflow"), rpc("fin_btw"), rpc("fin_recurring_list"), rpc("fin_nextbound_list")]);
+  const [cf, btw, rec, nb, oo] = await Promise.all([rpc("fin_cashflow"), rpc("fin_btw"), rpc("fin_recurring_list"), rpc("fin_nextbound_list"), rpc("fin_oneoff_list")]);
   FINREC = rec || [];
   FINNB = nb || [];
+  FINOO = oo || [];
   const laatste = (cf && cf.length) ? cf[cf.length-1] : null;
   const vasteMaand = FINREC.filter(r=>r.actief).reduce((s,r)=>s+(Number(r.amount)||0),0);
   const sub = t => `<div style="font-size:11px;color:var(--muted);margin-top:3px">${t}</div>`;
@@ -2294,7 +2312,9 @@ async function renderFinanceCash(){
        <td style="font-weight:600">${eur(r.afdracht)}</td></tr>`).join("")}</tbody>`;
   tekenNbTable();
   tekenRecTable();
+  tekenOoTable();
   const rn = $("finRecNew"); if(rn && !rn._bound){ rn._bound = true; rn.addEventListener("click", ()=>openRecEdit(null)); }
+  const on_ = $("finOoNew"); if(on_ && !on_._bound){ on_._bound = true; on_.addEventListener("click", ()=>openOoEdit(null)); }
 }
 const MND_KORT = ["jan","feb","mrt","apr","mei","jun","jul","aug","sep","okt","nov","dec"];
 function mndLabel(d){ const p=String(d).slice(0,10).split("-"); return MND_KORT[Number(p[1])-1]+" "+p[0]; }
@@ -2359,6 +2379,49 @@ async function verwijderRec(id){
   if(!confirm("Deze vaste last verwijderen?")) return;
   await rpc("fin_recurring_delete", { p_id: id });
   $("finRecEdit").classList.add("hidden");
+  renderFinanceCash();
+}
+function tekenOoTable(){
+  $("finOoTable").innerHTML =
+    `<thead><tr><th class="tl">Maand</th><th class="tl">Omschrijving</th><th>Bedrag</th><th></th></tr></thead>
+     <tbody>${FINOO.map(r=>`<tr data-id="${r.id}" style="cursor:pointer">
+       <td class="tl" style="white-space:nowrap">${mndLabel(r.maand)}</td>
+       <td class="tl">${esc(r.label||"—")}</td>
+       <td style="font-weight:600;color:${Number(r.bedrag)<0?'var(--bad)':'var(--good)'}">${Number(r.bedrag)<0?'−':''}${eur(Math.abs(Number(r.bedrag)||0))}</td>
+       <td style="color:var(--accent)">bewerken ›</td></tr>`).join("") || `<tr><td colspan="4" style="color:var(--muted);padding:14px">Nog geen eenmalige posten.</td></tr>`}</tbody>`;
+  document.querySelectorAll("#finOoTable tbody tr[data-id]").forEach(tr=>tr.addEventListener("click", ()=>openOoEdit(Number(tr.dataset.id))));
+}
+function openOoEdit(id){
+  const r = id ? (FINOO.find(x=>x.id===id)||{}) : {};
+  const mnd = r.maand ? String(r.maand).slice(0,7) : "";
+  const inp = (k,l,t,v) => `<label style="display:flex;flex-direction:column;gap:3px;font-size:11.5px;color:var(--muted)">${l}<input data-k="${k}" type="${t}" ${t==='number'?'step="any"':''} value="${escAttr(v==null?'':String(v))}" style="padding:7px 9px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--text);font-size:13px"></label>`;
+  $("finOoEdit").innerHTML =
+    `<div class="panel" style="padding:16px;margin-bottom:12px;border:1px solid var(--accent-soft)">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;align-items:end">
+        ${inp('maand','Maand','month',mnd)}${inp('bedrag','Bedrag (+ cash erbij, − eraf)','number',r.bedrag)}${inp('label','Omschrijving','text',r.label)}
+      </div>
+      <div style="display:flex;gap:10px;margin-top:12px;align-items:center">
+        <button onclick="bewaarOo(${id||'null'})" style="padding:8px 16px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer">Opslaan</button>
+        ${id?`<button onclick="verwijderOo(${id})" style="padding:8px 14px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--bad);cursor:pointer">Verwijderen</button>`:""}
+        <span style="cursor:pointer;color:var(--muted)" onclick="document.getElementById('finOoEdit').classList.add('hidden')">sluiten ✕</span>
+      </div>
+    </div>`;
+  $("finOoEdit").classList.remove("hidden");
+  $("finOoEdit").scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+async function bewaarOo(id){
+  const p = {}; if(id) p.id = String(id);
+  document.querySelectorAll("#finOoEdit [data-k]").forEach(i=>{ p[i.dataset.k] = i.value; });
+  if(!p.maand){ alert("Kies een maand."); return; }
+  if(p.maand.length===7) p.maand = p.maand + "-01";
+  await rpc("fin_oneoff_save", { p });
+  $("finOoEdit").classList.add("hidden");
+  renderFinanceCash();
+}
+async function verwijderOo(id){
+  if(!confirm("Deze eenmalige post verwijderen?")) return;
+  await rpc("fin_oneoff_delete", { p_id: id });
+  $("finOoEdit").classList.add("hidden");
   renderFinanceCash();
 }
 async function renderFinanceSplit(){
