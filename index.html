@@ -1990,6 +1990,7 @@ let activeTab = "resultaten";
 let CAMPPARK = null, CAMPVIEW = "adset";
 function toonTab(tab, opts){
   opts = opts || {};
+  if(tab==="finance" && !CAN_FINANCE) tab="resultaten";   // grootboek nooit renderen zonder recht (console/hash-bypass dichtgezet)
   activeTab = tab;
   document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active", x.dataset.tab===tab));
   $("tabResultaten").classList.toggle("hidden", tab!=="resultaten");
