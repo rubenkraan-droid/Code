@@ -447,6 +447,7 @@
         <div class="navmenu">
           <button class="tab" data-tab="financien" title="Deals &amp; marge · omzet/winst per deal"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5c0-1.4 1.2-2 2.5-2s2.5.7 2.5 1.8c0 2.4-5 1.3-5 3.7 0 1.1 1.2 1.8 2.5 1.8s2.5-.6 2.5-2"/></svg><span class="lbl">Deals &amp; marge</span></button>
           <button class="tab hidden" data-tab="finance" title="Finance · grootboek (alleen Willem en Ruben)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v2"/></svg><span class="lbl">Finance (grootboek)</span></button>
+          <button class="tab hidden" data-tab="woning" title="Betuwse Bron · Ochten · kosten en verhuur per woning (alleen Willem en Ruben)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-7 9 7M5 10v9h5v-6h4v6h5v-9"/></svg><span class="lbl">Betuwse Bron</span></button>
         </div>
       </div>
 
@@ -785,6 +786,19 @@
       <div class="panel"><div class="scroll"><table id="finEventsTable"></table></div></div>
       <p class="foot">Gevoed door toekomstige passeerdatums: Willems ledger en (zodra ingevuld) de notarisdatums in Pipedrive. Nu nog dun; dit vult zich vanzelf naarmate er meer passeerdatums bekend zijn.</p>
     </div>
+  </div>
+
+  <div id="tabWoning" class="hidden">
+    <div class="top"><div><h1 style="font-size:20px;margin:0">Betuwse Bron</h1><div class="sub">Ochten · kosten en verhuur per woning · eerste woning sinds 22 oktober 2026</div></div></div>
+    <div class="cards" id="woningKpis" style="margin-top:14px"></div>
+    <div id="woningPerWoning" class="panel hidden" style="margin-bottom:20px"><div class="scroll"><table id="woningSumTable"></table></div></div>
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:16px 0 10px">
+      <button id="woningNew" style="padding:8px 16px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer">+ Nieuwe post</button>
+      <span style="font-size:12px;color:var(--muted)">Kosten met een minteken (bv. −1250), verhuurinkomsten positief. Vul het woningnummer in (eerste woning = 56).</span>
+    </div>
+    <div id="woningEdit" class="hidden"></div>
+    <div class="panel"><div class="scroll"><table id="woningTable"></table></div></div>
+    <p class="foot">Alles wat je hier invult wordt bewaard in de database. Gebruik een minteken voor kosten en een positief bedrag voor verhuurinkomsten. Per woningnummer zie je het totaal bovenin. Alleen zichtbaar voor Ruben en Willem.</p>
   </div>
 
   <div id="tabBellen" class="hidden">
@@ -1873,10 +1887,12 @@ async function applyRole(){
   // een volledige eigenaar met financiën is. Een testweergave (Karl, Toine, makelaar, park) toont het dus niet.
   const finZichtbaar = CAN_FINANCE && owner && !v.nofinance;
   document.querySelector('.tab[data-tab="finance"]').classList.toggle("hidden", !finZichtbaar);
+  document.querySelector('.tab[data-tab="woning"]').classList.toggle("hidden", !finZichtbaar);   // Betuwse Bron: zelfde recht als grootboek
   $("financeBtn").classList.toggle("hidden", !finZichtbaar);   // vaste snelknop in de bovenbalk
   if(!finZichtbaar){
     $("tabFinanceLedger").classList.add("hidden");
-    if(activeTab==="finance") toonTab("resultaten", {silent:true});   // weg van Finance, terug naar Resultaten
+    $("tabWoning").classList.add("hidden");
+    if(activeTab==="finance" || activeTab==="woning") toonTab("resultaten", {silent:true});   // weg van Finance/Woning, terug naar Resultaten
   }
   // Bellen: makelaars + master-eigenaar, niet de parkeigenaar/park-gebonden eigenaar (Karl/Carl)
   // en niet een eigenaar zonder beldata-toegang (bv. Toine, echt óf testweergave)
@@ -2029,7 +2045,7 @@ let activeTab = "resultaten";
 let CAMPPARK = null, CAMPVIEW = "adset";
 function toonTab(tab, opts){
   opts = opts || {};
-  if(tab==="finance" && !CAN_FINANCE) tab="resultaten";   // grootboek nooit renderen zonder recht (console/hash-bypass dichtgezet)
+  if((tab==="finance"||tab==="woning") && !CAN_FINANCE) tab="resultaten";   // grootboek + woning nooit renderen zonder recht
   activeTab = tab;
   document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active", x.dataset.tab===tab));
   $("tabResultaten").classList.toggle("hidden", tab!=="resultaten");
@@ -2043,8 +2059,9 @@ function toonTab(tab, opts){
   $("tabBevindingen").classList.toggle("hidden", tab!=="bevindingen");
   $("tabICP").classList.toggle("hidden", tab!=="icp");
   $("tabFinanceLedger").classList.toggle("hidden", tab!=="finance");
+  $("tabWoning").classList.toggle("hidden", tab!=="woning");
   $("fAgent").classList.toggle("hidden", tab!=="resultaten" || !currentView || currentView().role!=="owner");
-  $("fPark").classList.toggle("hidden", (currentView && currentView().role==="park") || tab==="advertenties" || tab==="archief" || tab==="financien" || tab==="bellen" || tab==="mailflow" || tab==="resale" || tab==="campagnes" || tab==="bevindingen" || tab==="icp" || tab==="finance");
+  $("fPark").classList.toggle("hidden", (currentView && currentView().role==="park") || tab==="advertenties" || tab==="archief" || tab==="financien" || tab==="bellen" || tab==="mailflow" || tab==="resale" || tab==="campagnes" || tab==="bevindingen" || tab==="icp" || tab==="finance" || tab==="woning");
   if(!opts.silent) localStorage.setItem("activeTab", tab);
   if(tab==="advertenties") renderAds();
   if(tab==="archief") renderArchief();
@@ -2056,6 +2073,7 @@ function toonTab(tab, opts){
   if(tab==="bevindingen") renderBevindingen();
   if(tab==="icp") renderICP();
   if(tab==="finance"){ renderFinancePage(); if(location.hash!=="#finance") history.replaceState(null,"","#finance"); }
+  if(tab==="woning"){ renderWoning(); }
   else if(location.hash==="#finance"){ history.replaceState(null,"",location.pathname+location.search); }
   syncNavGroups();
 }
@@ -2417,6 +2435,80 @@ async function verwijderOo(id){
   await rpc("fin_oneoff_delete", { p_id: id });
   $("finOoEdit").classList.add("hidden");
   renderFinanceCash();
+}
+/* ========== WONING-TAB · Betuwse Bron (kosten + verhuur per woning, alleen Ruben + Willem) ========== */
+let WONING = [];
+async function renderWoning(){
+  if(!finToegestaan()) return;
+  WONING = await rpc("woning_list") || [];
+  const kost  = WONING.filter(x=>Number(x.bedrag)<0).reduce((s,x)=>s-(Number(x.bedrag)||0),0);
+  const ink   = WONING.filter(x=>Number(x.bedrag)>0).reduce((s,x)=>s+(Number(x.bedrag)||0),0);
+  const saldo = WONING.reduce((s,x)=>s+(Number(x.bedrag)||0),0);
+  const woningen = [...new Set(WONING.map(x=>x.woning).filter(Boolean))];
+  const sub = t => `<div style="font-size:11px;color:var(--muted);margin-top:3px">${t}</div>`;
+  $("woningKpis").innerHTML =
+    metric("Totale kosten", eur(kost)) +
+    metric("Verhuurinkomsten", eur(ink)) +
+    metric("Saldo", eur(saldo), sub(saldo<0?"nog niet terugverdiend":"in de plus")) +
+    metric("Woningen", String(woningen.length||0), sub(woningen.length?("nr. "+woningen.join(", ")):"nog geen"));
+  tekenWoningSum(woningen);
+  tekenWoningTable();
+  const wn = $("woningNew"); if(wn && !wn._bound){ wn._bound = true; wn.addEventListener("click", ()=>openWoningEdit(null)); }
+}
+function tekenWoningSum(woningen){
+  if(woningen.length <= 1){ $("woningPerWoning").classList.add("hidden"); return; }
+  const rows = woningen.map(w=>{
+    const posten = WONING.filter(x=>x.woning===w);
+    const k = posten.filter(x=>Number(x.bedrag)<0).reduce((s,x)=>s-(Number(x.bedrag)||0),0);
+    const i = posten.filter(x=>Number(x.bedrag)>0).reduce((s,x)=>s+(Number(x.bedrag)||0),0);
+    return `<tr><td class="tl">Woning ${esc(w)}</td><td>${eur(k)}</td><td>${eur(i)}</td><td style="font-weight:600">${eur(i-k)}</td></tr>`;
+  }).join("");
+  $("woningSumTable").innerHTML = `<thead><tr><th class="tl">Woning</th><th>Kosten</th><th>Verhuur</th><th>Saldo</th></tr></thead><tbody>${rows}</tbody>`;
+  $("woningPerWoning").classList.remove("hidden");
+}
+function tekenWoningTable(){
+  const dt = d => d ? new Date(d).toLocaleDateString("nl-NL") : "—";
+  $("woningTable").innerHTML =
+    `<thead><tr><th class="tl">Datum</th><th class="tl">Woning</th><th class="tl">Categorie</th><th class="tl">Omschrijving</th><th>Bedrag</th><th></th></tr></thead>
+     <tbody>${WONING.map(r=>`<tr data-id="${r.id}" style="cursor:pointer">
+       <td class="tl" style="white-space:nowrap">${dt(r.datum)}</td>
+       <td class="tl">${r.woning?esc(r.woning):"—"}</td>
+       <td class="tl">${esc(r.categorie||"—")}</td>
+       <td class="tl">${esc(r.omschrijving||"—")}</td>
+       <td style="font-weight:600;color:${Number(r.bedrag)<0?'var(--bad)':'var(--good)'}">${Number(r.bedrag)<0?'−':''}${eur(Math.abs(Number(r.bedrag)||0))}</td>
+       <td style="color:var(--accent)">bewerken ›</td></tr>`).join("") || `<tr><td colspan="6" style="color:var(--muted);padding:14px">Nog geen posten. Klik op "+ Nieuwe post".</td></tr>`}</tbody>`;
+  document.querySelectorAll("#woningTable tbody tr[data-id]").forEach(tr=>tr.addEventListener("click", ()=>openWoningEdit(Number(tr.dataset.id))));
+}
+function openWoningEdit(id){
+  const r = id ? (WONING.find(x=>x.id===id)||{}) : { woning:"56" };
+  const dval = r.datum ? String(r.datum).slice(0,10) : "";
+  const inp = (k,l,t,v) => `<label style="display:flex;flex-direction:column;gap:3px;font-size:11.5px;color:var(--muted)">${l}<input data-k="${k}" type="${t}" ${t==='number'?'step="any"':''} value="${escAttr(v==null?'':String(v))}" style="padding:7px 9px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--text);font-size:13px"></label>`;
+  $("woningEdit").innerHTML =
+    `<div class="panel" style="padding:16px;margin-bottom:12px;border:1px solid var(--accent-soft)">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;align-items:end">
+        ${inp('woning','Woning nr.','text',r.woning)}${inp('datum','Datum','date',dval)}${inp('categorie','Categorie (bv. aankoop, notaris, inrichting, verhuur)','text',r.categorie)}${inp('bedrag','Bedrag (− kost, + verhuur)','number',r.bedrag)}${inp('omschrijving','Omschrijving','text',r.omschrijving)}
+      </div>
+      <div style="display:flex;gap:10px;margin-top:12px;align-items:center">
+        <button onclick="bewaarWoning(${id||'null'})" style="padding:8px 16px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer">Opslaan</button>
+        ${id?`<button onclick="verwijderWoning(${id})" style="padding:8px 14px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--bad);cursor:pointer">Verwijderen</button>`:""}
+        <span style="cursor:pointer;color:var(--muted)" onclick="document.getElementById('woningEdit').classList.add('hidden')">sluiten ✕</span>
+      </div>
+    </div>`;
+  $("woningEdit").classList.remove("hidden");
+  $("woningEdit").scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+async function bewaarWoning(id){
+  const p = {}; if(id) p.id = String(id);
+  document.querySelectorAll("#woningEdit [data-k]").forEach(i=>{ p[i.dataset.k] = i.value; });
+  await rpc("woning_save", { p });
+  $("woningEdit").classList.add("hidden");
+  renderWoning();
+}
+async function verwijderWoning(id){
+  if(!confirm("Deze post verwijderen?")) return;
+  await rpc("woning_delete", { p_id: id });
+  $("woningEdit").classList.add("hidden");
+  renderWoning();
 }
 async function renderFinanceSplit(){
   if(!finToegestaan()){ $("finSplitTable").innerHTML=""; return; }
