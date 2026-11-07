@@ -724,6 +724,7 @@
         <button id="finLedNew" style="padding:8px 16px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer">+ Handmatige regel</button>
         <input id="finLedZoek" placeholder="Zoek verkoper of park…" style="padding:8px 11px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--text);font-size:13px;min-width:200px">
         <span id="finLedCount" style="font-size:12px;color:var(--muted)"></span>
+        <button onclick="tableToCSV('finLedTable','grootboek.csv')" title="Exporteer deze tabel naar CSV (opent in Excel)" style="margin-left:auto;padding:8px 13px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--ink);font:inherit;font-size:13px;font-weight:600;cursor:pointer">⤓ CSV</button>
       </div>
       <div style="font-size:12px;color:var(--muted);margin:-2px 0 10px;line-height:1.5">
         Nieuwe verkopen uit Pipedrive verschijnen hier automatisch (met een <span style="color:var(--accent);font-weight:600">auto</span>-label). Gebruik <b>+ Handmatige regel</b> alleen als een deal niet gevonden wordt.
@@ -794,6 +795,7 @@
     <div id="woningPerWoning" class="panel hidden" style="margin-bottom:20px"><div class="scroll"><table id="woningSumTable"></table></div></div>
     <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:16px 0 10px">
       <button id="woningNew" style="padding:8px 16px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer">+ Nieuwe post</button>
+      <button onclick="tableToCSV('woningTable','betuwse-bron-woning56.csv')" title="Exporteer naar CSV (opent in Excel)" style="padding:8px 13px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--ink);font:inherit;font-size:13px;font-weight:600;cursor:pointer">⤓ CSV</button>
       <span style="font-size:12px;color:var(--muted)">Kosten met een minteken (bv. −1250), verhuurinkomsten positief. Vul het woningnummer in (eerste woning = 56).</span>
     </div>
     <div id="woningEdit" class="hidden"></div>
@@ -1054,7 +1056,7 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /* ---------- helpers ---------- */
 const $ = id => document.getElementById(id);
-const eur = n => "€"+Math.round(n||0).toLocaleString("nl-NL");
+const eur = n => { const r = Math.round(n||0); return (r<0?"−€":"€") + Math.abs(r).toLocaleString("nl-NL"); };
 // subregel op de Afspraken-tegel: hoeveel afspraken staan nog vooruit gepland (tellen niet mee in de conversie)
 function geplandSub(n){
   return Number(n)>0
@@ -1070,6 +1072,16 @@ function geplandSubIn(n){
 const initials = n => n.slice(0,2).toUpperCase();
 const esc = s => String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 const escAttr = esc;
+// Exporteer een zichtbare tabel naar CSV (kolommen zonder kop, zoals de actiekolom, worden weggelaten).
+function tableToCSV(tableId, filename){
+  const t = document.getElementById(tableId); if(!t) return;
+  const keep = [...t.querySelectorAll("thead th")].map(th => th.innerText.trim() !== "");
+  const conv = v => { v=(v==null?"":String(v)).replace(/−/g,"-").replace(/ /g," ").trim(); return /[",\n;]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; };
+  const rows = [...t.querySelectorAll("tr")].map(tr => [...tr.children].filter((_,i)=>keep[i]!==false).map(c=>conv(c.innerText)));
+  const blob = new Blob(["﻿"+rows.map(r=>r.join(";")).join("\r\n")], {type:"text/csv;charset=utf-8"});
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
 // alleen http(s) of interne links toestaan in href/src (weert javascript:/data:-injectie)
 const safeUrl = u => { const s = String(u||""); return /^(https?:\/\/|#)/i.test(s) ? escAttr(s) : "#"; };
 
