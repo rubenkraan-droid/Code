@@ -2295,9 +2295,13 @@ function openPlanBreakdown(ws){
       html += li(esc(e.label||"—")+(e.fase==="zeker"?"":' <span style="color:var(--warn);font-size:11px">potentieel</span>'), Number(e.courtage||0), false);
     });
   }
-  if(makDeals.length){
-    html += `<div style="font-size:12px;color:var(--muted);margin:10px 0 2px">Makelaar betalen (30 dgn na courtage)</div>`;
-    makDeals.forEach(e=> html += li(esc(e.label||"—"), Number(e.makelaar), true));
+  const ooHier = FINOO.filter(o=>eowWeekKey(o.maand)===key);
+  const ooAgents = ooHier.filter(o=>o.soort==='agents');
+  const ooOverig = ooHier.filter(o=>o.soort!=='agents');
+  if(makDeals.length || ooAgents.length){
+    html += `<div style="font-size:12px;color:var(--muted);margin:10px 0 2px">Makelaar betalen</div>`;
+    makDeals.forEach(e=> html += li(esc(e.label||"—")+' <span style="color:var(--faint);font-size:11px">30 dgn na courtage</span>', Number(e.makelaar), true));
+    ooAgents.forEach(o=> html += li(esc(o.label||"Makelaar"), Math.abs(Number(o.bedrag)||0), true));
   }
   if(recs.length){
     html += `<div style="font-size:12px;color:var(--muted);margin:10px 0 2px">Terugkerend (einde maand)</div>`;
@@ -2308,10 +2312,9 @@ function openPlanBreakdown(ws){
     html += `<div style="font-size:12px;color:var(--muted);margin:10px 0 2px">Nextbound (15% van omzet, min. €2.000)</div>`;
     nbHier.forEach(n=> html += li("Nextbound "+mndLabel(n.maand), Number(n.ontvangst)||0, false));
   }
-  const ooHier = FINOO.filter(o=>eowWeekKey(o.maand)===key);
-  if(ooHier.length){
+  if(ooOverig.length){
     html += `<div style="font-size:12px;color:var(--muted);margin:10px 0 2px">Eenmalig</div>`;
-    ooHier.forEach(o=> html += li(esc(o.label||"Eenmalig"), Math.abs(Number(o.bedrag)||0), Number(o.bedrag)<0));
+    ooOverig.forEach(o=> html += li(esc(o.label||"Eenmalig"), Math.abs(Number(o.bedrag)||0), Number(o.bedrag)<0));
   }
   if(btw!==0){
     html += `<div style="font-size:12px;color:var(--muted);margin:10px 0 2px">Btw-afdracht kwartaal</div>` + li("Btw", Math.abs(btw), btw<0);
@@ -2605,6 +2608,22 @@ function finFilter(){
   const q = FINLED_Q.trim().toLowerCase();
   return q ? base.filter(r=>(`${r.verkoper||""} ${r.park_no||""}`).toLowerCase().includes(q)) : base;
 }
+// Automatisch rekenmodel: bronvelden = omzet, pct (courtage %), ml_excl (makelaarbedrag).
+// De rest wordt hieruit doorgerekend. Pas je een bronveld aan, dan rekent dit mee en wordt opgeslagen.
+const FIN_SOURCE_FIELDS = ["omzet","pct","ml_excl"];
+const finR2 = n => Math.round((Number(n)||0)*100)/100;
+function finCalcRow(r){
+  const BTW = 0.21;
+  const o = Number(r.omzet)||0, pct = Number(r.pct)||0, mlE = Number(r.ml_excl)||0;
+  const courE = finR2(o*pct), btwL = finR2(courE*BTW), courI = finR2(courE+btwL);
+  const mlI = finR2(mlE*(1+BTW)), rpE = finR2(courE-mlE), btwO = finR2(rpE*BTW), rpI = finR2(rpE+btwO);
+  return {
+    cour_excl: courE, btw_l: btwL, cour_incl: courI,
+    ml_incl: mlI, rp_excl: rpE, btw_o: btwO, rp_incl: rpI,
+    pct_ml: o ? Math.round(mlE/o*1e6)/1e6 : null,
+    pct_rp: o ? Math.round(rpE/o*1e6)/1e6 : null
+  };
+}
 function tekenFinTabel(){
   const rows = finFilter();
   $("finLedCount").textContent = `${rows.length} van ${FINLED.length} regels`;
@@ -2629,6 +2648,8 @@ function tekenFinTabel(){
   const m    = (id,f,v) => `<td onclick="event.stopPropagation();editFinCell(${id},'${f}',this,'num')"  style="cursor:pointer;white-space:nowrap">${fEur(v)}</td>`;
   const pcol = (id,f,v) => `<td onclick="event.stopPropagation();editFinCell(${id},'${f}',this,'num')"  style="cursor:pointer;white-space:nowrap">${_p(v)}</td>`;
   const t    = (id,f,v) => `<td onclick="event.stopPropagation();editFinCell(${id},'${f}',this,'text')" class="tl" style="cursor:pointer;white-space:nowrap">${(v==null||v==="")?'<span style="color:var(--faint)">—</span>':esc(String(v))}</td>`;
+  const mRO = v => `<td title="Automatisch berekend" style="white-space:nowrap;color:var(--muted)">${fEur(v)}</td>`;   // read-only, afgeleid
+  const pRO = v => `<td title="Automatisch berekend" style="white-space:nowrap;color:var(--muted)">${_p(v)}</td>`;
   const vc = r => {   // verkoper-cel met 'auto'-label voor automatisch uit Pipedrive toegevoegde regels
     const badge = r.source==="pipedrive" ? ` <span title="Automatisch uit Pipedrive toegevoegd" style="font-size:9.5px;font-weight:700;color:#fff;background:var(--accent);border-radius:5px;padding:1px 5px;vertical-align:middle">auto</span>` : "";
     const v = (r.verkoper==null||r.verkoper==="") ? '<span style="color:var(--faint)">—</span>' : esc(String(r.verkoper));
@@ -2642,8 +2663,8 @@ function tekenFinTabel(){
       <th class="tl">Optie</th><th>Prijs</th><th>%</th><th>RV</th><th>Btw RV</th><th>Totaal ex</th><th>Totaal in</th><th></th></tr></thead>
      <tbody>${rows.map(r=>`<tr data-id="${r.id}">
        ${vc(r)}${t(r.id,'park_no',r.park_no)}<td class="tl" style="white-space:nowrap">${r.verkoopdatum ? new Date(r.verkoopdatum).toLocaleDateString("nl-NL") : '<span style="color:var(--faint)">—</span>'}</td>${m(r.id,'omzet',r.omzet)}
-       ${pcol(r.id,'pct',r.pct)}${pcol(r.id,'pct_ml',r.pct_ml)}${m(r.id,'ml_excl',r.ml_excl)}${m(r.id,'ml_incl',r.ml_incl)}${pcol(r.id,'pct_rp',r.pct_rp)}
-       ${m(r.id,'cour_excl',r.cour_excl)}${m(r.id,'btw_l',r.btw_l)}${m(r.id,'cour_incl',r.cour_incl)}${m(r.id,'rp_excl',r.rp_excl)}${m(r.id,'btw_o',r.btw_o)}${m(r.id,'rp_incl',r.rp_incl)}
+       ${pcol(r.id,'pct',r.pct)}${pRO(r.pct_ml)}${m(r.id,'ml_excl',r.ml_excl)}${mRO(r.ml_incl)}${pRO(r.pct_rp)}
+       ${mRO(r.cour_excl)}${mRO(r.btw_l)}${mRO(r.cour_incl)}${mRO(r.rp_excl)}${mRO(r.btw_o)}${mRO(r.rp_incl)}
        ${jc(r.id,'getekend_q',r.getekend_q)}${pc(r)}${jc(r.id,'getekend_s',r.getekend_s)}${jc(r.id,'definitief',r.definitief)}${jc(r.id,'verzonden',r.verzonden)}${jc(r.id,'ontvangen',r.ontvangen)}${jc(r.id,'eigen_afspraak',r.eigen_afspraak)}${jc(r.id,'betaald_x',r.betaald_x)}
        ${jc(r.id,'optie',r.optie)}${m(r.id,'prijs',r.prijs)}${pcol(r.id,'pct_aa',r.pct_aa)}${m(r.id,'rv',r.rv)}${m(r.id,'btw_rv',r.btw_rv)}${m(r.id,'totaal_ex',r.totaal_ex)}${m(r.id,'totaal_in',r.totaal_in)}
        <td onclick="event.stopPropagation();openFinEdit(${r.id})" title="Volledig formulier" style="cursor:pointer;color:var(--accent);white-space:nowrap">openen ›</td>
@@ -2664,7 +2685,14 @@ async function editFinCell(id, field, cell, type){
     if(done) return; done = true;
     const val = inp.value;
     row[field] = (val==="") ? null : (type==="num" ? Number(val) : val);
-    await rpc("fin_ledger_save", { p: { id:String(id), [field]: val } });
+    const payload = { id:String(id), [field]: row[field] };
+    // Bronveld aangepast → reken de afgeleide velden mee en sla ze op
+    if(FIN_SOURCE_FIELDS.includes(field)){
+      const d = finCalcRow(row);
+      Object.assign(row, d);
+      Object.assign(payload, d);
+    }
+    await rpc("fin_ledger_save", { p: payload });
     tekenFinTabel();
   };
   inp.addEventListener("blur", save);
