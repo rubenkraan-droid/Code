@@ -723,6 +723,11 @@
       <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:16px 0 10px">
         <button id="finLedNew" style="padding:8px 16px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer">+ Handmatige regel</button>
         <input id="finLedZoek" placeholder="Zoek verkoper of park…" style="padding:8px 11px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--text);font-size:13px;min-width:200px">
+        <span id="finBronToggle" title="Kleen-deals zijn Willems eenmanszaak en tellen niet mee als Recraparcs-omzet" style="display:inline-flex;border:1px solid var(--line-strong);border-radius:8px;overflow:hidden">
+          <button id="finBronRecraparcs" onclick="finBronSet('recraparcs')" style="padding:7px 12px;border:0;border-right:1px solid var(--line-strong);background:var(--card);color:var(--text);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer">Recraparcs</button>
+          <button id="finBronEenmanszaak" onclick="finBronSet('eenmanszaak')" style="padding:7px 12px;border:0;border-right:1px solid var(--line-strong);background:var(--card);color:var(--text);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer">Eenmanszaak</button>
+          <button id="finBronAll" onclick="finBronSet('all')" style="padding:7px 12px;border:0;background:var(--card);color:var(--text);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer">Alles</button>
+        </span>
         <span id="finLedCount" style="font-size:12px;color:var(--muted)"></span>
         <button onclick="tableToCSV('finLedTable','grootboek.csv')" title="Exporteer deze tabel naar CSV (opent in Excel)" style="margin-left:auto;padding:8px 13px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--ink);font:inherit;font-size:13px;font-weight:600;cursor:pointer">⤓ CSV</button>
       </div>
@@ -2156,9 +2161,13 @@ function herstelTab(){
 document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => toonTab(t.dataset.tab)));
 
 /* ========== FINANCE-TAB · grootboek (Willems "Map Credit Debit", alleen Ruben + Willem) ========== */
-let FINLED = [], FINLED_Q = "", FINVIEW = "grootboek", FINSPLIT = [], FINREC = [], FINNB = [], FINOO = [], FINPERIOD = "30";
+let FINLED = [], FINLED_Q = "", FINVIEW = "grootboek", FINSPLIT = [], FINREC = [], FINNB = [], FINOO = [], FINPERIOD = "30", FINBRON = "recraparcs";
 const fEur = n => (n==null||n==="") ? "—" : eur(n);
 const finJa = v => { const s=String(v==null?"":v).trim().toLowerCase(); return s==="ja"||s==="j"||s==="true"||s==="1"; };
+// Eenmanszaak = de Kleen-deals die Willem zelf deed (HTH/FM/OD/VV/LH), niet de "Kleen … GW"-Greenerwold-deals.
+// Wel zichtbaar, maar tellen NIET mee als Recraparcs-omzet.
+const finEenmanszaak = r => { const p = String(r && r.park_no || ""); return /^\s*kleen/i.test(p) && !/gw/i.test(p) && /^\s*willem\s*$/i.test(String(r && r.verkoper || "")); };
+const finBronOk = r => FINBRON==="all" ? true : (finEenmanszaak(r) === (FINBRON==="eenmanszaak"));
 // Periode-filter: standaard max 30 dagen terug (op passeerdatum). Regels zonder datum blijven zichtbaar.
 function finInWin(d){
   if(FINPERIOD==="all") return true;
@@ -2166,7 +2175,15 @@ function finInWin(d){
   const dt = new Date(d); if(isNaN(dt)) return true;
   return dt.getTime() >= Date.now() - Number(FINPERIOD)*86400000;
 }
-function finPeriodSet(){ return FINLED.filter(r=>finInWin(r.passeren_date)); }
+function finPeriodSet(){ return FINLED.filter(r=>finInWin(r.passeren_date) && finBronOk(r)); }
+function finBronStyle(){
+  const on  = "background:var(--accent);color:#fff";
+  const off = "background:var(--card);color:var(--text)";
+  [["recraparcs","finBronRecraparcs"],["eenmanszaak","finBronEenmanszaak"],["all","finBronAll"]].forEach(([k,id])=>{
+    const b=$(id); if(b){ const base=b.getAttribute("style").replace(/background:[^;]+;?/g,"").replace(/color:[^;]+;?/g,""); b.setAttribute("style", base + ";" + (FINBRON===k?on:off)); }
+  });
+}
+function finBronSet(v){ FINBRON = v; finBronStyle(); tekenFinKpis(); tekenFinTabel(); }
 function finPeriodChanged(){
   FINPERIOD = $("finPeriod").value;
   if(FINVIEW==="grootboek"){ tekenFinKpis(); tekenFinTabel(); }
@@ -2568,15 +2585,20 @@ function tekenFinKpis(){
   const gekoppeld = r.filter(x=>x.deal_id!=null).length;
   // Openstaand naar makelaar = makelaarsdeel (incl. btw) van deals die wíj al ontvangen hebben,
   // maar nog niet aan de makelaar hebben doorbetaald. Over ALLE regels (totale schuld, niet periode-gebonden).
-  const openRows = FINLED.filter(x=>finJa(x.ontvangen) && !finJa(x.betaald_x));
+  const openRows = FINLED.filter(x=>finBronOk(x) && finJa(x.ontvangen) && !finJa(x.betaald_x));
   const openMak = openRows.reduce((s,x)=>s+(Number(x.ml_incl)||0),0);
+  const emz = FINLED.filter(finEenmanszaak).length;
   const sub = t => `<div style="font-size:11px;color:var(--muted);margin-top:3px">${t}</div>`;
+  const omzetSub = FINBRON==="recraparcs" ? sub("excl. "+emz+" eenmanszaak-regels (Kleen), niet meegeteld")
+                 : FINBRON==="eenmanszaak" ? sub("alleen eenmanszaak (Kleen)")
+                 : sub("incl. "+emz+" eenmanszaak-regels (Kleen)");
   $("finLedKpis").innerHTML =
     metric("Regels", String(r.length), sub(gekoppeld+" aan Pipedrive gekoppeld")) +
-    metric("Omzet (verkoopsom)", eur(omzet)) +
+    metric("Omzet (verkoopsom)", eur(omzet), omzetSub) +
     metric("Courtage Recraparcs incl.", eur(rp)) +
     metric("Betaald", String(betaald), sub((r.length-betaald)+" openstaand")) +
     metric("Openstaand naar makelaar", eur(openMak), sub(openRows.length+" deals · door ons ontvangen, nog niet doorbetaald"));
+  finBronStyle();
 }
 function finFilter(){
   const base = finPeriodSet();
