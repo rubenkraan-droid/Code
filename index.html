@@ -679,6 +679,14 @@
       </div>
       <div class="panel"><div class="scroll"><table id="adKanaalTable"></table></div></div>
     </div>
+    <details id="leadbronSec" style="margin-top:18px;border-top:1px solid var(--line);padding-top:10px">
+      <summary style="cursor:pointer;font-weight:600;color:var(--muted);padding:4px 0">
+        Leadkwaliteit · Facebook-formulier vs landingspagina
+        <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">Vergelijkt de kwaliteit van leads uit Facebook-formulieren (direct op Facebook ingevuld) met leads via de landingspagina, voor de gekozen periode. Alleen deals met een geregistreerde leadbron tellen mee; deals van vóór 10-11-2026 hebben nog geen bron en worden apart als "zonder bron" vermeld. Percentages onder 30 leads staan grijs: nog te weinig data voor een harde conclusie.</span></span>
+      </summary>
+      <div class="panel" style="margin-top:10px"><div class="scroll"><table id="leadbronTable"></table></div></div>
+      <p class="foot" id="leadbronFoot"></p>
+    </details>
     <p class="foot" id="adFoot"></p>
   </div>
 
@@ -1501,6 +1509,12 @@ function demoData(fn, args){
         const s=Math.round(r()*30); days.push({dag:demoIso(d), spend:s, clicks:Math.round(s*1.5), leads:Math.round(r()*3), afspraken: r()>0.9?1:0}); }
       return days; }
     case "ad_overview": return demoAds();
+    case "wd_leadbron_kwaliteit": return [
+      { bron:94, leads:Math.round(leads*0.55), gebeld:Math.round(leads*0.52), gesprek:Math.round(leads*0.09),
+        afspraken:Math.round(afspr*0.45), no_shows:Math.round(noShow*0.6), sales:Math.round(sales*0.35) },
+      { bron:95, leads:Math.round(leads*0.40), gebeld:Math.round(leads*0.38), gesprek:Math.round(leads*0.12),
+        afspraken:Math.round(afspr*0.55), no_shows:Math.round(noShow*0.4), sales:Math.round(sales*0.65) },
+      { bron:null, leads:Math.round(leads*0.05), gebeld:0, gesprek:0, afspraken:0, no_shows:0, sales:0 } ];
     case "ad_archive": return demoAds().map(a=>({ ...a, launch_date:null, kill_date:null }));
     case "ad_monthly": return mo.map(m=>({ maand:m.maand, spend:m.spend, leads:m.leads,
       cpl: m.leads?Math.round(m.spend/m.leads):0, afspraken:m.appointments, cpa:m.appointments?Math.round(m.spend/m.appointments):0,
@@ -3263,6 +3277,49 @@ async function renderAds(){
   $("adFoot").textContent = ADROWS.length
     ? `${k.leads_met_ad ?? 0} van ${leads} leads in deze periode zijn aan een advertentie gekoppeld · uitgaven en clicks uit Meta, leads, afspraken, sales en omzet uit Pipedrive via het AD ID op de deal.`
     : "Nog geen advertentiedata voor deze selectie.";
+  renderLeadbron(r, pp);
+}
+
+// Leadkwaliteit per bron (Facebook-formulier vs landingspagina), weggestopt onderaan de Advertenties-tab.
+async function renderLeadbron(r, pp){
+  const el = $("leadbronTable"); if(!el) return;
+  const rows = await rpc("wd_leadbron_kwaliteit", { ...r, p_park_id: pp }) || [];
+  const num = v => v==null ? 0 : Number(v);
+  const by = {}; let onbekend = 0;
+  for(const x of rows){
+    if(x.bron===94 || x.bron===95) by[x.bron] = x;
+    else onbekend += num(x.leads);
+  }
+  const pct = (a,b) => b>0 ? Math.round(a/b*100) : null;
+  function col(x){
+    const leads = num(x && x.leads), afspr = num(x && x.afspraken);
+    return { leads, few: leads<30, fewAf: afspr<10,
+      gebeld:pct(num(x && x.gebeld),leads), gesprek:pct(num(x && x.gesprek),leads),
+      afspraak:pct(afspr,leads), noshow:pct(num(x && x.no_shows),afspr), verkoop:pct(num(x && x.sales),leads) };
+  }
+  const F = col(by[94]), L = col(by[95]);
+  const foot = $("leadbronFoot");
+  if(F.leads===0 && L.leads===0){
+    el.innerHTML = `<tbody><tr><td style="color:var(--muted);padding:14px 10px">Nog geen leads met geregistreerde bron in deze periode${onbekend?` (${onbekend} zonder bron)`:""}.</td></tr></tbody>`;
+    if(foot) foot.textContent = "De leadbron wordt sinds 10-11-2026 vastgelegd; deals van daarvóór hebben nog geen bron.";
+    return;
+  }
+  const cell = (val, few) => val==null
+    ? '<td style="color:var(--muted)">—</td>'
+    : `<td${few?' style="color:var(--muted)"':''}>${val}%</td>`;
+  const rij = (label, fCell, lCell, tip) =>
+    `<tr><td class="tl">${label}${tip?` <span class="info" tabindex="0">i<span class="tip">${tip}</span></span>`:""}</td>${fCell}${lCell}</tr>`;
+  el.innerHTML =
+    `<thead><tr><th class="tl">Kwaliteit</th><th>Facebook-formulier</th><th>Landingspagina</th></tr></thead><tbody>` +
+    `<tr><td class="tl">Aantal leads</td><td>${F.leads||"—"}</td><td>${L.leads||"—"}</td></tr>` +
+    rij("% gebeld", cell(F.gebeld,F.few), cell(L.gebeld,L.few)) +
+    rij("% echt gesprek", cell(F.gesprek,F.few), cell(L.gesprek,L.few), "Minimaal één telefoongesprek dat echt gevoerd is (geen voicemail, geen niet-opgenomen poging).") +
+    rij("% naar afspraak", cell(F.afspraak,F.few), cell(L.afspraak,L.few)) +
+    rij("% no-show op afspraak", cell(F.noshow,F.fewAf), cell(L.noshow,L.fewAf), "Aandeel van de geplande afspraken waar de klant niet kwam opdagen. Grijs bij minder dan 10 afspraken.") +
+    rij("% naar verkoop", cell(F.verkoop,F.few), cell(L.verkoop,L.few)) +
+    `</tbody>`;
+  const weinig = (F.few||L.few) ? " Grijze percentages: nog minder dan 30 leads, te weinig voor een harde conclusie." : "";
+  if(foot) foot.textContent = `Alleen deals met geregistreerde leadbron.${onbekend?` ${onbekend} lead(s) zonder bron (van vóór 10-11-2026) tellen niet mee.`:""}${weinig}`;
 }
 
 let adDetailChart;
