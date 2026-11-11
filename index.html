@@ -716,14 +716,16 @@
       <button id="finTabCash" onclick="setFinView('cash')" style="padding:8px 16px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--text);font-weight:600;cursor:pointer">Cashflow</button>
       <button id="finTabPlan" onclick="setFinView('plan')" style="padding:8px 16px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--text);font-weight:600;cursor:pointer">Planning</button>
     </div>
-    <div style="margin-bottom:16px;display:flex;align-items:center;gap:8px">
-      <span style="font-size:12px;color:var(--muted)">Periode</span>
-      <select id="finPeriod" onchange="finPeriodChanged()" style="padding:6px 10px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--text);font-size:13px">
+    <div style="margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <label for="finPeriod" style="font-size:12px;color:var(--muted);font-weight:600">Periode</label>
+      <span class="info" tabindex="0">i<span class="tip">Filtert <b>betaalde</b> regels op passeerdatum. Openstaande (niet-betaalde) deals blijven altijd zichtbaar, ongeacht de gekozen periode, zodat je niets mist wat nog opgevolgd of geïncasseerd moet worden.</span></span>
+      <select id="finPeriod" onchange="finPeriodChanged()" style="padding:8px 12px;border:1.5px solid var(--accent);border-radius:8px;background:var(--card);color:var(--text);font-size:13px;font-weight:600;cursor:pointer">
         <option value="30">Laatste 30 dagen</option>
         <option value="90">Laatste 90 dagen</option>
         <option value="365">Laatste jaar</option>
-        <option value="all">Alles</option>
+        <option value="all">Alles (hele grootboek)</option>
       </select>
+      <span id="finPeriodHint" style="display:none;align-items:center;gap:6px;font-size:12.5px;color:#b45309;background:rgba(245,158,11,.13);border:1px solid rgba(245,158,11,.4);border-radius:8px;padding:5px 11px;font-weight:600"></span>
     </div>
 
     <div id="finViewGrootboek">
@@ -2189,7 +2191,9 @@ function finInWin(d){
   const dt = new Date(d); if(isNaN(dt)) return true;
   return dt.getTime() >= Date.now() - Number(FINPERIOD)*86400000;
 }
-function finPeriodSet(){ return FINLED.filter(r=>finInWin(r.passeren_date) && finBronOk(r)); }
+// Periode geldt alleen voor BETAALDE regels; openstaande (niet-betaalde) deals blijven altijd zichtbaar.
+function finInPeriode(r){ return finJa(r && r.betaald_x) ? finInWin(r && r.passeren_date) : true; }
+function finPeriodSet(){ return FINLED.filter(r=>finInPeriode(r) && finBronOk(r)); }
 function finBronStyle(){
   const on  = "background:var(--accent);color:#fff";
   const off = "background:var(--card);color:var(--text)";
@@ -2638,9 +2642,18 @@ function finCalcRow(r){
     pct_rp: o ? Math.round(rpE/o*1e6)/1e6 : null
   };
 }
+function updateFinPeriodHint(){
+  const el = $("finPeriodHint"); if(!el) return;
+  const verborgen = FINLED.filter(r => finBronOk(r) && !finInPeriode(r)).length;
+  if(FINPERIOD==="all" || verborgen===0){ el.style.display = "none"; return; }
+  el.style.display = "inline-flex";
+  el.innerHTML = `⚠ ${verborgen} betaalde ${verborgen===1?"verkoop valt":"verkopen vallen"} buiten deze periode `
+    + `<a href="#" onclick="event.preventDefault();$('finPeriod').value='all';finPeriodChanged();" style="color:inherit;font-weight:800;text-decoration:underline">Alles tonen</a>`;
+}
 function tekenFinTabel(){
   const rows = finFilter();
   $("finLedCount").textContent = `${rows.length} van ${FINLED.length} regels`;
+  updateFinPeriodHint();
   // Ja/Nee-cel met groen/rood, direct aanklikbaar om te wisselen (zonder het bewerkpaneel)
   const jc = (id, field, v) => {
     const s = String(v==null?"":v).trim().toLowerCase();
