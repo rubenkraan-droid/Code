@@ -4549,7 +4549,7 @@ async function renderBelDuur(){
        <td>${fmtDur(w.gem_gesprek_sec)}</td><td>${fmtDur(w.med_gesprek_sec)}</td><td>${fmtDur(w.gem_poging_sec)}</td></tr>`).join("")
        || `<tr><td colspan="12" style="color:var(--muted);padding:14px">Geen data in deze periode.</td></tr>`}</tbody>`;
   const totOngekoppeld = stats.reduce((a,s)=>a+(Number(s.zonder_deal)||0),0);
-  $("belDuurFoot").textContent = `Belletjes zonder gekoppelde deal tellen mee (ze zijn wel gebeld), maar staan apart in 'Niet aan deal' als datakwaliteit-signaal — nu ${totOngekoppeld}. Duur uit de CloudTalk-notitie; percentages op 1 decimaal.`;
+  $("belDuurFoot").textContent = `Let op: alleen gesprekken via CloudTalk tellen hier mee. Belt iemand (bijv. een makelaar) buiten CloudTalk om, dan verschijnt die hier niet — lees weinig of geen duur dus niet als 'belt nauwelijks'. Voor wie-sprak-wie los van CloudTalk: de kolom 'Gesprek' in de belcijfers-tabel hierboven. Belletjes zonder gekoppelde deal tellen wel mee, apart in 'Niet aan deal' als datakwaliteit-signaal — nu ${totOngekoppeld}. Duur uit de CloudTalk-notitie; percentages op 1 decimaal.`;
 }
 $("belDuurBeller").addEventListener("change", e=>{ BELDUUR_BELLER = e.target.value===""?null:Number(e.target.value); renderBelDuur(); });
 
