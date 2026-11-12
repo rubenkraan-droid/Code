@@ -3296,7 +3296,9 @@ async function renderAds(){
 // Leadkwaliteit per bron (Facebook-formulier vs landingspagina), weggestopt onderaan de Advertenties-tab.
 async function renderLeadbron(r, pp){
   const el = $("leadbronTable"); if(!el) return;
-  const rows = await rpc("wd_leadbron_kwaliteit", { ...r, p_park_id: pp }) || [];
+  // Leadbron bestaat pas sinds 10-11-2026; die leads zijn jonger dan de Uitgerijpt-grens.
+  // Daarom negeert dit blok de Uitgerijpt-einddatum (volRange = t/m vandaag) en toont het altijd alle leadbron-leads.
+  const rows = await rpc("wd_leadbron_kwaliteit", { ...volRange(r), p_park_id: pp }) || [];
   const num = v => v==null ? 0 : Number(v);
   const by = {}; let onbekend = 0;
   for(const x of rows){
@@ -3307,7 +3309,7 @@ async function renderLeadbron(r, pp){
   function col(x){
     const leads = num(x && x.leads), afspr = num(x && x.afspraken);
     return { leads, few: leads<30, fewAf: afspr<10,
-      gebeld:pct(num(x && x.gebeld),leads), gesprek:pct(num(x && x.gesprek),leads),
+      gebeld:pct(num(x && x.gebeld),leads),
       afspraak:pct(afspr,leads), noshow:pct(num(x && x.no_shows),afspr), verkoop:pct(num(x && x.sales),leads) };
   }
   const F = col(by[94]), L = col(by[95]);
@@ -3325,8 +3327,7 @@ async function renderLeadbron(r, pp){
   el.innerHTML =
     `<thead><tr><th class="tl">Kwaliteit</th><th>Facebook-formulier</th><th>Landingspagina</th></tr></thead><tbody>` +
     `<tr><td class="tl">Aantal leads</td><td>${F.leads||"—"}</td><td>${L.leads||"—"}</td></tr>` +
-    rij("% gebeld", cell(F.gebeld,F.few), cell(L.gebeld,L.few)) +
-    rij("% echt gesprek", cell(F.gesprek,F.few), cell(L.gesprek,L.few), "Minimaal één telefoongesprek dat echt gevoerd is (geen voicemail, geen niet-opgenomen poging).") +
+    rij("% gesproken", cell(F.gebeld,F.few), cell(L.gebeld,L.few), "Er is minstens één belactiviteit op de lead vastgelegd, oftewel de lead is gesproken. De makelaars bellen deels buiten CloudTalk om, dus een afgeronde belactiviteit is hier het betrouwbaarste contactsignaal (de oude CloudTalk-gespreksmeting zag die calls niet).") +
     rij("% naar afspraak", cell(F.afspraak,F.few), cell(L.afspraak,L.few)) +
     rij("% no-show op afspraak", cell(F.noshow,F.fewAf), cell(L.noshow,L.fewAf), "Aandeel van de geplande afspraken waar de klant niet kwam opdagen. Grijs bij minder dan 10 afspraken.") +
     rij("% naar verkoop", cell(F.verkoop,F.few), cell(L.verkoop,L.few)) +
