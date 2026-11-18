@@ -498,15 +498,16 @@
     </select>
     <input type="date" id="fFrom" class="hidden" />
     <input type="date" id="fTo" class="hidden" />
-    <select id="fPark"></select>
+    <select id="fPark" style="display:none"></select>
     <select id="fAgent"></select>
     <button id="recravasBtn" class="btn impact" title="Toon alleen resultaten vanaf 17 juli: het werk van Recraparcs.">Recraparcs <small>vanaf 17 juli</small></button>
     <button id="supermindsBtn" class="btn impact" title="Toon alleen resultaten tot 17 juli: het werk van de vorige marketingpartij Superminds.">Superminds <small>tot 17 juli</small></button>
-    <button id="uitgerijptBtn" class="btn impact" title="Toon alleen leads van 17 juli tot 25 dagen geleden — oud genoeg om (bij een cyclus van ~25 dagen) te zijn omgeslagen. De einddatum rolt automatisch mee met vandaag.">Uitgerijpt <small>17 jul &ndash; 25 dgn geleden</small></button>
+    <button id="uitgerijptBtn" class="btn impact" title="Toon alleen leads die oud genoeg zijn om te zijn omgeslagen: van 17 juli tot de uitrijptermijn geleden. Die termijn = het 80e percentiel van de doorlooptijd lead→verkoop van het gekozen park (terugval 25 dagen bij te weinig verkopen). De einddatum rolt automatisch mee met vandaag.">Uitgerijpt <small>17 jul &ndash; uitgerijpt</small></button>
   </div>
   <div id="impactBanner" class="impactbanner"><span>◉</span><span id="impactBannerTxt"></span></div>
 
   <div id="tabResultaten">
+  <div id="fParkUnits" class="tabs hidden" style="margin-bottom:16px"></div>
   <div id="liveSec" class="hidden">
     <div class="banner"><span style="color:var(--good)">●</span><span>Live uit Pipedrive · echte leads</span></div>
     <div class="cards" id="liveCards"></div>
@@ -586,6 +587,15 @@
       <span class="info" tabindex="0">i<span class="tip">Elke rij is het cohort van leads dat in die maand binnenkwam, met de advertentie-uitgaven van die maand en het uiteindelijke resultaat van dat cohort (afspraken, sales, omzet), ongeacht wanneer het omsloeg. ROAS = omzet ÷ uitgaven. Recente maanden moeten nog omslaan, dus lage cijfers daar zijn normaal.</span></span>
     </div>
     <div class="panel" style="margin-bottom:26px"><div class="scroll"><table id="ownerCohortTable"></table></div></div>
+  </div>
+
+  <div id="doorloopSec" class="hidden">
+    <div class="sec">Doorlooptijd lead tot verkoop
+      <span class="info" tabindex="0">i<span class="tip">Aantal dagen tussen de lead en de getekende verkoop. Elke verkoop telt op de verkoopdatum, niet op de leaddatum. Verkoop = deal met een verkoopdatum, bedrag &gt; 0, geen ontbinding en een stage die als akkoord telt. De uitrijping (hoe lang een lead de tijd krijgt om om te slaan) beweegt mee met het 80e percentiel hiervan voor het gekozen park.</span></span>
+    </div>
+    <div class="cards" id="doorloopKpis"></div>
+    <div class="panel" style="margin:12px 0 8px"><div style="height:240px"><canvas id="doorloopChart"></canvas></div></div>
+    <p class="foot" id="doorloopFoot"></p>
   </div>
 
   <div id="liveMonthsSec" class="hidden">
@@ -1568,8 +1578,31 @@ function demoAgentData(fn, args){
 
 const IMPACT_DATUM = '2026-07-17';        // RecraVas: vanaf deze dag
 const IMPACT_DATUM_VOOR = '2026-07-16';  // Superminds: t/m deze dag (dag vóór de overname)
-const RIJP_DAGEN = 25;                   // Uitgerijpt: einddatum = vandaag − dit aantal dagen (≈ sales-cyclus)
-// periode-bron: 'alles' (standaard) | 'recravas' (vanaf 17 juli) | 'superminds' (tot 17 juli) | 'uitgerijpt' (17 juli t/m vandaag−25d, meerollend)
+const RIJP_DAGEN = 25;                   // Uitgerijpt: vaste terugval-termijn (dagen) bij te weinig verkopen voor een eigen uitrijping
+// Dynamische uitrijping: per park de 80e-percentiel doorlooptijd lead->verkoop (RPC lead_sale_cycle); terugval op RIJP_DAGEN bij <8 verkopen.
+let RIJP_DYN = { dagen: RIJP_DAGEN, bron: "vast", n: 0, p80: null, park: "__init__" };
+async function ensureUitrijping(pp){
+  const key = pp==null ? "all" : String(pp);
+  if(RIJP_DYN.park === key) return RIJP_DYN;              // al geladen voor dit park
+  let d = { dagen: RIJP_DAGEN, bron: "vast", n: 0, p80: null, park: key };
+  try {
+    const c = await rpc("lead_sale_cycle", { p_park_id: pp });
+    const n = Number(c && c.n_sales) || 0;
+    const p80 = (c && c.lead_sale) ? Number(c.lead_sale.p80) : 0;
+    if(n >= 8 && p80 > 0) d = { dagen: p80, bron: "p80", n: n, p80: p80, park: key };
+    else d.n = n;
+  } catch(e){ /* terugval op de vaste waarde */ }
+  RIJP_DYN = d;
+  if(PERIODE_BRON === "uitgerijpt") pasImpactToggleToe();  // banner bijwerken met de geladen termijn
+  return d;
+}
+function uitgerijptUitleg(){
+  const d = RIJP_DYN, staart = " De einddatum rolt mee met vandaag; recentere leads blijven buiten beschouwing.";
+  if(d.bron === "p80")
+    return `Uitgerijpt · leads van 17 juli tot ${d.dagen} dagen geleden — 80% van de ${d.n} verkopen van dit park viel binnen deze termijn (80e percentiel van de doorlooptijd lead→verkoop).` + staart;
+  return `Uitgerijpt · leads van 17 juli tot ${d.dagen} dagen geleden — vaste termijn, want te weinig verkopen (${d.n}) voor een eigen uitrijping (minimaal 8 nodig).` + staart;
+}
+// periode-bron: 'alles' (standaard) | 'recravas' (vanaf 17 juli) | 'superminds' (tot 17 juli) | 'uitgerijpt' (17 juli t/m vandaag−p80, per park, meerollend)
 let PERIODE_BRON = localStorage.getItem("periode_bron") || "alles";
 function pasImpactToggleToe(){
   $("recravasBtn").classList.toggle("aan", PERIODE_BRON==="recravas");
@@ -1578,7 +1611,7 @@ function pasImpactToggleToe(){
   $("impactBanner").classList.toggle("aan", PERIODE_BRON!=="alles");
   if(PERIODE_BRON==="recravas") $("impactBannerTxt").textContent = "Recraparcs · resultaten vanaf 17 juli. Alles daarvóór is buiten beschouwing gelaten.";
   else if(PERIODE_BRON==="superminds") $("impactBannerTxt").textContent = "Superminds · resultaten tot 17 juli (vorige marketingpartij). Alles daarna is buiten beschouwing gelaten.";
-  else if(PERIODE_BRON==="uitgerijpt") $("impactBannerTxt").textContent = "Uitgerijpt · leads van 17 juli tot " + RIJP_DAGEN + " dagen geleden — oud genoeg om (bij een cyclus van ~" + RIJP_DAGEN + " dagen) te zijn omgeslagen. De einddatum rolt mee met vandaag; recentere leads blijven buiten beschouwing.";
+  else if(PERIODE_BRON==="uitgerijpt") $("impactBannerTxt").textContent = uitgerijptUitleg();
 }
 function kiesBron(bron){
   PERIODE_BRON = (PERIODE_BRON===bron) ? "alles" : bron;   // nogmaals klikken zet 'm weer uit
@@ -1617,7 +1650,7 @@ function periodRange(){
   // Uitgerijpt: vanaf 17 juli, en einddatum meerollend op vandaag − RIJP_DAGEN (alleen leads die tijd hadden om om te slaan).
   if(PERIODE_BRON==="uitgerijpt"){
     if(p_from < IMPACT_DATUM) p_from = IMPACT_DATUM;
-    const rijp = new Date(today); rijp.setDate(today.getDate()-RIJP_DAGEN);
+    const rijp = new Date(today); rijp.setDate(today.getDate()-RIJP_DYN.dagen);
     const rijpIso = iso(rijp);
     if(p_to > rijpIso) p_to = rijpIso;
   }
@@ -2040,6 +2073,22 @@ $("fPeriod").addEventListener("change", e=>{
 });
 let refresh = ()=>{};
 ["fFrom","fTo","fPark","fAgent"].forEach(id=>$(id).addEventListener("change", ()=>{ refresh(); renderActieveTab(); }));
+
+/* Parkfilter als klikbare units (pills) i.p.v. dropdown; de verborgen fPark-select blijft de bron van waarheid. */
+function syncParkUnits(){
+  const sel = $("fPark"), box = $("fParkUnits"); if(!sel || !box) return;
+  const opts = Array.from(sel.options);
+  if(sel.classList.contains("hidden") || opts.length <= 1){ box.classList.add("hidden"); box.innerHTML = ""; return; }
+  const cur = sel.value;
+  box.innerHTML = opts.map(o=>`<button type="button" class="tab${o.value===cur?" active":""}"${sel.disabled?" disabled":""} data-val="${escAttr(o.value)}">${esc(o.text)}</button>`).join("");
+  box.classList.remove("hidden");
+}
+$("fParkUnits").addEventListener("click", e=>{
+  const b = e.target.closest(".tab"); if(!b || b.disabled) return;
+  const sel = $("fPark");
+  if(sel.value !== b.dataset.val){ sel.value = b.dataset.val; sel.dispatchEvent(new Event("change")); }
+  else syncParkUnits();
+});
 // Periode-bron: RecraVas (vanaf 17 juli) / Superminds (tot 17 juli) / alles. Onthouden per browser.
 pasImpactToggleToe();
 $("recravasBtn").addEventListener("click", ()=>kiesBron("recravas"));
@@ -3180,6 +3229,7 @@ async function renderAds(){
   }
   setBranding(pp);
   ADROASCAP = Infinity;   // ROAS wordt nergens meer gecapt (ook demopark rekent op echte cijfers)
+  await ensureUitrijping(pp);
   const r = periodRange();
   const rPrevAd = vorigePeriode(r);
   const rijpA = isUitgerijpt(), rVolA = volRange(r);
@@ -3876,7 +3926,69 @@ async function renderGepland(parkId, agentId){
        || `<tr><td colspan="5" style="color:var(--muted);padding:14px">Nog geen afspraken gepland die nog moeten plaatsvinden.</td></tr>`}</tbody>`;
   return rows.length;
 }
+// Doorlooptijd lead -> verkoop (RPC lead_sale_cycle), per park gescoopt. Owner-only sectie op Resultaten.
+let doorloopChart;
+async function renderDoorloop(pp){
+  const sec = $("doorloopSec"); if(!sec) return;
+  const data = await rpc("lead_sale_cycle", { p_park_id: pp }).catch(()=>null);
+  const ls = data && data.lead_sale;
+  const sales = (data && data.sales) || [];
+  const n = Number(data && data.n_sales) || 0;
+  if(!ls || !n){
+    sec.classList.add("hidden");
+    if(doorloopChart){ doorloopChart.destroy(); doorloopChart = null; }
+    return;
+  }
+  sec.classList.remove("hidden");
+  const basis = `<div class="l" style="margin:5px 0 0">op basis van ${n} ${n===1?"verkoop":"verkopen"}</div>`;
+  $("doorloopKpis").className = "cards";
+  $("doorloopKpis").innerHTML =
+    metric("Gemiddelde doorlooptijd", `${Number(ls.gem).toLocaleString("nl-NL")} dgn`, basis) +
+    metric("Mediaan", `${ls.mediaan} dgn`, basis) +
+    metric("Binnen 30 dagen", `${ls.binnen30}%`) +
+    metric("Binnen 60 dagen", `${ls.binnen60}%`) +
+    metric("Binnen 90 dagen", `${ls.binnen90}%`);
+  // Stippengrafiek: x = leaddatum (timestamp op lineaire as, geen time-adapter nodig), y = doorlooptijd.
+  const pts = sales.filter(s=>s.lag_lead_sale!=null && s.lead_datum).map(s=>({
+    x: Date.parse(s.lead_datum), y: Number(s.lag_lead_sale),
+    deal: s.deal_id, lead: s.lead_datum, sale: s.verkoop_datum, ad: s.ad_naam }));
+  let acc = "#2C5F52"; try { acc = parkAccent(pp) || acc; } catch(e){}
+  const med = Number(ls.mediaan);
+  const xs = pts.map(p=>p.x);
+  const xmin = xs.length ? Math.min(...xs) : 0, xmax = xs.length ? Math.max(...xs) : 1;
+  if(doorloopChart) doorloopChart.destroy();
+  doorloopChart = new Chart($("doorloopChart"), {
+    data: { datasets: [
+      { type:"scatter", label:"Verkoop", data:pts, backgroundColor:acc, borderColor:acc, pointRadius:5, pointHoverRadius:7, order:1 },
+      { type:"line", label:`Mediaan ${med} dgn`, data:[{x:xmin,y:med},{x:xmax,y:med}], borderColor:"#94A1B5", borderDash:[6,5], borderWidth:1.5, pointRadius:0, fill:false, order:2 }
+    ]},
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      interaction:{ mode:"nearest", intersect:true },
+      scales:{
+        x:{ type:"linear", grid:{ display:false },
+            ticks:{ callback:v=>new Date(v).toLocaleDateString("nl-NL",{day:"numeric",month:"short"}), maxRotation:0, autoSkip:true, maxTicksLimit:8 } },
+        y:{ beginAtZero:true, title:{ display:true, text:"Doorlooptijd (dagen)" } }
+      },
+      plugins:{
+        legend:{ display:true, labels:{ usePointStyle:true, boxWidth:8 } },
+        tooltip:{ filter: it => it.datasetIndex===0, callbacks:{
+          title: items => items[0]?.raw?.deal ? `Deal ${items[0].raw.deal}` : "",
+          label: it => { const d=it.raw||{}; return [
+            `Lead: ${d.lead?new Date(d.lead).toLocaleDateString("nl-NL"):"—"}`,
+            `Verkoop: ${d.sale?new Date(d.sale).toLocaleDateString("nl-NL"):"—"}`,
+            `Doorlooptijd: ${d.y} dagen`,
+            `Advertentie: ${d.ad||"—"}` ]; }
+        }}
+      }
+    }
+  });
+  const foot = $("doorloopFoot");
+  if(foot) foot.textContent = `Elke stip is één verkoop, geplaatst op de leaddatum. Stippellijn = mediaan (${med} dagen). Verkoop = getekend akkoord met verkoopdatum, niet ontbonden.`;
+}
+
 async function renderOwner(){
+  { const v = $("fPark").value; await ensureUitrijping((v===""||v==="all") ? null : Number(v)); }
   const r = periodRange();
   // gescoopte eigenaar (Carl-login) of Karl-preview: park vastzetten en het parkfilter vergrendelen.
   // Carl mét extra ad-parken mag wél kiezen tussen zijn toegestane parken (standaard eigen park).
@@ -3898,6 +4010,7 @@ async function renderOwner(){
   scopePark = parkNum;   // parkfilter (dropdown) ook doorvoeren in de Per makelaar-sectie / setter-rij / omzet-per-park
   renderLive(r, parkNum);
   setBranding(parkNum);
+  syncParkUnits();
 
   const rPrev = vorigePeriode(r);
   const funnelRpc = rr => parkVal==="all" ? rpc("owner_total_funnel", rr) : rpc("client_park_funnel", {p_park_id:Number(parkVal), ...rr});
@@ -4018,6 +4131,7 @@ async function renderOwner(){
   // cohort-rendement per lead-maand (advertentie-uitgaven vs resultaat van dat cohort) — owner-only, park-gescoopt
   const cohortMo = await rpc("ad_monthly", { p_park_id: parkVal==="all"?null:Number(parkVal), p_from:r.p_from, p_to:r.p_to }) || [];
   renderAdMonths(cohortMo, "ownerCohortTable", "ownerCohortSec");
+  renderDoorloop(parkVal==="all"?null:Number(parkVal));
   // Onder Optie (WD-tussenstap): afvalratio + conversievergelijking (direct vs via optie). Alleen bij WD in beeld.
   $("optieSec").classList.toggle("hidden", !toonOptie);
   if(toonOptie){
@@ -4057,6 +4171,7 @@ async function renderOwner(){
 /* ---------- MAKELAAR: eigen cijfers + teamgemiddelde, geen collega's ---------- */
 async function renderAgent(agentId){
   $("ownerCohortSec").classList.add("hidden");   // cohort-rendement is owner-only
+  $("doorloopSec").classList.add("hidden");
   $("optieSec").classList.add("hidden");        // Onder Optie-analyse is owner-only
   const r = periodRange();
   const parkVal = $("fPark").value;
@@ -4112,6 +4227,7 @@ async function renderAgent(agentId){
 /* ---------- RECREATIEONTWIKKELAAR: alleen parkgemiddelden ---------- */
 async function renderPark(parkId){
   $("ownerCohortSec").classList.add("hidden");   // cohort-rendement is owner-only
+  $("doorloopSec").classList.add("hidden");
   $("optieSec").classList.add("hidden");        // Onder Optie-analyse is owner-only
   const r = periodRange();
   setBranding(parkId);
