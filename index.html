@@ -3258,10 +3258,10 @@ async function renderAds(){
         afsprBet=Number(k.afspraken_betaald ?? k.afspraken)||0;
   const netwSales = Math.max(0, sales - salesBet);     // netwerk/referral: wel prestatie, niet in ROAS
   const netwAfspr = Math.max(0, afspr - afsprBet);     // idem voor de afspraak achter een netwerk-sale
-  const roasTip = ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">ROAS = omzet uit betaalde advertenties &#247; advertentie-uitgaven. Netwerk-/referral-sales (zonder advertentiebudget) tellen hier bewust NIET mee, zodat het advertentierendement niet vertekend raakt.</span></span>`;
-  const kpsTip = ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">Advertentie-uitgaven &#247; het aantal sales uit betaalde advertenties (netwerk/referral niet meegerekend).</span></span>`;
+  const roasTip = ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">ROAS = totale omzet &#247; advertentie-uitgaven. Verkopen uit het eigen netwerk (zonder advertentiebudget) tellen hier óók mee.</span></span>`;
+  const kpsTip = ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">Advertentie-uitgaven &#247; alle sales, inclusief verkopen uit het eigen netwerk.</span></span>`;
   const cohortTip = ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">Sales en omzet worden hier toegeschreven aan de periode waarin de <b>lead</b> binnenkwam (ad-cohort), zodat ROAS zuiver blijft: omzet &#247; de advertentie-uitgaven van diezelfde leads. Onder Recraparcs/Uitgerijpt (vanaf 17 juli) tellen sales uit leads van vóór 17 juli (Superminds) hier dus niet mee, ook al zijn ze later getekend. Het gerealiseerde totaal, geteld op <b>verkoopdatum</b>, staat op de Resultaten-tab.</span></span>`;
-  const kpaTip = ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">Advertentie-uitgaven &#247; het aantal afspraken uit betaalde advertenties (afspraken uit eigen netwerk niet meegerekend).</span></span>`;
+  const kpaTip = ` <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">Advertentie-uitgaven &#247; alle afspraken, inclusief afspraken uit het eigen netwerk.</span></span>`;
   const prevCpl = kPrev && Number(kPrev.leads)>0 ? Number(kPrev.spend)/Number(kPrev.leads) : null;
   const sMnd = (mnd||[]).slice(-8);
   $("adKpis").innerHTML =
@@ -3269,12 +3269,12 @@ async function renderAds(){
     metric("Clicks", clicks.toLocaleString("nl-NL")) +
     metric("Leads", leads, deltaSub(leads,kPrev&&kPrev.leads,heeftPrevAd)+sparkline(sMnd.map(x=>x.leads),"#5B8DEF")) +
     metric("Kosten per lead", leads ? eur(spend/leads) : "—", leads&&prevCpl!=null ? deltaSub(spend/leads,prevCpl,true,true) : "") +
-    metric("Afspraken", afspr, (netwAfspr>0 ? `<div class="l" style="margin:5px 0 0">waarvan ${netwAfspr} uit eigen netwerk <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">${netwAfspr===1?"Deze afspraak komt":"Deze afspraken komen"} uit het eigen netwerk, niet uit een advertentie. ${netwAfspr===1?"Hij telt":"Ze tellen"} wel mee als afspraak, maar niet in de kosten-per-afspraak.</span></span></div>` : "") + geplandSub(geplandAd)) +
-    metric("Kosten per afspraak"+kpaTip, afsprBet ? eur(spend/afsprBet) : "—") +
-    metric("Sales"+cohortTip, sales, defSub(dsAds) + (netwSales>0 ? `<div class="l" style="margin:5px 0 0">waarvan ${netwSales} uit eigen netwerk <span class="info" tabindex="0" onclick="event.stopPropagation()">i<span class="tip">${netwSales===1?"Deze sale komt":"Deze sales komen"} uit het eigen netwerk, niet uit een advertentie. ${netwSales===1?"Hij telt":"Ze tellen"} wel mee als omzet en sale (prestatie), maar bewust NIET in de ROAS en de kosten-per-sale, zodat het advertentierendement zuiver blijft.</span></span></div>` : "")) +
-    metric("Kosten per sale"+kpsTip, salesBet ? eur(spend/salesBet) : "—") +
+    metric("Afspraken", afspr, geplandSub(geplandAd)) +
+    metric("Kosten per afspraak"+kpaTip, afspr ? eur(spend/afspr) : "—") +
+    metric("Sales"+cohortTip, sales, defSub(dsAds)) +
+    metric("Kosten per sale"+kpsTip, sales ? eur(spend/sales) : "—") +
     metric("Omzet"+cohortTip, eur(omzet)) +
-    metric("ROAS"+roasTip, spend ? Math.min(ADROASCAP, omzetBet/spend).toFixed(2) : "—");
+    metric("ROAS"+roasTip, spend ? Math.min(ADROASCAP, omzet/spend).toFixed(2) : "—");
 
   const dd = daily || [];
   const dt2 = d => new Date(d).toLocaleDateString("nl-NL",{day:"numeric",month:"short"});
