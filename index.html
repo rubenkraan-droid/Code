@@ -498,7 +498,7 @@
     </select>
     <input type="date" id="fFrom" class="hidden" />
     <input type="date" id="fTo" class="hidden" />
-    <select id="fPark" style="display:none"></select>
+    <select id="fPark"></select>
     <select id="fAgent"></select>
     <button id="recravasBtn" class="btn impact" title="Toon alleen resultaten vanaf 17 juli: het werk van Recraparcs.">Recraparcs <small>vanaf 17 juli</small></button>
     <button id="supermindsBtn" class="btn impact" title="Toon alleen resultaten tot 17 juli: het werk van de vorige marketingpartij Superminds.">Superminds <small>tot 17 juli</small></button>
@@ -2075,13 +2075,8 @@ let refresh = ()=>{};
 ["fFrom","fTo","fPark","fAgent"].forEach(id=>$(id).addEventListener("change", ()=>{ refresh(); renderActieveTab(); }));
 
 /* Parkfilter als klikbare units (pills) i.p.v. dropdown; de verborgen fPark-select blijft de bron van waarheid. */
-function syncParkUnits(){
-  const sel = $("fPark"), box = $("fParkUnits"); if(!sel || !box) return;
-  const opts = Array.from(sel.options);
-  if(sel.classList.contains("hidden") || opts.length <= 1){ box.classList.add("hidden"); box.innerHTML = ""; return; }
-  const cur = sel.value;
-  box.innerHTML = opts.map(o=>`<button type="button" class="tab${o.value===cur?" active":""}"${sel.disabled?" disabled":""} data-val="${escAttr(o.value)}">${esc(o.text)}</button>`).join("");
-  box.classList.remove("hidden");
+function syncParkUnits(){ /* tijdelijk uit: parkfilter blijft de dropdown. Units worden later per-rol/per-tab opnieuw ontworpen (zie overzicht-mock-ups). */
+  const box = $("fParkUnits"); if(box){ box.classList.add("hidden"); box.innerHTML = ""; }
 }
 $("fParkUnits").addEventListener("click", e=>{
   const b = e.target.closest(".tab"); if(!b || b.disabled) return;
