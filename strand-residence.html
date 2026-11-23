@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Strand Residence Leads</title>
+<!-- Leadportaal Strand Residence voor externen. Login met naam + pincode (geen Supabase Auth).
+     Alles loopt via de edge function spiegel-portaal; schrijven gaat eerst naar Pipedrive.
+     Broncode backend: Recraparcs/02 Parken Nederland/Strand Residence Bergen aan Zee/Spiegeldatabase -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23313A49'/%3E%3Cpath d='M18 64 34 44 50 64 66 44 82 64' fill='none' stroke='%23E1E1D8' stroke-width='7' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&family=Titillium+Web:wght@400;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#F3F2EE; --card:#FFFFFF; --surface-2:#EAE9E2; --kiezel:#E1E1D8;
+    --ink:#262B33; --muted:#6F6A67; --faint:#A39E9A;
+    --line:#E3E1DA; --line-strong:#CFCCC3;
+    --accent:#313A49; --accent-ink:#FFFFFF; --accent-soft:#E4E7EC;
+    --blauw:#8BABBA; --terra:#9E6B60; --olijf:#5C6963; --zand:#C2AE8F; --wijn:#751F38;
+    --ok:#3E6B57; --ok-soft:#E3EEE7; --warn:#9A5B12; --warn-soft:#F7ECDD; --err:#A33A3A; --err-soft:#F6E3E1;
+    --serif:"Source Serif 4",Georgia,serif;
+    --sans:"Titillium Web",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    --radius:12px; --shadow:0 1px 2px rgba(38,43,51,.06),0 8px 24px rgba(38,43,51,.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#171A20; --card:#20242C; --surface-2:#282D37; --kiezel:#2E333D;
+      --ink:#ECEBE6; --muted:#A8A39F; --faint:#6E6A67;
+      --line:#2F343E; --line-strong:#3E4450;
+      --accent:#C9CFDA; --accent-ink:#1B1F27; --accent-soft:#2C3340;
+      --ok:#7FB79C; --ok-soft:#22332B; --warn:#E0A75C; --warn-soft:#3A2E1E; --err:#E58C8C; --err-soft:#3D2526;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#171A20; --card:#20242C; --surface-2:#282D37; --kiezel:#2E333D;
+    --ink:#ECEBE6; --muted:#A8A39F; --faint:#6E6A67;
+    --line:#2F343E; --line-strong:#3E4450;
+    --accent:#C9CFDA; --accent-ink:#1B1F27; --accent-soft:#2C3340;
+    --ok:#7FB79C; --ok-soft:#22332B; --warn:#E0A75C; --warn-soft:#3A2E1E; --err:#E58C8C; --err-soft:#3D2526;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  button,input,select,textarea{font:inherit;color:inherit}
+  a{color:inherit}
+  [hidden]{display:none !important}
+  .zigzag{display:block}
+
+  /* ── Login ── */
+  .login{min-height:100vh;display:grid;place-items:center;padding:24px 16px}
+  .login-kaart{width:100%;max-width:380px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:32px 28px;box-shadow:var(--shadow)}
+  .merk{display:flex;flex-direction:column;align-items:flex-start;gap:2px;margin-bottom:22px}
+  .merk-naam{font-family:var(--serif);font-weight:600;font-size:26px;letter-spacing:-.01em;line-height:1.1}
+  .merk-sub{font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted)}
+  .login h1{font-size:15px;font-weight:600;margin:0 0 4px}
+  .login p.uitleg{margin:0 0 20px;color:var(--muted);font-size:14px}
+  label.veld{display:block;margin-bottom:14px}
+  label.veld>span{display:block;font-size:13px;font-weight:600;margin-bottom:5px}
+  input[type=text],input[type=password],input[type=date],input[type=time],input[type=number],input[type=tel],input[type=email],select,textarea{
+    width:100%;background:var(--card);border:1px solid var(--line-strong);border-radius:9px;padding:9px 11px;outline:none;transition:border-color .15s,box-shadow .15s}
+  textarea{resize:vertical;min-height:84px}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  input.pin{letter-spacing:.4em;font-size:20px;text-align:center}
+  .knop{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid transparent;border-radius:9px;padding:9px 15px;font-weight:600;cursor:pointer;background:var(--accent);color:var(--accent-ink);transition:opacity .15s}
+  .knop:hover{opacity:.9}
+  .knop:disabled{opacity:.5;cursor:default}
+  .knop.licht{background:transparent;color:var(--ink);border-color:var(--line-strong)}
+  .knop.licht:hover{background:var(--surface-2);opacity:1}
+  .knop.klein{padding:5px 10px;font-size:13px;border-radius:8px}
+  .knop.vol{width:100%}
+  .melding{border-radius:9px;padding:9px 12px;font-size:14px;margin:0 0 14px}
+  .melding.fout{background:var(--err-soft);color:var(--err)}
+  .melding.ok{background:var(--ok-soft);color:var(--ok)}
+
+  /* ── App-shell ── */
+  header.balk{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:14px;padding:10px 20px;background:var(--card);border-bottom:1px solid var(--line)}
+  header.balk .merk{margin:0;flex-direction:row;align-items:baseline;gap:10px}
+  header.balk .merk-naam{font-size:20px}
+  .balk-rechts{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted)}
+  .balk-rechts .wie{color:var(--ink);font-weight:600}
+  main{max-width:1280px;margin:0 auto;padding:20px}
+
+  .fasen{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:14px;scrollbar-width:thin}
+  .fase{flex:0 0 auto;min-width:118px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;text-align:left;cursor:pointer}
+  .fase:hover{border-color:var(--line-strong)}
+  .fase.aan{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+  .fase .n{font-family:var(--serif);font-size:22px;font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums}
+  .fase .l{font-size:12px;color:var(--muted);line-height:1.25;display:block;max-width:150px}
+
+  .filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
+  .filters input[type=text]{max-width:300px}
+  .filters select{width:auto}
+  .filters .aantal{margin-left:auto;color:var(--muted);font-size:13px}
+  .vink{display:inline-flex;align-items:center;gap:6px;font-size:14px;cursor:pointer;user-select:none}
+
+  .tabel-kaart{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  table{width:100%;border-collapse:collapse}
+  th{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--surface-2);white-space:nowrap}
+  td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  tbody tr{cursor:pointer}
+  tbody tr:hover{background:var(--surface-2)}
+  tbody tr.open{background:var(--accent-soft)}
+  .naam{font-weight:600}
+  .klein{font-size:13px;color:var(--muted)}
+  .tel{white-space:nowrap}
+  .tel a{text-decoration:none;border-bottom:1px dotted var(--faint)}
+  .label{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--kiezel);color:var(--ink);white-space:nowrap}
+  .label.won{background:var(--ok-soft);color:var(--ok)}
+  .label.lost{background:var(--err-soft);color:var(--err)}
+  .te-laat{color:var(--err);font-weight:600}
+  .vandaag{color:var(--warn);font-weight:600}
+  .leeg{padding:40px 20px;text-align:center;color:var(--muted)}
+
+  /* ── Detailpaneel ── */
+  .scherm{position:fixed;inset:0;background:rgba(23,26,32,.35);z-index:30}
+  aside.paneel{position:fixed;top:0;right:0;bottom:0;width:min(620px,100%);background:var(--bg);z-index:31;display:flex;flex-direction:column;box-shadow:-12px 0 32px rgba(0,0,0,.12)}
+  .paneel-kop{display:flex;align-items:flex-start;gap:12px;padding:18px 20px 14px;background:var(--card);border-bottom:1px solid var(--line)}
+  .paneel-kop h2{font-family:var(--serif);font-weight:600;font-size:22px;margin:0;line-height:1.2}
+  .paneel-kop .sluit{margin-left:auto}
+  .paneel-romp{overflow-y:auto;padding:16px 20px 40px;flex:1}
+  section.blok{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px 16px 6px;margin-bottom:14px}
+  section.blok>h3{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 12px}
+  section.blok>h3 .knop{margin-left:auto;text-transform:none;letter-spacing:0}
+  .raster{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 14px}
+  .raster>*,.rij2>*,.rij3>*,.paneel-kop>div{min-width:0}
+  select{max-width:100%;text-overflow:ellipsis}
+  aside.paneel{max-width:100vw;overflow-x:hidden}
+  .raster .heel{grid-column:1/-1}
+  .gegeven{margin-bottom:12px}
+  .gegeven dt{font-size:12px;color:var(--muted);margin:0}
+  .gegeven dd{margin:0;word-break:break-word}
+  .opslaan-rij{display:flex;gap:8px;align-items:center;justify-content:flex-end;padding:4px 0 12px}
+  .opslaan-rij .status{margin-right:auto;font-size:13px;color:var(--muted)}
+  .act{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+  .act:first-of-type{border-top:0}
+  .act input[type=checkbox]{width:18px;height:18px;margin-top:3px;accent-color:var(--ok);flex:0 0 auto;cursor:pointer}
+  .act.klaar .act-titel{text-decoration:line-through;color:var(--muted)}
+  .act-titel{font-weight:600}
+  .act-notitie{white-space:pre-wrap;font-size:14px;color:var(--muted);margin-top:2px}
+  .notitie{padding:12px 0;border-top:1px solid var(--line)}
+  .notitie:first-of-type{border-top:0}
+  .notitie-tekst{white-space:pre-wrap;word-break:break-word}
+  .notitie-kop{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--muted);margin-bottom:4px}
+  .notitie-kop .knop{margin-left:auto}
+  .formulier{background:var(--surface-2);border-radius:10px;padding:12px;margin-bottom:12px}
+  .rij2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+  .rij3{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:0 10px}
+  .contactregel{display:flex;gap:8px;margin-bottom:8px}
+  .contactregel input{flex:1}
+  .contactregel select{width:112px;flex:0 0 auto}
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:50;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;box-shadow:var(--shadow);max-width:calc(100% - 32px)}
+  .toast.fout{background:var(--err);color:#fff}
+  .laden{opacity:.55;pointer-events:none}
+
+  @media (max-width:820px){
+    main{padding:14px 16px}
+    header.balk{padding:10px 16px;gap:8px}
+    header.balk .merk-naam{font-size:18px;white-space:nowrap}
+    header.balk .merk-sub,.balk-rechts .sync,.balk-rechts .wie{display:none}
+    .balk-rechts{gap:6px}
+    .filters input[type=text]{max-width:none;flex:1 1 100%}
+    .filters .aantal{margin-left:0}
+    thead{display:none}
+    table,tbody,tr,td{display:block;width:100%}
+    tbody tr{padding:12px 14px;border-bottom:1px solid var(--line)}
+    tbody tr:last-child{border-bottom:0}
+    td{border:0;padding:2px 0}
+    td.verberg-mobiel{display:none}
+    .raster,.rij2,.rij3{grid-template-columns:minmax(0,1fr)}
+    .paneel-romp{padding:14px 16px 40px}
+  }
+</style>
+</head>
+<body>
+
+<!-- ───────── Login ───────── -->
+<div class="login" id="login" hidden>
+  <form class="login-kaart" id="loginForm" autocomplete="off">
+    <div class="merk">
+      <span class="merk-naam">Strand Residence</span>
+      <span class="merk-sub">Bergen aan Zee</span>
+      <svg class="zigzag" width="64" height="10" viewBox="0 0 64 10" aria-hidden="true"><path d="M1 9 11.5 1 22 9 32.5 1 43 9 53.5 1 63 9" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".55"/></svg>
+    </div>
+    <h1>Leadportaal</h1>
+    <p class="uitleg">Log in met je naam en je persoonlijke pincode.</p>
+    <div class="melding fout" id="loginFout" hidden></div>
+    <label class="veld"><span>Naam</span><input type="text" id="loginNaam" required autocomplete="username" /></label>
+    <label class="veld"><span>Pincode</span><input type="password" class="pin" id="loginPin" required inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="current-password" /></label>
+    <button class="knop vol" type="submit" id="loginKnop">Inloggen</button>
+  </form>
+</div>
+
+<!-- ───────── App ───────── -->
+<div id="app" hidden>
+  <header class="balk">
+    <div class="merk">
+      <span class="merk-naam">Strand Residence</span>
+      <span class="merk-sub">Leadportaal</span>
+    </div>
+    <div class="balk-rechts">
+      <span class="sync" id="syncTijd"></span>
+      <button class="knop licht klein" id="verversKnop" title="Lijst opnieuw laden">Vernieuwen</button>
+      <span class="wie" id="wie"></span>
+      <button class="knop licht klein" id="uitlogKnop">Uitloggen</button>
+    </div>
+  </header>
+  <main>
+    <div class="fasen" id="fasen" role="tablist" aria-label="Fases"></div>
+    <div class="filters">
+      <input type="text" id="zoek" placeholder="Zoek op naam, telefoon of e-mail" aria-label="Zoeken" />
+      <select id="statusFilter" aria-label="Status">
+        <option value="open">Open deals</option>
+        <option value="won">Gewonnen</option>
+        <option value="lost">Verloren</option>
+        <option value="">Alle deals</option>
+      </select>
+      <label class="vink"><input type="checkbox" id="zonderTaak" /> Zonder volgende activiteit</label>
+      <span class="aantal" id="aantal"></span>
+    </div>
+    <div class="tabel-kaart">
+      <table>
+        <thead><tr><th>Contact</th><th>Telefoon</th><th>Fase</th><th>Volgende activiteit</th><th>Bijgewerkt</th></tr></thead>
+        <tbody id="rijen"></tbody>
+      </table>
+      <div class="leeg" id="leeg" hidden>Geen deals gevonden.</div>
+    </div>
+  </main>
+</div>
+
+<!-- ───────── Detail ───────── -->
+<div class="scherm" id="scherm" hidden></div>
+<aside class="paneel" id="paneel" hidden aria-modal="true" role="dialog">
+  <div class="paneel-kop">
+    <div>
+      <div class="klein" id="dKopFase"></div>
+      <h2 id="dTitel"></h2>
+      <div class="klein" id="dKopSub"></div>
+    </div>
+    <button class="knop licht klein sluit" id="sluitKnop">Sluiten</button>
+  </div>
+  <div class="paneel-romp" id="paneelRomp"></div>
+</aside>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+'use strict';
+const API = 'https://ooqkpazyvohsrdvxfnug.supabase.co/functions/v1/spiegel-portaal';
+const OPSLAG = 'sr_portaal_token';
+
+const FOUTEN = {
+  onjuist: 'Naam of pincode klopt niet.',
+  geblokkeerd: 'Te veel pogingen. Probeer het over 15 minuten opnieuw.',
+  portaal_tijdelijk_dicht: 'Het portaal is tijdelijk dicht door te veel mislukte pogingen. Probeer het later opnieuw.',
+  niet_ingelogd: 'Je sessie is verlopen. Log opnieuw in.',
+  alleen_lezen: 'Je account mag alleen meekijken.',
+  deal_niet_gevonden: 'Deze deal bestaat niet meer of staat niet meer in deze pipeline.',
+  stadium_onbekend: 'Onbekende fase.',
+  ongeldige_datum: 'Ongeldige datum.',
+  ongeldige_tijd: 'Ongeldige tijd (gebruik uu:mm).',
+  ongeldig_emailadres: 'Ongeldig e-mailadres.',
+  ongeldig_telefoonnummer: 'Ongeldig telefoonnummer.',
+  onderwerp_leeg: 'Vul een onderwerp in.',
+  notitie_leeg: 'De notitie is leeg.',
+  naam_leeg: 'Vul een naam in.',
+  titel_leeg: 'Vul een titel in.',
+  niets_gewijzigd: 'Er is niets gewijzigd.',
+  alleen_eigen_notities: 'Je kunt alleen je eigen notities aanpassen.',
+  serverfout: 'Er ging iets mis. Probeer het opnieuw.',
+};
+const foutTekst = (f) => FOUTEN[f] || (f && f.startsWith('Pipedrive') ? f : (FOUTEN[String(f).split(':')[0]] || 'Er ging iets mis: ' + f));
+
+// ── Hulpjes ──
+const $ = (id) => document.getElementById(id);
+function el(tag, attrs = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k === 'class') e.className = v;
+    else if (k === 'text') e.textContent = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (k === 'value') e.value = v;
+    else e.setAttribute(k, v === true ? '' : v);
+  }
+  for (const k of kids.flat()) if (k != null && k !== false) e.append(k instanceof Node ? k : document.createTextNode(String(k)));
+  return e;
+}
+const leesToken = () => { try { return sessionStorage.getItem(OPSLAG); } catch { return null; } };
+const zetToken = (t) => { try { t ? sessionStorage.setItem(OPSLAG, t) : sessionStorage.removeItem(OPSLAG); } catch {} };
+
+let toastTimer;
+function toast(tekst, fout = false) {
+  const t = $('toast'); t.textContent = tekst; t.className = 'toast' + (fout ? ' fout' : ''); t.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => (t.hidden = true), fout ? 6000 : 2600);
+}
+
+async function api(pad, opties = {}) {
+  const token = leesToken();
+  const r = await fetch(API + pad, {
+    method: opties.method || 'GET',
+    headers: { 'content-type': 'application/json', ...(token ? { authorization: 'Bearer ' + token } : {}) },
+    body: opties.body ? JSON.stringify(opties.body) : undefined,
+  });
+  const j = await r.json().catch(() => ({ fout: 'serverfout' }));
+  if (r.status === 401 && pad !== '/login') { zetToken(null); toonLogin(FOUTEN.niet_ingelogd); throw new Error('niet_ingelogd'); }
+  if (!r.ok) throw new Error(j.fout || 'serverfout');
+  return j;
+}
+
+// Datums en tijden
+const VANDAAG = () => new Date().toISOString().slice(0, 10);
+function datumNL(d, metJaar = true) {
+  if (!d) return '';
+  const x = new Date(String(d).length === 10 ? d + 'T12:00:00' : d);
+  return x.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', ...(metJaar ? { year: 'numeric' } : {}) });
+}
+function relatief(d) {
+  if (!d) return '';
+  const ms = Date.now() - new Date(d).getTime(), m = Math.round(ms / 60000);
+  if (m < 1) return 'zojuist';
+  if (m < 60) return m + ' min geleden';
+  const u = Math.round(m / 60); if (u < 24) return u + ' uur geleden';
+  const dg = Math.round(u / 24); if (dg < 7) return dg + (dg === 1 ? ' dag' : ' dagen') + ' geleden';
+  return datumNL(d);
+}
+const euro = (v) => v ? new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v) : '';
+const tijdKort = (t) => t ? String(t).slice(0, 5) : '';
+
+// Pipedrive-notities zijn HTML; we tonen ze als platte tekst (nooit als HTML).
+function htmlNaarTekst(html) {
+  if (!html) return '';
+  const doc = new DOMParser().parseFromString(String(html).replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div|li)>/gi, '\n'), 'text/html');
+  return (doc.body.textContent || '').replace(/\n{3,}/g, '\n\n').trim();
+}
+const zonderHandtekening = (t) => t.replace(/\n*Via portaal: .*$/, '').trim();
+
+// ── Staat ──
+const S = { meta: null, deals: [], fase: null, openDeal: null, detail: null };
+const stadiumNaam = (id) => S.meta?.stadia.find((s) => Number(s.stage_id) === Number(id))?.naam || '';
+const gebruikerNaam = (id) => S.meta?.pd_gebruikers.find((u) => Number(u.user_id) === Number(id))?.naam || '';
+const typeNaam = (k) => S.meta?.activiteit_types.find((t) => t.key === k)?.naam || k || '';
+const STATUS = { open: 'Open', won: 'Gewonnen', lost: 'Verloren' };
+
+function veldWaarde(def, v) {
+  if (v == null || v === '') return '';
+  switch (def.type) {
+    case 'enum': return def.opties?.find((o) => Number(o.id) === Number(v))?.label ?? String(v);
+    case 'set': return (Array.isArray(v) ? v : [v]).map((x) => def.opties?.find((o) => Number(o.id) === Number(x))?.label ?? x).join(', ');
+    case 'user': return gebruikerNaam(typeof v === 'object' ? (v.id ?? v.value) : v);
+    case 'date': return datumNL(v);
+    case 'monetary': return euro(typeof v === 'object' ? v.value : v);
+    default: return typeof v === 'object' ? (v.value ?? JSON.stringify(v)) : String(v);
+  }
+}
+
+// ── Login ──
+function toonLogin(fout) {
+  $('app').hidden = true; sluitPaneel(); $('login').hidden = false;
+  const f = $('loginFout'); f.hidden = !fout; f.textContent = fout || '';
+  setTimeout(() => ($('loginNaam').value ? $('loginPin') : $('loginNaam')).focus(), 30);
+}
+$('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const knop = $('loginKnop'); knop.disabled = true; knop.textContent = 'Bezig…';
+  try {
+    const r = await api('/login', { method: 'POST', body: { naam: $('loginNaam').value.trim(), pin: $('loginPin').value.trim() } });
+    zetToken(r.token); $('loginPin').value = '';
+    await start();
+  } catch (err) {
+    const f = $('loginFout'); f.hidden = false; f.textContent = foutTekst(err.message);
+    $('loginPin').value = ''; $('loginPin').focus();
+  } finally { knop.disabled = false; knop.textContent = 'Inloggen'; }
+});
+$('uitlogKnop').addEventListener('click', async () => {
+  try { await api('/uitloggen', { method: 'POST' }); } catch {}
+  zetToken(null); S.meta = null; toonLogin();
+});
+
+// ── Overzicht ──
+async function start() {
+  try {
+    S.meta = await api('/meta');
+  } catch (e) { if (e.message !== 'niet_ingelogd') toonLogin(foutTekst(e.message)); return; }
+  $('login').hidden = true; $('app').hidden = false;
+  $('wie').textContent = S.meta.gebruiker.naam + (S.meta.gebruiker.mag_bewerken ? '' : ' (meekijken)');
+  await laadOverzicht();
+}
+
+async function laadOverzicht() {
+  $('rijen').classList.add('laden');
+  try {
+    const r = await api('/overzicht');
+    S.deals = r.deals;
+    const m = await api('/meta'); S.meta = m;
+    $('syncTijd').textContent = m.laatste_sync ? 'Pipedrive bijgewerkt ' + relatief(m.laatste_sync) : '';
+    tekenFasen(); tekenRijen();
+  } catch (e) { if (e.message !== 'niet_ingelogd') toast(foutTekst(e.message), true); }
+  finally { $('rijen').classList.remove('laden'); }
+}
+$('verversKnop').addEventListener('click', laadOverzicht);
+
+function gefilterd(metFase = true) {
+  const q = $('zoek').value.trim().toLowerCase();
+  const qCijfers = q.replace(/\D/g, '');
+  const st = $('statusFilter').value;
+  return S.deals.filter((d) => {
+    if (st && d.status !== st) return false;
+    if (metFase && S.fase != null && Number(d.stage_id) !== S.fase) return false;
+    if ($('zonderTaak').checked && d.volgende_datum) return false;
+    if (q) {
+      const hooi = [d.persoon, d.title, d.email].join(' ').toLowerCase();
+      const tel = String(d.telefoon || '').replace(/\D/g, '');
+      if (!hooi.includes(q) && !(qCijfers.length >= 3 && tel.includes(qCijfers))) return false;
+    }
+    return true;
+  });
+}
+
+function tekenFasen() {
+  const basis = gefilterd(false);
+  const box = $('fasen'); box.replaceChildren();
+  const knop = (label, n, aan, klik) => el('button', { class: 'fase' + (aan ? ' aan' : ''), type: 'button', onclick: klik, role: 'tab', 'aria-selected': aan ? 'true' : 'false' },
+    el('div', { class: 'n', text: n }), el('span', { class: 'l', text: label }));
+  box.append(knop('Alle fases', basis.length, S.fase == null, () => { S.fase = null; tekenFasen(); tekenRijen(); }));
+  for (const s of S.meta.stadia) {
+    const n = basis.filter((d) => Number(d.stage_id) === Number(s.stage_id)).length;
+    box.append(knop(s.naam, n, S.fase === Number(s.stage_id), () => { S.fase = Number(s.stage_id); tekenFasen(); tekenRijen(); }));
+  }
+}
+
+function volgendeCel(d) {
+  if (!d.volgende_datum) return el('span', { class: 'klein', text: 'Geen' });
+  const vd = String(d.volgende_datum).slice(0, 10), v = VANDAAG();
+  const cls = vd < v ? 'te-laat' : vd === v ? 'vandaag' : '';
+  return el('div', {},
+    el('div', { class: cls, text: (vd === v ? 'Vandaag' : datumNL(vd, false)) + (d.volgende_tijd ? ' ' + tijdKort(d.volgende_tijd) : '') }),
+    el('div', { class: 'klein', text: [typeNaam(d.volgende_type), d.volgende_onderwerp].filter(Boolean).join(' · ') }));
+}
+
+function tekenRijen() {
+  const lijst = gefilterd();
+  $('aantal').textContent = lijst.length + (lijst.length === 1 ? ' deal' : ' deals');
+  const tb = $('rijen'); tb.replaceChildren();
+  $('leeg').hidden = lijst.length > 0;
+  for (const d of lijst) {
+    const tel = d.telefoon ? el('a', { href: 'tel:' + String(d.telefoon).replace(/[^+0-9]/g, ''), text: d.telefoon, onclick: (e) => e.stopPropagation() }) : el('span', { class: 'klein', text: 'Geen nummer' });
+    const fase = d.status === 'open' ? el('span', { class: 'label', text: stadiumNaam(d.stage_id) })
+                                     : el('span', { class: 'label ' + d.status, text: STATUS[d.status] });
+    tb.append(el('tr', { class: S.openDeal === Number(d.deal_id) ? 'open' : '', onclick: () => openDeal(Number(d.deal_id)), tabindex: '0',
+                         onkeydown: (e) => { if (e.key === 'Enter') openDeal(Number(d.deal_id)); } },
+      el('td', {}, el('div', { class: 'naam', text: d.persoon || d.title || 'Zonder naam' }), el('div', { class: 'klein', text: d.email || '' })),
+      el('td', { class: 'tel' }, tel),
+      el('td', {}, fase),
+      el('td', {}, volgendeCel(d)),
+      el('td', { class: 'klein verberg-mobiel', text: relatief(d.update_time) })));
+  }
+}
+for (const id of ['zoek', 'statusFilter', 'zonderTaak']) $(id).addEventListener('input', () => { tekenFasen(); tekenRijen(); });
+
+// ── Detailpaneel ──
+function sluitPaneel() {
+  $('paneel').hidden = true; $('scherm').hidden = true; document.body.style.overflow = '';
+  if (S.openDeal != null) { S.openDeal = null; if (!$('app').hidden) tekenRijen(); }
+}
+$('sluitKnop').addEventListener('click', sluitPaneel);
+$('scherm').addEventListener('click', sluitPaneel);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('paneel').hidden) sluitPaneel(); });
+
+async function openDeal(id, verversen = true) {
+  S.openDeal = id; tekenRijen();
+  $('paneel').hidden = false; $('scherm').hidden = false; document.body.style.overflow = 'hidden';
+  const lijstDeal = S.deals.find((d) => Number(d.deal_id) === id);
+  if (lijstDeal && !S.detail || (S.detail && Number(S.detail.deal.deal_id) !== id)) {
+    $('dTitel').textContent = lijstDeal?.persoon || lijstDeal?.title || '';
+    $('dKopFase').textContent = ''; $('dKopSub').textContent = 'Laden uit Pipedrive…';
+    $('paneelRomp').replaceChildren();
+  }
+  $('paneelRomp').classList.add('laden');
+  try {
+    S.detail = await api('/deal/' + id + (verversen ? '' : '?verversen=0'));
+    tekenDetail();
+  } catch (e) {
+    if (e.message !== 'niet_ingelogd') { toast(foutTekst(e.message), true); if (e.message === 'deal_niet_gevonden') { sluitPaneel(); laadOverzicht(); } }
+  } finally { $('paneelRomp').classList.remove('laden'); }
+}
+
+// Na een wijziging: detail en de rij in de lijst bijwerken zonder de hele lijst te herladen.
+async function naWijziging(melding) {
+  toast(melding);
+  await openDeal(S.openDeal, false);
+  try { S.deals = (await api('/overzicht')).deals; tekenFasen(); tekenRijen(); } catch {}
+}
+
+function tekenDetail() {
+  const { deal: d, persoon: p, activiteiten, notities } = S.detail;
+  const mag = S.meta.gebruiker.mag_bewerken;
+  $('dTitel').textContent = p?.naam || d.title;
+  $('dKopFase').textContent = d.status === 'open' ? stadiumNaam(d.stage_id) : STATUS[d.status];
+  $('dKopSub').textContent = [d.title !== p?.naam ? d.title : null, 'Eigenaar: ' + (gebruikerNaam(d.owner_id) || 'onbekend'), 'Binnen ' + datumNL(d.add_time)].filter(Boolean).join(' · ');
+  const romp = $('paneelRomp'); romp.replaceChildren(
+    blokContact(p, mag), blokDeal(d, mag), blokActiviteiten(d, activiteiten, mag), blokNotities(d, notities, mag));
+}
+
+function gegeven(label, waarde, heel = false) {
+  return el('dl', { class: 'gegeven' + (heel ? ' heel' : '') }, el('dt', { text: label }), el('dd', {}, waarde || el('span', { class: 'klein', text: '—' })));
+}
+
+// Contact
+function blokContact(p, mag) {
+  const s = el('section', { class: 'blok' });
+  const kop = el('h3', { text: 'Contact' });
+  s.append(kop);
+  if (!p) { s.append(el('p', { class: 'klein', text: 'Geen contactpersoon gekoppeld.' })); return s; }
+  const toon = () => {
+    s.replaceChildren(kop);
+    if (mag) kop.append(el('button', { class: 'knop licht klein', type: 'button', text: 'Bewerken', onclick: bewerk }));
+    s.append(el('div', { class: 'raster' },
+      gegeven('Naam', p.naam, true),
+      gegeven('Telefoon', p.telefoons?.length ? el('div', {}, ...p.telefoons.map((t) => el('div', {}, el('a', { href: 'tel:' + t.value.replace(/[^+0-9]/g, ''), text: t.value })))) : null),
+      gegeven('E-mail', p.emails?.length ? el('div', {}, ...p.emails.map((t) => el('div', {}, el('a', { href: 'mailto:' + t.value, text: t.value })))) : null)));
+  };
+  const bewerk = () => {
+    kop.querySelector('.knop')?.remove();
+    const naam = el('input', { type: 'text', value: p.naam || '' });
+    const lijstEditor = (items, type) => {
+      const box = el('div');
+      const regel = (it = {}) => {
+        const inp = el('input', { type, value: it.value || '', placeholder: type === 'tel' ? '+31 6 …' : 'naam@voorbeeld.nl' });
+        const lab = el('select', {}, ...(type === 'tel' ? [['mobile', 'Mobiel'], ['work', 'Werk'], ['home', 'Thuis'], ['other', 'Overig']] : [['work', 'Werk'], ['home', 'Thuis'], ['other', 'Overig']])
+          .map(([v, t]) => el('option', { value: v, text: t })));
+        lab.value = it.label || (type === 'tel' ? 'mobile' : 'work');
+        const r = el('div', { class: 'contactregel' }, inp, lab, el('button', { class: 'knop licht klein', type: 'button', text: '×', 'aria-label': 'Verwijderen', onclick: () => r.remove() }));
+        box.append(r);
+      };
+      (items?.length ? items : [{}]).forEach(regel);
+      const toevoegen = el('button', { class: 'knop licht klein', type: 'button', text: '+ Toevoegen', onclick: () => regel() });
+      return { box, toevoegen, waarden: () => [...box.querySelectorAll('.contactregel')].map((r) => ({ value: r.querySelector('input').value.trim(), label: r.querySelector('select').value })).filter((x) => x.value) };
+    };
+    const tel = lijstEditor(p.telefoons, 'tel'), mail = lijstEditor(p.emails, 'email');
+    const opslaan = el('button', { class: 'knop klein', type: 'button', text: 'Opslaan in Pipedrive' });
+    opslaan.addEventListener('click', async () => {
+      opslaan.disabled = true;
+      try {
+        await api('/persoon/' + p.person_id, { method: 'PATCH', body: { naam: naam.value, telefoons: tel.waarden(), emails: mail.waarden() } });
+        await naWijziging('Contact bijgewerkt in Pipedrive');
+      } catch (e) { toast(foutTekst(e.message), true); opslaan.disabled = false; }
+    });
+    s.replaceChildren(kop,
+      el('label', { class: 'veld' }, el('span', { text: 'Naam' }), naam),
+      el('div', { class: 'veld' }, el('span', { class: 'klein', text: 'Telefoon' }), tel.box, tel.toevoegen),
+      el('div', { class: 'veld' }, el('span', { class: 'klein', text: 'E-mail' }), mail.box, mail.toevoegen),
+      el('div', { class: 'opslaan-rij' }, el('button', { class: 'knop licht klein', type: 'button', text: 'Annuleren', onclick: toon }), opslaan));
+  };
+  toon();
+  return s;
+}
+
+// Deal
+function blokDeal(d, mag) {
+  const s = el('section', { class: 'blok' }, el('h3', { text: 'Deal' }));
+  const defs = S.meta.velden;
+  if (!mag) {
+    s.append(el('div', { class: 'raster' },
+      gegeven('Fase', stadiumNaam(d.stage_id)), gegeven('Status', STATUS[d.status]), gegeven('Waarde', euro(d.value)),
+      ...defs.filter((f) => f.key !== 'lost_reason').map((f) => gegeven(f.naam, veldWaarde(f, d.velden?.[f.key]), f.type === 'text')),
+      d.status === 'lost' ? gegeven('Reden verlies', d.lost_reason) : null));
+    return s;
+  }
+  const invoer = {};
+  const fase = el('select', {}, ...S.meta.stadia.filter((x) => Number(x.pipeline_id) === Number(d.pipeline_id)).map((x) => el('option', { value: x.stage_id, text: x.naam })));
+  fase.value = d.stage_id;
+  const status = el('select', {}, ...Object.entries(STATUS).map(([v, t]) => el('option', { value: v, text: t })));
+  status.value = d.status;
+  const waarde = el('input', { type: 'number', min: '0', step: '1000', value: d.value ?? '' });
+  const lrDef = defs.find((f) => f.key === 'lost_reason');
+  const reden = lrDef?.opties?.length
+    ? el('select', {}, el('option', { value: '', text: 'Kies een reden' }), ...lrDef.opties.map((o) => el('option', { value: o.label, text: o.label })))
+    : el('input', { type: 'text' });
+  reden.value = d.lost_reason || '';
+  const redenVeld = el('label', { class: 'veld heel' }, el('span', { text: 'Reden verlies' }), reden);
+  const zichtReden = () => (redenVeld.hidden = status.value !== 'lost');
+  status.addEventListener('change', zichtReden); zichtReden();
+
+  const velden = [];
+  for (const f of defs) {
+    if (f.key === 'lost_reason') continue;
+    const v = d.velden?.[f.key];
+    if (!f.bewerkbaar) { velden.push(gegeven(f.naam, veldWaarde(f, v))); continue; }
+    let inp;
+    if (f.type === 'enum') {
+      inp = el('select', {}, el('option', { value: '', text: '—' }), ...(f.opties || []).map((o) => el('option', { value: o.id, text: o.label })));
+      inp.value = v ?? '';
+    } else if (f.type === 'date') inp = el('input', { type: 'date', value: v ? String(v).slice(0, 10) : '' });
+    else if (['double', 'int', 'monetary'].includes(f.type)) inp = el('input', { type: 'number', value: v ?? '' });
+    else if (f.type === 'text') inp = el('textarea', { rows: '4' }, v ?? '');
+    else inp = el('input', { type: 'text', value: v ?? '' });
+    invoer[f.key] = { inp, begin: inp.value };
+    velden.push(el('label', { class: 'veld' + (f.type === 'text' ? ' heel' : '') }, el('span', { text: f.naam }), inp));
+  }
+
+  const begin = { stage_id: fase.value, status: status.value, value: waarde.value, lost_reason: reden.value };
+  const melding = el('span', { class: 'status' });
+  const opslaan = el('button', { class: 'knop klein', type: 'button', text: 'Opslaan in Pipedrive' });
+  const verzamel = () => {
+    const b = {};
+    if (fase.value !== begin.stage_id) b.stage_id = Number(fase.value);
+    if (status.value !== begin.status) b.status = status.value;
+    if (status.value === 'lost' && reden.value !== begin.lost_reason) b.lost_reason = reden.value;
+    if (waarde.value !== begin.value) b.value = waarde.value;
+    const v = {};
+    for (const [k, x] of Object.entries(invoer)) if (x.inp.value !== x.begin) v[k] = x.inp.value;
+    if (Object.keys(v).length) b.velden = v;
+    return b;
+  };
+  const check = () => { const n = Object.keys(verzamel()).length; opslaan.disabled = !n; melding.textContent = n ? 'Niet opgeslagen wijzigingen' : ''; };
+  s.addEventListener('input', check); s.addEventListener('change', check);
+  opslaan.addEventListener('click', async () => {
+    const b = verzamel();
+    if (b.status === 'lost' && !reden.value) { toast('Kies een reden van verlies.', true); return; }
+    opslaan.disabled = true; melding.textContent = 'Opslaan…';
+    try { await api('/deal/' + d.deal_id, { method: 'PATCH', body: b }); await naWijziging('Deal bijgewerkt in Pipedrive'); }
+    catch (e) { toast(foutTekst(e.message), true); check(); }
+  });
+  s.append(el('div', { class: 'raster' },
+    el('label', { class: 'veld' }, el('span', { text: 'Fase' }), fase),
+    el('label', { class: 'veld' }, el('span', { text: 'Status' }), status),
+    redenVeld,
+    el('label', { class: 'veld' }, el('span', { text: 'Waarde (€)' }), waarde),
+    ...velden),
+    el('div', { class: 'opslaan-rij' }, melding, opslaan));
+  check();
+  return s;
+}
+
+// Activiteiten
+function blokActiviteiten(d, acts, mag) {
+  const s = el('section', { class: 'blok' });
+  const kop = el('h3', { text: 'Activiteiten' });
+  s.append(kop);
+  const lijst = el('div');
+  const formBox = el('div');
+  if (mag) kop.append(el('button', { class: 'knop licht klein', type: 'button', text: '+ Nieuwe activiteit', onclick: () => { formBox.replaceChildren(activiteitForm(d, () => formBox.replaceChildren())); } }));
+  if (!acts.length) lijst.append(el('p', { class: 'klein', text: 'Nog geen activiteiten.' }));
+  for (const a of acts) {
+    const vd = a.due_date ? String(a.due_date).slice(0, 10) : '';
+    const cls = !a.done && vd && vd < VANDAAG() ? 'te-laat' : !a.done && vd === VANDAAG() ? 'vandaag' : '';
+    const vink = el('input', { type: 'checkbox', 'aria-label': 'Markeer als gedaan', disabled: !mag });
+    vink.checked = !!a.done;
+    vink.addEventListener('change', async () => {
+      vink.disabled = true;
+      try { await api('/activiteit/' + a.activity_id, { method: 'PATCH', body: { done: vink.checked } }); await naWijziging(vink.checked ? 'Activiteit afgevinkt' : 'Activiteit weer open'); }
+      catch (e) { toast(foutTekst(e.message), true); vink.checked = !vink.checked; vink.disabled = false; }
+    });
+    const notitie = htmlNaarTekst(a.note);
+    lijst.append(el('div', { class: 'act' + (a.done ? ' klaar' : '') }, vink,
+      el('div', { style: 'flex:1;min-width:0' },
+        el('div', { class: 'act-titel', text: a.subject || typeNaam(a.type) }),
+        el('div', { class: 'klein' },
+          el('span', { class: cls, text: vd ? datumNL(vd) + (a.due_time ? ' ' + tijdKort(a.due_time) : '') : 'Geen datum' }),
+          ' · ' + typeNaam(a.type) + (a.owner_id ? ' · ' + gebruikerNaam(a.owner_id) : '')),
+        notitie ? el('div', { class: 'act-notitie', text: notitie }) : null)));
+  }
+  s.append(formBox, lijst, el('div', { style: 'height:10px' }));
+  return s;
+}
+
+function activiteitForm(d, klaar) {
+  const types = S.meta.activiteit_types;
+  const type = el('select', {}, ...types.map((t) => el('option', { value: t.key, text: t.naam })));
+  type.value = types.some((t) => t.key === 'call') ? 'call' : types[0]?.key;
+  const onderwerp = el('input', { type: 'text', placeholder: 'Bijv. terugbellen over plattegrond', required: true });
+  const datum = el('input', { type: 'date', value: VANDAAG() });
+  const tijd = el('input', { type: 'time' });
+  const wie = el('select', {}, ...S.meta.pd_gebruikers.map((u) => el('option', { value: u.user_id, text: u.naam })));
+  wie.value = d.owner_id ?? '';
+  const notitie = el('textarea', { rows: '3', placeholder: 'Optioneel' });
+  const gedaan = el('input', { type: 'checkbox' });
+  const opslaan = el('button', { class: 'knop klein', type: 'submit', text: 'Toevoegen in Pipedrive' });
+  const f = el('form', { class: 'formulier' },
+    el('div', { class: 'rij2' },
+      el('label', { class: 'veld' }, el('span', { text: 'Soort' }), type),
+      el('label', { class: 'veld' }, el('span', { text: 'Toegewezen aan' }), wie)),
+    el('label', { class: 'veld' }, el('span', { text: 'Onderwerp' }), onderwerp),
+    el('div', { class: 'rij2' },
+      el('label', { class: 'veld' }, el('span', { text: 'Datum' }), datum),
+      el('label', { class: 'veld' }, el('span', { text: 'Tijd (optioneel)' }), tijd)),
+    el('label', { class: 'veld' }, el('span', { text: 'Notitie' }), notitie),
+    el('div', { class: 'opslaan-rij' }, el('label', { class: 'vink status' }, gedaan, 'Al gedaan'),
+      el('button', { class: 'knop licht klein', type: 'button', text: 'Annuleren', onclick: klaar }), opslaan));
+  f.addEventListener('submit', async (e) => {
+    e.preventDefault(); opslaan.disabled = true;
+    try {
+      await api('/activiteit', { method: 'POST', body: { deal_id: Number(d.deal_id), type: type.value, subject: onderwerp.value, due_date: datum.value, due_time: tijd.value || null, owner_id: wie.value ? Number(wie.value) : null, note: notitie.value || null, done: gedaan.checked } });
+      await naWijziging('Activiteit toegevoegd in Pipedrive');
+    } catch (err) { toast(foutTekst(err.message), true); opslaan.disabled = false; }
+  });
+  setTimeout(() => onderwerp.focus(), 20);
+  return f;
+}
+
+// Notities
+function blokNotities(d, notities, mag) {
+  const s = el('section', { class: 'blok' }, el('h3', { text: 'Notities' }));
+  if (mag) {
+    const tekst = el('textarea', { rows: '3', placeholder: 'Schrijf een notitie. Die komt direct in Pipedrive bij deze deal.' });
+    const knop = el('button', { class: 'knop klein', type: 'submit', text: 'Notitie plaatsen' });
+    const f = el('form', { class: 'formulier' }, tekst, el('div', { class: 'opslaan-rij', style: 'padding-bottom:0;padding-top:8px' }, knop));
+    f.addEventListener('submit', async (e) => {
+      e.preventDefault(); if (!tekst.value.trim()) return; knop.disabled = true;
+      try { await api('/notitie', { method: 'POST', body: { deal_id: Number(d.deal_id), tekst: tekst.value } }); await naWijziging('Notitie geplaatst in Pipedrive'); }
+      catch (err) { toast(foutTekst(err.message), true); knop.disabled = false; }
+    });
+    s.append(f);
+  }
+  if (!notities.length) s.append(el('p', { class: 'klein', text: 'Nog geen notities.' }));
+  for (const n of notities) {
+    const volledig = htmlNaarTekst(n.content);
+    const box = el('div', { class: 'notitie' });
+    const toon = () => {
+      box.replaceChildren(
+        el('div', { class: 'notitie-kop' },
+          el('span', { text: [datumNL(n.add_time), new Date(n.add_time).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }), n.eigen ? 'jouw notitie' : gebruikerNaam(n.user_id)].filter(Boolean).join(' · ') }),
+          mag && n.eigen ? el('button', { class: 'knop licht klein', type: 'button', text: 'Aanpassen', onclick: bewerk }) : null),
+        el('div', { class: 'notitie-tekst', text: volledig }));
+    };
+    const bewerk = () => {
+      const t = el('textarea', { rows: '4' }, zonderHandtekening(volledig));
+      const k = el('button', { class: 'knop klein', type: 'button', text: 'Opslaan' });
+      k.addEventListener('click', async () => {
+        k.disabled = true;
+        try { await api('/notitie/' + n.note_id, { method: 'PATCH', body: { tekst: t.value } }); await naWijziging('Notitie bijgewerkt'); }
+        catch (e) { toast(foutTekst(e.message), true); k.disabled = false; }
+      });
+      box.replaceChildren(t, el('div', { class: 'opslaan-rij', style: 'padding-top:8px' }, el('button', { class: 'knop licht klein', type: 'button', text: 'Annuleren', onclick: toon }), k));
+    };
+    toon(); s.append(box);
+  }
+  s.append(el('div', { style: 'height:10px' }));
+  return s;
+}
+
+// Lijst elke 2 minuten stil verversen zolang de pagina open en zichtbaar is.
+setInterval(() => { if (!$('app').hidden && document.visibilityState === 'visible' && $('paneel').hidden) laadOverzicht(); }, 120000);
+
+// Start
+if (leesToken()) start(); else toonLogin();
+</script>
+</body>
+</html>
