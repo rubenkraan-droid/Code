@@ -637,7 +637,7 @@
     </div>
     <div id="adAdviesSec" class="hidden" style="margin-bottom:26px">
       <div class="sec">Adset-advies · opschalen, aanlaten of uitzetten
-        <span class="info" tabindex="0">i<span class="tip">Automatisch advies per Meta-adset en voor Google, op basis van de WD-regels: wachten tot €1500 spend, daarna kosten per afspraak onder €600 = opschalen (+20% budget op de hele adset), €600–900 = aanlaten, €900 of meer = uitzetten. Een adset die €1500 voorbij is zonder leads gaat ook uit. Losse advertenties met kosten per lead boven €55 staan apart als 'uitzetten' (over de hele looptijd gerekend).</span></span>
+        <span class="info" tabindex="0">i<span class="tip">Automatisch advies per Meta-adset en voor Google, op basis van de WD-regels: wachten tot €1500 spend, daarna kosten per afspraak onder €600 = opschalen (+20% budget op de hele adset), €600–900 = aanlaten, €900 of meer = uitzetten. Een adset die €1500 voorbij is zonder leads gaat ook uit. Losse advertenties met kosten per lead boven €55 staan apart als 'uitzetten'. Cijfers volgen de gekozen periode (datafilter), net als de rest van de tab; alleen adsets met een actieve advertentie worden getoond.</span></span>
       </div>
       <div id="adAdviesGroepen"></div>
       <div id="adAdviesKill" class="hidden" style="margin-top:14px"></div>
@@ -3352,7 +3352,8 @@ async function renderAds(){
   renderLeadbron(r, pp);
   // Adset-advies alleen voor de interne master-eigenaar (rol owner zonder vast park);
   // niet voor de eigenaar-/park-rol of een park-gebonden eigenaar (Carl/Karl).
-  renderAdAdvies(pp, v.role==="owner" && lockPark==null);
+  // Volgt dezelfde periode (datafilter) als de rest van de tab.
+  renderAdAdvies(pp, v.role==="owner" && lockPark==null, r);
 }
 
 // Leadkwaliteit per bron (Facebook-formulier vs landingspagina), weggestopt onderaan de Advertenties-tab.
@@ -3401,10 +3402,10 @@ async function renderLeadbron(r, pp){
 // Adset-advies: opschalen / aanlaten / uitzetten per adset (Meta) + Google, plus losse ads op kosten/lead.
 // Bron: RPC ad_action_labels(park) — werkt op de héle looptijd (cumulatief), niet op de periodefilter,
 // omdat de €1500-grens en de adset-beslissing over de totale spend gaan.
-async function renderAdAdvies(pp, mag){
+async function renderAdAdvies(pp, mag, r){
   const sec = $("adAdviesSec"); if(!sec) return;
   if(!mag){ sec.classList.add("hidden"); $("adAdviesGroepen").innerHTML=""; $("adAdviesKill").innerHTML=""; return; }
-  const rows = await rpc("ad_action_labels", { p_park_id: pp }).catch(()=>null);
+  const rows = await rpc("ad_action_labels", { p_park_id: pp, p_from: r && r.p_from, p_to: r && r.p_to }).catch(()=>null);
   if(!rows || !rows.length){ sec.classList.add("hidden"); $("adAdviesGroepen").innerHTML=""; return; }
   sec.classList.remove("hidden");
   const verdicts = rows.filter(r=>r.scope!=="ad_cpl");
