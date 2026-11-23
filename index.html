@@ -3350,7 +3350,9 @@ async function renderAds(){
     ? `${k.leads_met_ad ?? 0} van ${leads} leads in deze periode zijn aan een advertentie gekoppeld · uitgaven en clicks uit Meta, leads, afspraken, sales en omzet uit Pipedrive via het AD ID op de deal.`
     : "Nog geen advertentiedata voor deze selectie.";
   renderLeadbron(r, pp);
-  renderAdAdvies(pp);
+  // Adset-advies alleen voor de interne master-eigenaar (rol owner zonder vast park);
+  // niet voor de eigenaar-/park-rol of een park-gebonden eigenaar (Carl/Karl).
+  renderAdAdvies(pp, v.role==="owner" && lockPark==null);
 }
 
 // Leadkwaliteit per bron (Facebook-formulier vs landingspagina), weggestopt onderaan de Advertenties-tab.
@@ -3399,8 +3401,9 @@ async function renderLeadbron(r, pp){
 // Adset-advies: opschalen / aanlaten / uitzetten per adset (Meta) + Google, plus losse ads op kosten/lead.
 // Bron: RPC ad_action_labels(park) — werkt op de héle looptijd (cumulatief), niet op de periodefilter,
 // omdat de €1500-grens en de adset-beslissing over de totale spend gaan.
-async function renderAdAdvies(pp){
+async function renderAdAdvies(pp, mag){
   const sec = $("adAdviesSec"); if(!sec) return;
+  if(!mag){ sec.classList.add("hidden"); $("adAdviesGroepen").innerHTML=""; $("adAdviesKill").innerHTML=""; return; }
   const rows = await rpc("ad_action_labels", { p_park_id: pp }).catch(()=>null);
   if(!rows || !rows.length){ sec.classList.add("hidden"); $("adAdviesGroepen").innerHTML=""; return; }
   sec.classList.remove("hidden");
