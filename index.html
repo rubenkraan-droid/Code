@@ -637,7 +637,7 @@
     </div>
     <div id="adAdviesSec" class="hidden" style="margin-bottom:26px">
       <div class="sec">Adset-advies · opschalen, aanlaten of uitzetten
-        <span class="info" tabindex="0">i<span class="tip">Automatisch advies per Meta-adset en voor Google, op basis van de WD-regels: wachten tot €1500 spend, daarna kosten per afspraak onder €600 = opschalen (+20% budget op de hele adset), €600–900 = aanlaten, €900 of meer = uitzetten. Een adset die €1500 voorbij is zonder leads gaat ook uit. Losse advertenties met kosten per lead boven €55 staan apart als 'uitzetten'. Cijfers volgen de gekozen periode (datafilter), net als de rest van de tab; alleen adsets met een actieve advertentie worden getoond.</span></span>
+        <span class="info" tabindex="0">i<span class="tip">Automatisch advies per Meta-adset en voor Google, op basis van de WD-regels: wachten tot €1500 spend, daarna meteen oordelen op kosten per afspraak (zonder uitrijp-wachttijd): onder €750 = opschalen (+20% budget op de hele adset), €750–900 = aanlaten, €900 of meer = uitzetten. Een adset die €1500 voorbij is zonder leads of zonder afspraken gaat uit. Losse advertenties met kosten per lead boven €55 staan apart als 'uitzetten'. Cijfers volgen de gekozen periode (datafilter), net als de rest van de tab; alleen adsets met een actieve advertentie worden getoond.</span></span>
       </div>
       <div id="adAdviesGroepen"></div>
       <div id="adAdviesKill" class="hidden" style="margin-top:14px"></div>
@@ -3423,7 +3423,7 @@ async function renderAdAdvies(pp, mag, r){
     { key:"Opschalen",    kleur:"#2C5F52", bg:"rgba(44,95,82,.10)",   icoon:"▲", titel:"Opschalen (+20% budget, hele adset)" },
     { key:"Aanlaten",     kleur:"#4B7A3E", bg:"rgba(75,122,62,.08)",  icoon:"=", titel:"Aanlaten" },
     { key:"Uitzetten",    kleur:"#B5432E", bg:"rgba(181,67,46,.10)",  icoon:"✕", titel:"Uitzetten" },
-    { key:"Nog te vroeg", kleur:"#8A94A6", bg:"rgba(138,148,166,.08)", icoon:"…", titel:"Nog te vroeg (onder €1500 of leads nog niet uitgerijpt)" },
+    { key:"Nog te vroeg", kleur:"#8A94A6", bg:"rgba(138,148,166,.08)", icoon:"…", titel:"Nog te vroeg (onder €1500 spend)" },
   ];
   let html = "";
   for(const g of GROEP){
