@@ -1824,6 +1824,9 @@ const DEFAULT_MASTER_PARK = 3;  // Wielsche Dreef: master-weergave opent hier ov
 function masterDefPark(list){   // WD indien in de lijst, anders het eerste park
   return ((list||[]).find(p=>p.id===DEFAULT_MASTER_PARK) ? DEFAULT_MASTER_PARK : ((list||[])[0]||{}).id);
 }
+function wdFirst(list){         // Wielsche Dreef vooraan, rest in dezelfde (alfabetische) volgorde — stabiele sort
+  return [...(list||[])].sort((a,b)=> (a.id===DEFAULT_MASTER_PARK?-1:0) - (b.id===DEFAULT_MASTER_PARK?-1:0));
+}
 let LOGIN_EMAIL = "";           // ingelogde gebruiker (voor knoppen die maar voor 1 persoon zijn)
 const MAG_SYNCEN = () => LOGIN_EMAIL.toLowerCase() === "ruben.kraan@gmail.com";
 async function startAsUser(email){
@@ -1851,7 +1854,7 @@ async function startAsUser(email){
       $("viewAs").classList.add("hidden");             // op slot: alleen eigen park, geen andere weergaven
     } else {
       $("whoami").textContent = email + " · Eigenaar" + (row.no_finance ? " · excl. financiën" : "");
-      PARKS  = await rpc("owner_parks")  || [];
+      PARKS  = wdFirst(await rpc("owner_parks")  || []);   // Wielsche Dreef vooraan in de masterweergave
       PARKS.push(DEMO_PARK);
       AGENTS.push(DEMO_AGENT);   // demo-makelaar meelopen in de "Bekijk als"-lijst
       $("viewAs").innerHTML =
@@ -1906,7 +1909,7 @@ async function loginBoot(){
 async function boot(){
   $("whoami").textContent = "Bekijk als:";
   $("logout").classList.add("hidden");
-  PARKS  = await rpc("owner_parks")  || [];
+  PARKS  = wdFirst(await rpc("owner_parks")  || []);   // Wielsche Dreef vooraan in de masterweergave
   AGENTS = await rpc("owner_agents") || [];
   PARKS.push(DEMO_PARK);   // demopark meelopen in naam-/branding-lookups en de sub-tabs
   AGENTS.push(DEMO_AGENT); // demo-makelaar in de "Bekijk als"-lijst
