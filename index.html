@@ -3409,6 +3409,13 @@ async function renderLeadbron(r, pp){
 // Adset-advies: opschalen / aanlaten / uitzetten per adset (Meta) + Google, plus losse ads op kosten/lead.
 // Bron: RPC ad_action_labels(park) — werkt op de héle looptijd (cumulatief), niet op de periodefilter,
 // omdat de €1500-grens en de adset-beslissing over de totale spend gaan.
+let LAST_ADVIES = null;   // laatste renderAdAdvies-args, voor her-render na 'mag weg'
+async function heroverweegWeg(pp, adsetKey, el){
+  el.disabled = true;
+  const ok = await rpc("set_adset_dismiss", { p_park_id: pp, p_adset_key: adsetKey, p_weg: true }).then(()=>true).catch(()=>false);
+  if(!ok){ el.disabled = false; el.checked = false; alert("Kon niet opslaan, probeer opnieuw."); return; }
+  if(LAST_ADVIES) renderAdAdvies(LAST_ADVIES.pp, LAST_ADVIES.mag, LAST_ADVIES.r);
+}
 async function renderAdAdvies(pp, mag, r){
   const sec = $("adAdviesSec"); if(!sec) return;
   if(!mag){ sec.classList.add("hidden"); $("adAdviesGroepen").innerHTML=""; $("adAdviesKill").innerHTML=""; return; }
@@ -3419,7 +3426,9 @@ async function renderAdAdvies(pp, mag, r){
   const kills    = rows.filter(r=>r.scope==="ad_cpl");
   const eur0 = n => "€"+Math.round(Number(n)||0).toLocaleString("nl-NL");
   const kanaalNaam = k => k==="google" ? "Google" : "Meta";
+  LAST_ADVIES = { pp, mag, r };
   const GROEP = [
+    { key:"Heroverwegen", kleur:"#9A6A00", bg:"rgba(234,161,39,.12)", icoon:"↺", titel:"Heroverwegen — uitgezet, maar blijkt tóch goed" },
     { key:"Opschalen",    kleur:"#2C5F52", bg:"rgba(44,95,82,.10)",   icoon:"▲", titel:"Opschalen (+20% budget, hele adset)" },
     { key:"Aanlaten",     kleur:"#4B7A3E", bg:"rgba(75,122,62,.08)",  icoon:"=", titel:"Aanlaten" },
     { key:"Uitzetten",    kleur:"#B5432E", bg:"rgba(181,67,46,.10)",  icoon:"✕", titel:"Uitzetten" },
@@ -3427,7 +3436,7 @@ async function renderAdAdvies(pp, mag, r){
   ];
   let html = "";
   for(const g of GROEP){
-    const list = verdicts.filter(v=>v.label===g.key).sort((a,b)=>Number(b.spend)-Number(a.spend));
+    const list = verdicts.filter(v=>v.label===g.key && !(g.key==="Heroverwegen" && v.key==="(zonder adset)")).sort((a,b)=>Number(b.spend)-Number(a.spend));
     if(!list.length) continue;
     html += `<div style="margin-bottom:12px">
       <div style="font-weight:700;color:${g.kleur};font-size:13px;margin-bottom:6px">
@@ -3447,6 +3456,7 @@ async function renderAdAdvies(pp, mag, r){
           <div style="font-weight:700">${eur0(v.spend)}</div>
           ${sub?`<div style="color:var(--muted);font-size:11px">${sub}</div>`:""}
         </div>
+        ${g.key==="Heroverwegen"?`<label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);cursor:pointer;white-space:nowrap" title="Vink aan als deze adset definitief uit mag blijven — dan verdwijnt 'ie uit dit lijstje"><input type="checkbox" onchange="heroverweegWeg(${pp}, '${escAttr(v.key)}', this)" style="cursor:pointer"> mag weg</label>`:""}
       </div>`;
     }
     html += `</div></div>`;
