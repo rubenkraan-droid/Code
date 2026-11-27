@@ -1620,6 +1620,12 @@ function pasImpactToggleToe(){
   else if(PERIODE_BRON==="superminds") $("impactBannerTxt").textContent = "Superminds · resultaten tot 17 juli (vorige marketingpartij). Alles daarna is buiten beschouwing gelaten.";
   else if(PERIODE_BRON==="uitgerijpt") $("impactBannerTxt").textContent = uitgerijptUitleg();
 }
+function syncBronKnoppen(){
+  // Strand Residence (park 7) is een nieuw park zonder 17-juli-splitsing: Recraparcs/Superminds-knoppen weg, alleen Uitgerijpt blijft
+  const verberg = Number($("fPark").value) === 7;
+  $("recravasBtn").classList.toggle("hidden", verberg);
+  $("supermindsBtn").classList.toggle("hidden", verberg);
+}
 function kiesBron(bron){
   PERIODE_BRON = (PERIODE_BRON===bron) ? "alles" : bron;   // nogmaals klikken zet 'm weer uit
   localStorage.setItem("periode_bron", PERIODE_BRON);
@@ -2039,6 +2045,10 @@ async function applyRole(){
   } else {
     $("title").textContent = "Park dashboard";
     $("subtitle").textContent = "Parkweergave · " + ((PARKS.find(p=>p.id===v.id)||{}).name||"");
+    // park-klant (ontwikkelaar): alleen eigen park, geen parkschakelaar naar andere parken
+    fillSelect($("fPark"), PARKS.filter(p=>p.id===v.id).map(p=>({value:p.id,label:p.name})), null);
+    $("fPark").value = String(v.id);
+    setBranding(v.id);
     refresh = () => renderPark(v.id);
   }
   if(LOGIN_NO_FINANCE || v.nofinance){   // eigenaar zonder financiën (echt óf testweergave Karl): tab verborgen
@@ -2097,6 +2107,7 @@ let refresh = ()=>{};
 
 /* Parkfilter als klikbare units (pills) i.p.v. dropdown; de verborgen fPark-select blijft de bron van waarheid. */
 function syncParkUnits(){
+  syncBronKnoppen();   // bron-knoppen (Recraparcs/Superminds) volgen het gekozen park
   const sel = $("fPark"), box = $("fParkUnits"); if(!sel || !box) return;
   const opts = Array.from(sel.options);
   if(opts.length <= 1){ box.classList.add("hidden"); box.innerHTML = ""; return; }   // 0-1 keuze (bv. park-gebonden eigenaar): geen knoppen
@@ -3372,6 +3383,10 @@ async function renderAds(){
 // Leadkwaliteit per bron (Facebook-formulier vs landingspagina), weggestopt onderaan de Advertenties-tab.
 async function renderLeadbron(r, pp){
   const el = $("leadbronTable"); if(!el) return;
+  const sec = $("leadbronSec");
+  const parkRol = (typeof currentView==="function" && currentView().role==="park");
+  if(sec && (parkRol || Number(pp)!==3)){ sec.classList.add("hidden"); return; }   // alleen Wielsche Dreef, en nooit voor de park-klant (ontwikkelaar)
+  if(sec) sec.classList.remove("hidden");
   // Leadbron bestaat pas sinds 10-11-2026; die leads zijn jonger dan de Uitgerijpt-grens.
   // Daarom negeert dit blok de Uitgerijpt-einddatum (volRange = t/m vandaag) en toont het altijd alle leadbron-leads.
   const rows = await rpc("wd_leadbron_kwaliteit", { ...volRange(r), p_park_id: pp }) || [];
@@ -3900,6 +3915,10 @@ function renderAdMonths(rows, tableId, secId){
 /* ---------- monthly overview (all roles) ---------- */
 // opts.def = map "YYYY-MM" -> aantal definitieve verkopen (uit monthly_definitief); null = kolom weglaten
 function renderMonths(rows, opts){
+  // begin bij de eerste maand met activiteit (spend/leads/afspraken/sales/omzet); lege aanloopmaanden weglaten
+  const actiefM = x => (Number(x.spend)||0)>0 || (Number(x.leads)||0)>0
+    || (Number(x.appointments)||0)>0 || (Number(x.sales)||0)>0 || (Number(x.revenue)||0)>0;
+  { const i0 = (rows||[]).findIndex(actiefM); rows = i0>=0 ? rows.slice(i0) : (rows||[]).slice(-1); }
   const mfmt = d => { const s = new Date(d).toLocaleDateString("nl-NL",{month:"long",year:"numeric"});
     return s.charAt(0).toUpperCase()+s.slice(1); };
   const mkey = d => String(d).slice(0,7);
