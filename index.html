@@ -998,7 +998,7 @@
     <div id="campParkTabs" class="tabs hidden" style="margin-bottom:16px"></div>
     <div class="sec" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
       <span style="flex:1;min-width:220px">Kosten per afspraak &amp; per sale <span id="campScope" style="font-weight:400;text-transform:none;color:var(--muted)"></span>
-        <span class="info" tabindex="0">i<span class="tip">Rolt de advertentiekosten (uit Meta) op naar campagne- of adsetniveau en zet ze tegen de afspraken en sales uit Pipedrive. Afspraak telt pas als hij geweest is; sale = echte verkoop; resale uitgesloten. Verse adsets: de afspraken lopen achter op de leads, dus de CPA zakt nog als die leads converteren. CPL/CPA/CPSale = uitgaven ÷ leads/afspraken/sales. Alleen leads die aan een advertentie gekoppeld zijn tellen mee.</span></span>
+        <span class="info" tabindex="0">i<span class="tip">Rolt de advertentiekosten (uit Meta) op naar campagne- of adsetniveau en zet ze tegen de afspraken en sales uit Pipedrive. Een afspraak telt zodra hij geboekt is (ook als hij nog moet plaatsvinden); sale = echte verkoop; resale uitgesloten. Verse adsets: de afspraken lopen achter op de leads, dus de CPA zakt nog als die leads converteren. CPL/CPA/CPSale = uitgaven ÷ leads/afspraken/sales. Alleen leads die aan een advertentie gekoppeld zijn tellen mee.</span></span>
       </span>
       <div class="segwrap" id="campToggle" style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden">
         <button class="segbtn" data-camp="adset" style="border:0;background:transparent;padding:7px 14px;cursor:pointer;font:inherit">Per adset</button>
@@ -1821,11 +1821,17 @@ let LOGIN_NO_CALLS = false;     // eigenaar zonder beldata-toegang (bv. Toine: w
 let CAN_FINANCE = false;        // Finance-grootboek: alleen Ruben + Willem (server-side gated op can_see_finance())
 let SCOPED_PARK = null;         // park-gebonden eigenaar (bv. Carl = alleen Wielsche Dreef); null = alle parken
 const DEFAULT_MASTER_PARK = 3;  // Wielsche Dreef: master-weergave opent hier overal standaard op
+const MASTER_PARK_ORDER = [3, 7];  // vaste volgorde vooraan in de masterweergave: Wielsche Dreef, dan Strand Residence
 function masterDefPark(list){   // WD indien in de lijst, anders het eerste park
   return ((list||[]).find(p=>p.id===DEFAULT_MASTER_PARK) ? DEFAULT_MASTER_PARK : ((list||[])[0]||{}).id);
 }
-function wdFirst(list){         // Wielsche Dreef vooraan, rest in dezelfde (alfabetische) volgorde — stabiele sort
-  return [...(list||[])].sort((a,b)=> (a.id===DEFAULT_MASTER_PARK?-1:0) - (b.id===DEFAULT_MASTER_PARK?-1:0));
+function wdFirst(list){         // vaste parken vooraan (WD, dan Strand), demopark achteraan, rest ertussen — stabiele sort
+  const rang = p => {
+    if (isDemo(p.id)) return 999;                 // demopark altijd laatst
+    const i = MASTER_PARK_ORDER.indexOf(p.id);
+    return i === -1 ? 500 : i;                     // niet-vaste parken tussen de vaste en het demopark
+  };
+  return [...(list||[])].sort((a,b)=> rang(a) - rang(b));
 }
 let LOGIN_EMAIL = "";           // ingelogde gebruiker (voor knoppen die maar voor 1 persoon zijn)
 const MAG_SYNCEN = () => LOGIN_EMAIL.toLowerCase() === "ruben.kraan@gmail.com";
@@ -2931,8 +2937,8 @@ async function renderCampagnes(){
   }).join("");
   $("campTable").innerHTML = `<thead>${head}</thead><tbody>${body}</tbody>`;
   $("campFoot").textContent = perAdset
-    ? "Per adset, onder de CBO-campagne. Afspraak telt pas als hij geweest is; verse adsets: CPA zakt nog als leads converteren."
-    : "Per campagne (CBO). Afspraak telt pas als hij geweest is.";
+    ? "Per adset, onder de CBO-campagne. Een afspraak telt zodra hij geboekt is (ook als hij nog moet plaatsvinden); verse adsets: CPA zakt nog als leads converteren."
+    : "Per campagne (CBO). Een afspraak telt zodra hij geboekt is (ook als hij nog moet plaatsvinden).";
 }
 
 /* ---------- BEVINDINGEN ---------- */
